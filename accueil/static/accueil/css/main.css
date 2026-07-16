@@ -117,8 +117,12 @@ p {
 }
 
 /* ==========================================================================
-   Module : icône (sprite SVG, cf. img/icones.svg)
+   Module : icône (sprite SVG inclus dans la page, cf. templates/accueil/icones.svg)
    ========================================================================== */
+
+.icones-sprite {
+  display: none;
+}
 
 .icone {
   width: 1.125em;

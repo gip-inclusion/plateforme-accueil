@@ -10,6 +10,8 @@
     <script src="{% static 'accueil/js/profils.js' %}" defer></script>
   </head>
   <body>
+    {# Sprite inclus dans la page : une référence externe (fichier#id) serait bloquée dans une iframe sandboxée sans allow-same-origin. #}
+    {% include "accueil/icones.svg" %}
     <main>
       <section class="section profils" id="pour-qui">
         <div class="section__contenu">
@@ -20,22 +22,22 @@
           <div class="profils__onglets" role="tablist" aria-label="Profils" hidden>
             <button type="button" class="profils__onglet est-actif" role="tab" id="onglet-prescripteur"
                     aria-controls="profil-prescripteur" aria-selected="true">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-home-smile-2-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-home-smile-2-line"/></svg>
               Prescripteur / orienteur
             </button>
             <button type="button" class="profils__onglet" role="tab" id="onglet-employeur"
                     aria-controls="profil-employeur" aria-selected="false">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-community-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-community-line"/></svg>
               Employeur inclusif
             </button>
             <button type="button" class="profils__onglet" role="tab" id="onglet-institution"
                     aria-controls="profil-institution" aria-selected="false">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-government-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-government-line"/></svg>
               Institution partenaire
             </button>
             <button type="button" class="profils__onglet" role="tab" id="onglet-candidat"
                     aria-controls="profil-candidat" aria-selected="false">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-user-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-user-line"/></svg>
               Candidat
             </button>
           </div>
@@ -46,7 +48,7 @@
                 <h3 class="profil__titre">Orientez vos candidats vers l'emploi durable</h3>
                 <p class="profil__chapo">Adressez vos bénéficiaires aux employeurs inclusifs de votre territoire et suivez chaque parcours depuis votre espace.</p>
                 <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-user-add-line"/></svg>
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
                   <span>Créer un compte</span>
                 </a>
               </div>
@@ -77,7 +79,7 @@
                 <h3 class="profil__titre">Recrutez et gérez vos PASS IAE en ligne</h3>
                 <p class="profil__chapo">SIAE, GEIQ, EA ou facilitateur&nbsp;: publiez vos postes et gérez vos obligations déclaratives sans changer d'outil.</p>
                 <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-user-add-line"/></svg>
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
                   <span>Créer un compte</span>
                 </a>
               </div>
@@ -108,7 +110,7 @@
                 <h3 class="profil__titre">Pilotez l'insertion sur votre territoire</h3>
                 <p class="profil__chapo">DDETS, conseils départementaux, France Travail&nbsp;: disposez d'une vision consolidée de l'offre et des parcours d'insertion.</p>
                 <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-user-add-line"/></svg>
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
                   <span>Créer un compte</span>
                 </a>
               </div>
@@ -139,7 +141,7 @@
                 <h3 class="profil__titre">Trouvez un emploi près de chez vous</h3>
                 <p class="profil__chapo">Recherchez un emploi inclusif, postulez et suivez vos candidatures — seul ou avec votre accompagnateur.</p>
                 <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-user-add-line"/></svg>
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
                   <span>Créer un compte</span>
                 </a>
               </div>
@@ -172,32 +174,32 @@
           <h2 class="section__titre">Tout votre quotidien professionnel, au même endroit</h2>
           <div class="fonctionnalites__grille">
             <div class="carte">
-              <span class="carte__pictogramme carte__pictogramme--emploi"><svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-briefcase-line"/></svg></span>
+              <span class="carte__pictogramme carte__pictogramme--emploi"><svg class="icone" aria-hidden="true"><use href="#ri-briefcase-line"/></svg></span>
               <h3 class="carte__titre">Recruter et candidater</h3>
               <p class="carte__texte">Publier des fiches de poste, recevoir des candidatures et obtenir les PASS IAE en ligne dès l'embauche.</p>
             </div>
             <div class="carte">
-              <span class="carte__pictogramme carte__pictogramme--orientation"><svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-user-shared-line"/></svg></span>
+              <span class="carte__pictogramme carte__pictogramme--orientation"><svg class="icone" aria-hidden="true"><use href="#ri-user-shared-line"/></svg></span>
               <h3 class="carte__titre">Orienter des candidats</h3>
               <p class="carte__texte">Adresser vos bénéficiaires aux employeurs inclusifs de votre territoire et suivre leurs candidatures.</p>
             </div>
             <div class="carte">
-              <span class="carte__pictogramme carte__pictogramme--solutions"><svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-compass-3-line"/></svg></span>
+              <span class="carte__pictogramme carte__pictogramme--solutions"><svg class="icone" aria-hidden="true"><use href="#ri-compass-3-line"/></svg></span>
               <h3 class="carte__titre">Trouver des solutions d'insertion</h3>
               <p class="carte__texte">Rechercher les services d'accompagnement disponibles sur votre territoire et orienter vers le bon interlocuteur.</p>
             </div>
             <div class="carte">
-              <span class="carte__pictogramme carte__pictogramme--pilotage"><svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-line-chart-line"/></svg></span>
+              <span class="carte__pictogramme carte__pictogramme--pilotage"><svg class="icone" aria-hidden="true"><use href="#ri-line-chart-line"/></svg></span>
               <h3 class="carte__titre">Piloter votre activité</h3>
               <p class="carte__texte">Suivre vos indicateurs et les tableaux de bord territoriaux, actualisés en continu.</p>
             </div>
             <div class="carte">
-              <span class="carte__pictogramme carte__pictogramme--communaute"><svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-group-line"/></svg></span>
+              <span class="carte__pictogramme carte__pictogramme--communaute"><svg class="icone" aria-hidden="true"><use href="#ri-group-line"/></svg></span>
               <h3 class="carte__titre">Échanger entre professionnels</h3>
               <p class="carte__texte">Poser vos questions et partager vos pratiques avec les professionnels de l'inclusion.</p>
             </div>
             <div class="carte">
-              <span class="carte__pictogramme carte__pictogramme--parcours"><svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-route-line"/></svg></span>
+              <span class="carte__pictogramme carte__pictogramme--parcours"><svg class="icone" aria-hidden="true"><use href="#ri-route-line"/></svg></span>
               <h3 class="carte__titre">Accompagner les parcours</h3>
               <p class="carte__texte">Centraliser le suivi de vos bénéficiaires&nbsp;: récap de parcours, immersions professionnelles, historique partagé.</p>
             </div>
@@ -213,7 +215,7 @@
             <p class="espace__texte">Les services que vous utilisiez séparément — chacun avec son adresse et son compte — sont désormais rassemblés. Vous vous connectez une seule fois et retrouvez tout votre environnement de travail.</p>
             <p class="espace__texte">Vos données circulent entre les fonctionnalités&nbsp;: plus de ressaisie, plus de double compte.</p>
             <p class="espace__garantie">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-shield-star-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-shield-star-line"/></svg>
               Un compte unique, sécurisé par ProConnect
             </p>
           </div>
@@ -221,37 +223,37 @@
             <div class="service">
               <span class="service__puce service__puce--emploi" aria-hidden="true"></span>
               <span class="service__nom">Les emplois de l'inclusion</span>
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-arrow-right-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
               <span class="service__description">Recrutement, candidatures et PASS IAE</span>
             </div>
             <div class="service">
               <span class="service__puce service__puce--info" aria-hidden="true"></span>
               <span class="service__nom">DORA</span>
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-arrow-right-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
               <span class="service__description">Recherche de solutions d'insertion</span>
             </div>
             <div class="service">
               <span class="service__puce service__puce--pilotage" aria-hidden="true"></span>
               <span class="service__nom">Le pilotage de l'inclusion</span>
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-arrow-right-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
               <span class="service__description">Tableaux de bord et statistiques</span>
             </div>
             <div class="service">
               <span class="service__puce service__puce--communaute" aria-hidden="true"></span>
               <span class="service__nom">La communauté de l'inclusion</span>
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-arrow-right-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
               <span class="service__description">Échanges entre professionnels</span>
             </div>
             <div class="service">
               <span class="service__puce service__puce--important" aria-hidden="true"></span>
               <span class="service__nom">Mon Récap'</span>
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-arrow-right-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
               <span class="service__description">Suivi des parcours</span>
             </div>
             <div class="service">
               <span class="service__puce service__puce--ciel" aria-hidden="true"></span>
               <span class="service__nom">Immersion Facilitée</span>
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-arrow-right-line"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
               <span class="service__description">Immersions professionnelles</span>
             </div>
             <p class="services__note">Le marché de l'inclusion reste un service indépendant.</p>
@@ -265,7 +267,7 @@
           <h2 class="section__titre">Ils utilisent la plateforme au quotidien</h2>
           <div class="temoignages__grille">
             <figure class="temoignage">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-double-quotes-l"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
               <blockquote class="temoignage__citation">Un seul compte pour tout mon quotidien&nbsp;: orienter, suivre, échanger. Je gagne un temps précieux à chaque accompagnement.</blockquote>
               <figcaption class="temoignage__auteur">
                 <b class="temoignage__nom">Nadia B.</b>
@@ -273,7 +275,7 @@
               </figcaption>
             </figure>
             <figure class="temoignage">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-double-quotes-l"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
               <blockquote class="temoignage__citation">Nous délivrons les PASS IAE en ligne et suivons nos indicateurs au même endroit. L'outil s'est effacé derrière le métier.</blockquote>
               <figcaption class="temoignage__auteur">
                 <b class="temoignage__nom">Marc D.</b>
@@ -281,7 +283,7 @@
               </figcaption>
             </figure>
             <figure class="temoignage">
-              <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-double-quotes-l"/></svg>
+              <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
               <blockquote class="temoignage__citation">Les tableaux de bord territoriaux nous donnent enfin une vision consolidée de l'offre d'insertion du département.</blockquote>
               <figcaption class="temoignage__auteur">
                 <b class="temoignage__nom">Claire M.</b>
@@ -296,7 +298,7 @@
         <h2 class="appel__titre">Créer votre compte ne prend que quelques minutes</h2>
         <p class="appel__texte">Rejoignez les professionnels de l'inclusion déjà présents sur la plateforme.</p>
         <a class="bouton bouton--inverse" href="#">
-          <svg class="icone" aria-hidden="true"><use href="{% static 'accueil/img/icones.svg' %}#ri-user-add-line"/></svg>
+          <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
           <span>Créer un compte</span>
         </a>
       </section>

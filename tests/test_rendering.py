@@ -8,6 +8,16 @@ def test_index_renders(client):
     assert "/static/accueil/js/resize-reporter.js" in contenu
 
 
+def test_index_inlines_svg_sprite(client):
+    # Le sprite est inclus dans la page et référencé par fragment seul :
+    # une référence externe (fichier#id) serait bloquée dans une iframe
+    # sandboxée sans allow-same-origin (origine opaque).
+    contenu = client.get("/").content.decode()
+    assert '<symbol viewBox="0 0 24 24" id="ri-user-add-line">' in contenu
+    assert 'href="#ri-user-add-line"' in contenu
+    assert "icones.svg" not in contenu
+
+
 def test_index_allows_iframe_embedding(client):
     response = client.get("/")
     assert "X-Frame-Options" not in response.headers
@@ -33,7 +43,6 @@ def test_static_assets_are_served(client):
         "/static/accueil/js/iframe-embed.js",
         "/static/accueil/js/profils.js",
         "/static/accueil/css/main.css",
-        "/static/accueil/img/icones.svg",
         "/static/accueil/fonts/Marianne-Regular.woff2",
     ):
         assert client.get(chemin).status_code == 200, chemin
