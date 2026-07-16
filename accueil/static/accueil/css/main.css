@@ -1,39 +1,568 @@
 /* ==========================================================================
-   Base
+   Fontes — Marianne
+   Provenance : gip-inclusion/itou-theme · dist/fonts/marianne (woff2).
+   Seules les graisses réellement utilisées par la page sont chargées.
    ========================================================================== */
 
-:root {
-  --couleur-texte: #161616;
-  --couleur-fond: #fff;
+@font-face {
+  font-family: "Marianne";
+  src: url("../fonts/Marianne-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  color: var(--couleur-texte);
-  background: var(--couleur-fond);
-  line-height: 1.5;
+@font-face {
+  font-family: "Marianne";
+  src: url("../fonts/Marianne-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Marianne";
+  src: url("../fonts/Marianne-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* ==========================================================================
-   Module : accueil
+   Tokens — design system Plateforme de l'inclusion
+   Provenance : gip-inclusion/itou-theme · src/stylesheets/base/_variables.scss
+   (sous-ensemble utilisé par la page ; compléter depuis la source au besoin).
    ========================================================================== */
 
-.accueil {
-  padding: 1rem;
+:root {
+  /* Nuances (échelle de gris de la charte) */
+  --nuance-05: #999baf;
+  --nuance-08: #e6e6eb;
+  --nuance-10: #f8f8f8;
+
+  /* Marque */
+  --primary: #000638; /* encre — titres + texte principal */
+  --secondary: #333860; /* texte secondaire */
+  --tertiary: #000091; /* bleu Marianne — liens, focus, accent */
+
+  /* Boutons */
+  --button: #000091;
+  --button-lightest: #edf6ff;
+
+  /* Sémantiques */
+  --info: #0063cb;
+  --info-lightest: #f6f8ff;
+  --important: #6c38d9;
+  --important-lightest: #f4f2ff;
+
+  /* Couleurs signature des services */
+  --emploi: #006adc;
+  --emploi-lightest: #f2f8fd;
+  --communaute: #18a47d;
+  --communaute-lightest: #f3faf8;
+  --pilotage: #ffad1d;
+  --pilotage-lightest: #fff8ed;
+  --accent-02: #8adcff; /* ciel */
+
+  /* Raccourcis */
+  --fg-muted: #727492;
+  --border: var(--nuance-08);
+
+  /* Typo */
+  --font-sans: "Marianne", Arial, sans-serif;
+
+  /* Divers */
+  --radius-lg: 0.5rem;
+  --radius-xl: 1rem;
+  --transition: all 0.3s ease-in-out;
+  --focus-ring: 0 0 0 0.2rem rgba(0, 0, 145, 0.3);
 }
 
-.accueil__titre {
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+body {
   margin: 0;
-  font-size: 1.5rem;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--primary);
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--primary);
+}
+
+p {
+  margin: 0;
+}
+
+::selection {
+  background: var(--tertiary);
+  color: #fff;
+}
+
+:where(a, button):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 0.25rem;
+}
+
+/* ==========================================================================
+   Module : icône (sprite SVG, cf. img/icones.svg)
+   ========================================================================== */
+
+.icone {
+  width: 1.125em;
+  height: 1.125em;
+  fill: currentColor;
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+/* ==========================================================================
+   Module : section (gabarit commun des sections)
+   ========================================================================== */
+
+.section {
+  padding: 3rem 1rem;
+  background: #fff;
+}
+
+.section--grisee {
+  background: var(--nuance-10);
+}
+
+.section--lisere {
+  border-top: 1px solid var(--border);
+}
+
+.section__contenu {
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+.section__surtitre {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tertiary);
+}
+
+.section__titre {
+  margin: 0 0 2rem;
+  font-size: 1.75rem;
 }
 
 @media (min-width: 48rem) {
-  .accueil {
-    padding: 2rem;
+  .section {
+    padding: 4.5rem 2rem;
   }
 
-  .accueil__titre {
+  .section__titre {
+    font-size: 2rem;
+  }
+}
+
+/* ==========================================================================
+   Module : bouton
+   ========================================================================== */
+
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.5rem 1.25rem;
+  background: var(--button);
+  color: #fff;
+  border: 1px solid var(--button);
+  border-radius: var(--radius-lg);
+  font: 500 0.9375rem var(--font-sans);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.bouton--inverse {
+  background: #fff;
+  color: var(--button);
+  border-color: #fff;
+  min-height: 48px;
+  padding: 0.625rem 1.625rem;
+  font-size: 1rem;
+}
+
+/* ==========================================================================
+   Module : profils (onglets « Pour qui ? »)
+   Sans JavaScript, les quatre profils sont affichés à la suite ; le JS
+   (js/profils.js) révèle la barre d'onglets et n'affiche qu'un panneau.
+   ========================================================================== */
+
+.profils__onglets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2.25rem;
+}
+
+.profils__onglet {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 0.375rem;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font: 500 0.9375rem var(--font-sans);
+  color: var(--secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.profils__onglet.est-actif {
+  border-bottom-color: var(--tertiary);
+  color: var(--tertiary);
+  font-weight: 700;
+}
+
+.profil + .profil {
+  margin-top: 3rem;
+}
+
+.profil__grille {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.profil__titre {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.profil__chapo {
+  margin: 0 0 1.75rem;
+  line-height: 1.7;
+  color: var(--secondary);
+}
+
+.profil__etapes {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.etape {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.etape__numero {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--button-lightest);
+  color: var(--tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 0.875rem var(--font-sans);
+  flex: none;
+}
+
+.etape__titre {
+  display: block;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.etape__detail {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+
+@media (min-width: 64rem) {
+  .profil__grille {
+    grid-template-columns: 1fr 1.2fr;
+    gap: 3.5rem;
+  }
+}
+
+/* ==========================================================================
+   Module : fonctionnalités (cartes)
+   ========================================================================== */
+
+.fonctionnalites__grille {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.carte {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: var(--transition);
+}
+
+.carte__pictogramme {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.375rem;
+}
+
+.carte__pictogramme--emploi {
+  background: var(--emploi-lightest);
+  color: var(--emploi);
+}
+
+.carte__pictogramme--orientation {
+  background: var(--button-lightest);
+  color: var(--tertiary);
+}
+
+.carte__pictogramme--solutions {
+  background: var(--info-lightest);
+  color: var(--info);
+}
+
+.carte__pictogramme--pilotage {
+  background: var(--pilotage-lightest);
+  color: #b34000;
+}
+
+.carte__pictogramme--communaute {
+  background: var(--communaute-lightest);
+  color: var(--communaute);
+}
+
+.carte__pictogramme--parcours {
+  background: var(--important-lightest);
+  color: var(--important);
+}
+
+.carte__titre {
+  font-size: 1.125rem;
+}
+
+.carte__texte {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--secondary);
+}
+
+@media (min-width: 40rem) {
+  .fonctionnalites__grille {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 64rem) {
+  .fonctionnalites__grille {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ==========================================================================
+   Module : espace (« Un seul espace » + liste des services)
+   ========================================================================== */
+
+.espace__grille {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.espace__texte {
+  margin: 0 0 1rem;
+  line-height: 1.7;
+  color: var(--secondary);
+}
+
+.espace__garantie {
+  margin: 0.5rem 0 0;
+  font-weight: 500;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.espace__garantie .icone {
+  color: var(--tertiary);
+}
+
+.services {
+  background: var(--nuance-10);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 0.5rem 1.5rem;
+}
+
+.service {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--nuance-08);
+}
+
+.service:last-of-type {
+  border-bottom: 0;
+}
+
+.service__puce {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  flex: none;
+}
+
+.service__puce--emploi { background: var(--emploi); }
+.service__puce--info { background: var(--info); }
+.service__puce--pilotage { background: var(--pilotage); }
+.service__puce--communaute { background: var(--communaute); }
+.service__puce--important { background: var(--important); }
+.service__puce--ciel { background: var(--accent-02); }
+
+.service__nom {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  flex: 1;
+}
+
+.service .icone {
+  color: var(--nuance-05);
+}
+
+.service__description {
+  font-size: 0.9375rem;
+  color: var(--secondary);
+  flex: 1;
+  text-align: right;
+}
+
+.services__note {
+  margin: 0;
+  padding: 0.75rem 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+  border-top: 1px solid var(--nuance-08);
+}
+
+@media (min-width: 64rem) {
+  .espace__grille {
+    grid-template-columns: 1fr 1.1fr;
+    gap: 3.5rem;
+  }
+}
+
+/* ==========================================================================
+   Module : témoignages
+   ========================================================================== */
+
+.temoignages__grille {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.temoignage {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.temoignage > .icone {
+  font-size: 1.75rem;
+  color: var(--tertiary);
+}
+
+.temoignage__citation {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.temoignage__auteur {
+  margin-top: auto;
+}
+
+.temoignage__nom {
+  display: block;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.temoignage__role {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+
+@media (min-width: 64rem) {
+  .temoignages__grille {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ==========================================================================
+   Module : appel (CTA final sur fond encre)
+   ========================================================================== */
+
+.appel {
+  padding: 3rem 1rem;
+  background: var(--primary);
+  text-align: center;
+}
+
+.appel__titre {
+  margin: 0 0 0.75rem;
+  font-size: 1.75rem;
+  color: #fff;
+}
+
+.appel__texte {
+  margin: 0 0 2rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+@media (min-width: 48rem) {
+  .appel {
+    padding: 4rem 2rem;
+  }
+
+  .appel__titre {
     font-size: 2rem;
   }
 }
