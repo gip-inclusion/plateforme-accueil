@@ -1,0 +1,39 @@
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+:root {
+  --couleur-texte: #161616;
+  --couleur-fond: #fff;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: var(--couleur-texte);
+  background: var(--couleur-fond);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   Module : accueil
+   ========================================================================== */
+
+.accueil {
+  padding: 1rem;
+}
+
+.accueil__titre {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+@media (min-width: 48rem) {
+  .accueil {
+    padding: 2rem;
+  }
+
+  .accueil__titre {
+    font-size: 2rem;
+  }
+}
