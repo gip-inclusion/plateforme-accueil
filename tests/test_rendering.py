@@ -1,7 +1,11 @@
-def test_index_renders(client):
+def test_index_serves_maquette(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "Bienvenue sur La plateforme de l'inclusion." in response.content.decode()
+    contenu = response.content.decode()
+    # La page servie est la maquette autonome...
+    assert "<title>Plateforme de l&#39;inclusion" in contenu
+    # ...avec le script de report de hauteur injecté pour l'embarquement iframe.
+    assert "/static/accueil/js/resize-reporter.js" in contenu
 
 
 def test_index_allows_iframe_embedding(client):
