@@ -51,7 +51,11 @@ contenu, inclure le script hôte fourni :
 ```
 
 Le script écoute les messages `postMessage` émis par la page et ajuste la
-hauteur de toute iframe portant l'attribut `data-plateforme-accueil`.
+hauteur de toute iframe portant l'attribut `data-plateforme-accueil`. Quand ce
+script est utilisé, ajoutez `scrolling="no"` au tag `<iframe>` : la hauteur
+suivant le contenu, les ascenseurs internes deviennent inutiles (ne mettez
+**pas** `scrolling="no"` sans le script : sans JavaScript, l'ascenseur reste le
+seul moyen d'accéder au contenu qui dépasse).
 
 Protocole, si vous préférez l'implémenter vous-même — la page émet vers son
 parent (`targetOrigin: "*"`, la hauteur n'est pas une donnée sensible), au
