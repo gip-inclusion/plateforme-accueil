@@ -49,6 +49,12 @@ SECURE_CSP = {
 if DEBUG:
     SECURE_CSP["frame-ancestors"] += ["http://localhost:*", "http://127.0.0.1:*"]
 
+# Origines supplémentaires autorisées à embarquer la page (liste séparée par des
+# virgules), pour tester un embed depuis un hôte non listé ci-dessus.
+SECURE_CSP["frame-ancestors"] += [
+    origin for origin in os.environ.get("CSP_EXTRA_FRAME_ANCESTORS", "").split(",") if origin
+]
+
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
 USE_I18N = True
