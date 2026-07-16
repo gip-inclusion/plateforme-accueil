@@ -4,7 +4,13 @@
    La hauteur mesurée est celle du contenu réel (bord bas de l'enfant le plus
    bas du body), pas `scrollHeight` : dans une iframe auto-dimensionnée,
    `scrollHeight` dépend de la hauteur de l'iframe elle-même (effet cliquet —
-   la hauteur monte mais ne redescend jamais, cf. pages en `min-height: 100vh`). */
+   la hauteur monte mais ne redescend jamais, cf. pages en `min-height: 100vh`).
+
+   Les observations ne se limitent pas à un ResizeObserver : si un script de la
+   page reconstruit le DOM (le <body> observé est alors remplacé), l'observateur
+   devient muet. D'où, en plus : l'événement `resize` de window (insensible à
+   l'identité des nœuds) et un MutationObserver qui ré-arrime l'observation au
+   <body> courant. */
 (function () {
   "use strict";
 
@@ -14,6 +20,18 @@
 
   var derniereHauteur = 0;
   var mesurePlanifiee = null;
+  var observateur = "ResizeObserver" in window ? new ResizeObserver(planifierMesure) : null;
+  var corpsObserve = null;
+
+  function arrimerObservateur() {
+    if (observateur === null || document.body === corpsObserve) {
+      return;
+    }
+    corpsObserve = document.body;
+    observateur.disconnect();
+    observateur.observe(document.documentElement); // redimensionnements de l'iframe
+    observateur.observe(corpsObserve); // changements du contenu
+  }
 
   function hauteurContenu() {
     var bas = 0;
@@ -33,6 +51,7 @@
 
   function publierHauteur() {
     mesurePlanifiee = null;
+    arrimerObservateur();
     var hauteur = hauteurContenu();
     if (Math.abs(hauteur - derniereHauteur) < 2) {
       return; // tolérance : évite les boucles hôte <-> iframe sur arrondis
@@ -54,10 +73,8 @@
     }
   }
 
-  if ("ResizeObserver" in window) {
-    var observateur = new ResizeObserver(planifierMesure);
-    observateur.observe(document.documentElement); // redimensionnements de l'iframe
-    observateur.observe(document.body); // changements du contenu
-  }
+  arrimerObservateur();
   window.addEventListener("load", planifierMesure);
+  window.addEventListener("resize", planifierMesure);
+  new MutationObserver(planifierMesure).observe(document, { childList: true, subtree: true });
 })();
