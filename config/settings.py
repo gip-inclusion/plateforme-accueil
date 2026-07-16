@@ -57,6 +57,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Sert aussi les statiques trouvés par les finders (utile hors collectstatic :
+# dev et tests) ; en production, le manifeste de collectstatic reste prioritaire.
+WHITENOISE_USE_FINDERS = True
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},

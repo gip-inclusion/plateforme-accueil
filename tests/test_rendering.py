@@ -14,3 +14,8 @@ def test_index_allows_iframe_embedding(client):
     assert "https://*.cleverapps.io" in csp
     assert "https://*.scalingo.io" in csp
     assert "localhost" not in csp  # DEBUG=False in tests
+
+
+def test_iframe_embed_script_is_served(client):
+    response = client.get("/static/accueil/js/iframe-embed.js")
+    assert response.status_code == 200
