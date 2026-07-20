@@ -4,14 +4,21 @@ def test_index_renders(client):
     contenu = response.content.decode()
     assert "<title>Plateforme de l'inclusion</title>" in contenu
     assert "Un parcours adapté à chaque profil" in contenu
-    # Le script de report de hauteur, indispensable à l'embarquement en iframe.
+    # The height reporter, without which the iframe embed cannot size itself.
     assert "/static/accueil/js/resize-reporter.js" in contenu
 
 
+def test_index_loads_analytics(client):
+    # Must be in the <head>: the tag manager has to boot before the page
+    # builds, so a tag that drifted into the <body> would under-measure.
+    entete = client.get("/").content.decode().split("</head>")[0]
+    assert "/static/accueil/js/matomo.js" in entete
+
+
 def test_index_inlines_svg_sprite(client):
-    # Le sprite est inclus dans la page et référencé par fragment seul :
-    # une référence externe (fichier#id) serait bloquée dans une iframe
-    # sandboxée sans allow-same-origin (origine opaque).
+    # The sprite is inlined and referenced by bare fragment: an external
+    # reference (file#id) is blocked in a sandboxed iframe without
+    # allow-same-origin, where the origin is opaque.
     contenu = client.get("/").content.decode()
     assert '<symbol viewBox="0 0 24 24" id="ri-user-add-line">' in contenu
     assert 'href="#ri-user-add-line"' in contenu
@@ -35,12 +42,13 @@ def test_index_has_no_inline_styles_or_scripts(client):
     contenu = response.content.decode()
     assert "style=" not in contenu
     assert "<style" not in contenu
-    assert "<script>" not in contenu  # seuls des scripts externes (src=…)
+    assert "<script>" not in contenu  # external scripts (src=…) only
 
 
 def test_static_assets_are_served(client):
     for chemin in (
         "/static/accueil/js/iframe-embed.js",
+        "/static/accueil/js/matomo.js",
         "/static/accueil/js/profils.js",
         "/static/accueil/css/main.css",
         "/static/accueil/fonts/Marianne-Regular.woff2",
