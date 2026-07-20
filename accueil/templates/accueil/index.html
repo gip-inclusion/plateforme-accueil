@@ -1,24 +1,18 @@
+{% extends "accueil/base.html" %}
 {% load static %}
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Plateforme de l'inclusion</title>
-    <link rel="stylesheet" href="{% static 'accueil/css/main.css' %}">
-    <script src="{% static 'accueil/js/resize-reporter.js' %}" defer></script>
-    <script src="{% static 'accueil/js/profils.js' %}" defer></script>
-  </head>
-  <body>
-    {# Sprite inclus dans la page : une référence externe (fichier#id) serait bloquée dans une iframe sandboxée sans allow-same-origin. #}
-    {% include "accueil/icones.svg" %}
+
+{% block head %}
+  <script src="{% static 'accueil/js/profils.js' %}" defer></script>
+{% endblock %}
+
+{% block contenu %}
     <main>
       <section class="section profils" id="pour-qui">
         <div class="section__contenu">
           <p class="section__surtitre">Pour qui&nbsp;?</p>
           <h2 class="section__titre">Un parcours adapté à chaque profil</h2>
 
-          {# Barre d'onglets : révélée par js/profils.js ; sans JS, les quatre profils s'affichent à la suite. #}
+          {# Tab bar: revealed by js/profils.js; without JS the four profiles are stacked. #}
           <div class="profils__onglets" role="tablist" aria-label="Profils" hidden>
             <button type="button" class="profils__onglet est-actif" role="tab" id="onglet-prescripteur"
                     aria-controls="profil-prescripteur" aria-selected="true">
@@ -303,5 +297,4 @@
         </a>
       </section>
     </main>
-  </body>
-</html>
+{% endblock %}
