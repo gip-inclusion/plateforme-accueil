@@ -1,7 +1,6 @@
-/* Onglets de la section « Pour qui ? » (amélioration progressive).
-   Sans JavaScript : la barre d'onglets reste masquée (attribut hidden) et les
-   quatre profils s'affichent à la suite. Avec JavaScript : la barre est
-   révélée et un seul panneau est visible à la fois. */
+/* Tabs for the "Pour qui ?" section (progressive enhancement).
+   Without JavaScript the tab bar stays hidden and the four profiles are
+   stacked; with it, the bar is revealed and one panel shows at a time. */
 (function () {
   "use strict";
 

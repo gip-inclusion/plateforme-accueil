@@ -1,21 +1,20 @@
-/* Publie la hauteur de la page au site hôte (protocole iframe, cf. README).
-   Amélioration progressive : la page fonctionne intégralement sans ce script.
+/* Publishes the page height to the host site (iframe protocol, see README).
+   Progressive enhancement: the page works fully without this script.
 
-   La hauteur mesurée est celle du contenu réel (bord bas de l'enfant le plus
-   bas du body), pas `scrollHeight` : dans une iframe auto-dimensionnée,
-   `scrollHeight` dépend de la hauteur de l'iframe elle-même (effet cliquet —
-   la hauteur monte mais ne redescend jamais, cf. pages en `min-height: 100vh`).
+   The measured height is that of the real content (bottom edge of the lowest
+   body child), not `scrollHeight`: in a self-sizing iframe, `scrollHeight`
+   depends on the iframe height itself, which ratchets — the height grows but
+   never shrinks back (think pages using `min-height: 100vh`).
 
-   Les observations ne se limitent pas à un ResizeObserver : si un script de la
-   page reconstruit le DOM (le <body> observé est alors remplacé), l'observateur
-   devient muet. D'où, en plus : l'événement `resize` de window (insensible à
-   l'identité des nœuds) et un MutationObserver qui ré-arrime l'observation au
-   <body> courant. */
+   A ResizeObserver alone is not enough: if a page script rebuilds the DOM, the
+   observed <body> is replaced and the observer goes silent. Hence also the
+   window `resize` event (blind to node identity) and a MutationObserver that
+   re-attaches the observation to the current <body>. */
 (function () {
   "use strict";
 
   if (window.parent === window) {
-    return; // pas dans une iframe
+    return; // not framed
   }
 
   var derniereHauteur = 0;
@@ -29,8 +28,8 @@
     }
     corpsObserve = document.body;
     observateur.disconnect();
-    observateur.observe(document.documentElement); // redimensionnements de l'iframe
-    observateur.observe(corpsObserve); // changements du contenu
+    observateur.observe(document.documentElement); // iframe resizes
+    observateur.observe(corpsObserve); // content changes
   }
 
   function hauteurContenu() {
@@ -40,7 +39,7 @@
       var element = enfants[i];
       var style = window.getComputedStyle(element);
       if (style.position === "fixed") {
-        continue; // hors flux, suit le viewport et non le contenu
+        continue; // out of flow, tracks the viewport rather than the content
       }
       var rect = element.getBoundingClientRect();
       var margeBasse = parseFloat(style.marginBottom) || 0;
@@ -54,7 +53,7 @@
     arrimerObservateur();
     var hauteur = hauteurContenu();
     if (Math.abs(hauteur - derniereHauteur) < 2) {
-      return; // tolérance : évite les boucles hôte <-> iframe sur arrondis
+      return; // slack, so rounding does not ping-pong between host and iframe
     }
     derniereHauteur = hauteur;
     window.parent.postMessage(

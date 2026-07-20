@@ -35,8 +35,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# La page est faite pour être embarquée en iframe : pas de X-Frame-Options,
-# la liste des sites autorisés est portée par la CSP.
+# The page is built to be embedded in an iframe: no X-Frame-Options, the
+# allowed hosts are carried by the CSP instead.
 SECURE_CSP = {
     "frame-ancestors": [
         "https://*.inclusion.gouv.fr",
@@ -49,8 +49,8 @@ SECURE_CSP = {
 if DEBUG:
     SECURE_CSP["frame-ancestors"] += ["http://localhost:*", "http://127.0.0.1:*"]
 
-# Origines supplémentaires autorisées à embarquer la page (liste séparée par des
-# virgules), pour tester un embed depuis un hôte non listé ci-dessus.
+# Extra origins allowed to embed the page (comma-separated), to test an embed
+# from a host not listed above.
 SECURE_CSP["frame-ancestors"] += [
     origin for origin in os.environ.get("CSP_EXTRA_FRAME_ANCESTORS", "").split(",") if origin
 ]
@@ -63,8 +63,8 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Sert aussi les statiques trouvés par les finders (utile hors collectstatic :
-# dev et tests) ; en production, le manifeste de collectstatic reste prioritaire.
+# Also serve statics located by the finders, which matters when collectstatic
+# has not run (dev and tests); in production the manifest still wins.
 WHITENOISE_USE_FINDERS = True
 
 STORAGES = {

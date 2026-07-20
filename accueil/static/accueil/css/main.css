@@ -1,7 +1,7 @@
 /* ==========================================================================
-   Fontes — Marianne
-   Provenance : gip-inclusion/itou-theme · dist/fonts/marianne (woff2).
-   Seules les graisses réellement utilisées par la page sont chargées.
+   Fonts — Marianne
+   Source: gip-inclusion/itou-theme · dist/fonts/marianne (woff2).
+   Only the weights the page actually uses are loaded.
    ========================================================================== */
 
 @font-face {
@@ -29,49 +29,49 @@
 }
 
 /* ==========================================================================
-   Tokens — design system Plateforme de l'inclusion
-   Provenance : gip-inclusion/itou-theme · src/stylesheets/base/_variables.scss
-   (sous-ensemble utilisé par la page ; compléter depuis la source au besoin).
+   Tokens — Plateforme de l'inclusion design system
+   Source: gip-inclusion/itou-theme · src/stylesheets/base/_variables.scss
+   (subset used by the page; pull more from the source as needed).
    ========================================================================== */
 
 :root {
-  /* Nuances (échelle de gris de la charte) */
+  /* Greys from the brand scale */
   --nuance-05: #999baf;
   --nuance-08: #e6e6eb;
   --nuance-10: #f8f8f8;
 
-  /* Marque */
-  --primary: #000638; /* encre — titres + texte principal */
-  --secondary: #333860; /* texte secondaire */
-  --tertiary: #000091; /* bleu Marianne — liens, focus, accent */
+  /* Brand */
+  --primary: #000638; /* ink — headings + body text */
+  --secondary: #333860; /* secondary text */
+  --tertiary: #000091; /* Marianne blue — links, focus, accent */
 
-  /* Boutons */
+  /* Buttons */
   --button: #000091;
   --button-lightest: #edf6ff;
 
-  /* Sémantiques */
+  /* Semantic */
   --info: #0063cb;
   --info-lightest: #f6f8ff;
   --important: #6c38d9;
   --important-lightest: #f4f2ff;
 
-  /* Couleurs signature des services */
+  /* Per-service signature colours */
   --emploi: #006adc;
   --emploi-lightest: #f2f8fd;
   --communaute: #18a47d;
   --communaute-lightest: #f3faf8;
   --pilotage: #ffad1d;
   --pilotage-lightest: #fff8ed;
-  --accent-02: #8adcff; /* ciel */
+  --accent-02: #8adcff; /* sky */
 
-  /* Raccourcis */
+  /* Shorthands */
   --fg-muted: #727492;
   --border: var(--nuance-08);
 
-  /* Typo */
+  /* Type */
   --font-sans: "Marianne", Arial, sans-serif;
 
-  /* Divers */
+  /* Misc */
   --radius-lg: 0.5rem;
   --radius-xl: 1rem;
   --transition: all 0.3s ease-in-out;
@@ -117,7 +117,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : icône (sprite SVG inclus dans la page, cf. templates/accueil/icones.svg)
+   Module: icône (SVG sprite inlined in the page, see templates/accueil/icones.svg)
    ========================================================================== */
 
 .icones-sprite {
@@ -133,7 +133,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : section (gabarit commun des sections)
+   Module: section (shared section layout)
    ========================================================================== */
 
 .section {
@@ -179,7 +179,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : bouton
+   Module: bouton
    ========================================================================== */
 
 .bouton {
@@ -207,7 +207,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : profils (onglets « Pour qui ? »)
+   Module: profils ("Pour qui ?" tabs)
    Sans JavaScript, les quatre profils sont affichés à la suite ; le JS
    (js/profils.js) révèle la barre d'onglets et n'affiche qu'un panneau.
    ========================================================================== */
@@ -310,7 +310,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : fonctionnalités (cartes)
+   Module: fonctionnalités (cards)
    ========================================================================== */
 
 .fonctionnalites__grille {
@@ -393,7 +393,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : espace (« Un seul espace » + liste des services)
+   Module: espace ("Un seul espace" + service list)
    ========================================================================== */
 
 .espace__grille {
@@ -488,7 +488,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : témoignages
+   Module: témoignages
    ========================================================================== */
 
 .temoignages__grille {
@@ -540,7 +540,7 @@ p {
 }
 
 /* ==========================================================================
-   Module : appel (CTA final sur fond encre)
+   Module: appel (final CTA on ink background)
    ========================================================================== */
 
 .appel {

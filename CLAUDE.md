@@ -39,6 +39,27 @@ templates sont dans `accueil/templates/`, les statiques dans `accueil/static/`.
 Côté serveur uniquement (templates Django). **Pas de templating JS**, pas de
 rendu client, pas de gros framework JS.
 
+### Langue
+
+Comme sur `les-emplois` : **les commentaires de code sont en anglais**
+(Python, templates, JS, CSS). Le français reste la langue du contenu affiché,
+des noms de classes CSS sémantiques et de la documentation en prose (README,
+ce fichier).
+
+### Mesure d'audience
+
+Toutes les pages rendues doivent charger le Tag Manager Matomo
+(`accueil/static/accueil/js/matomo.js`) dans leur `<head>`.
+
+- Le script est branché une seule fois, dans
+  `accueil/templates/accueil/base.html`. **Toute page publique étend ce
+  gabarit** — on ne recopie pas le squelette HTML ailleurs.
+- Ne jamais retirer ni déplacer plus bas la balise `<script>` du tag manager,
+  ne jamais lui ajouter `defer` ou `async` : le conteneur doit démarrer avant
+  le reste de la page.
+- Toute nouvelle vue hérite de `base.html` et est couverte par un test du type
+  `test_index_loads_analytics`.
+
 ### Iframe
 
 La page est embarquée en iframe par des sites tiers autorisés (CSP

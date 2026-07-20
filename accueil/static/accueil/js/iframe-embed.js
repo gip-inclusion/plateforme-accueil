@@ -1,10 +1,10 @@
-/* Script hôte pour l'iframe de La plateforme de l'inclusion.
-   Usage côté site hôte :
+/* Host-side script for the Plateforme de l'inclusion iframe.
+   Usage on the embedding site:
      <iframe src="…" data-plateforme-accueil …></iframe>
      <script src="…/static/accueil/js/iframe-embed.js" defer></script>
-   Écoute les messages { source: "plateforme-accueil", type: "resize", height }
-   et ajuste la hauteur de l'iframe correspondante. Sans ce script, l'iframe
-   garde simplement sa hauteur par défaut. */
+   Listens for { source: "plateforme-accueil", type: "resize", height } messages
+   and resizes the matching iframe. Without it the iframe simply keeps its
+   default height. */
 (function () {
   "use strict";
 
