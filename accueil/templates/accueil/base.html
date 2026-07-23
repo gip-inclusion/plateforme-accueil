@@ -1,22 +1,18 @@
 {% load static %}
 <!doctype html>
-{# Skeleton every page extends. #}
 <html lang="{% block langue %}fr{% endblock %}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block titre %}Plateforme de l'inclusion{% endblock %}</title>
 
-    {# Analytics first and without `defer`: the container must start before the page builds. #}
     <script src="{% static 'accueil/js/matomo.js' %}"></script>
 
     <link rel="stylesheet" href="{% static 'accueil/css/main.css' %}">
-    {# Reports the page height to the host, required for the iframe embed. #}
     <script src="{% static 'accueil/js/resize-reporter.js' %}" defer></script>
     {% block head %}{% endblock %}
   </head>
   <body>
-    {# Sprite inlined: an external reference (file#id) is blocked in a sandboxed iframe without allow-same-origin. #}
     {% include "accueil/icones.svg" %}
     {% block contenu %}{% endblock %}
   </body>
