@@ -1,9 +1,61 @@
+import io
+import json
+from unittest import mock
+
+
 def test_index_renders(client):
     response = client.get("/")
     assert response.status_code == 200
     contenu = response.content.decode()
     assert "<title>Plateforme de l'inclusion</title>" in contenu
     assert "Un parcours adapté à chaque profil" in contenu
+
+
+def test_stats_affichent_le_flux(client):
+    # Numbers come from the (mocked) key-figures feed, formatted for French.
+    contenu = client.get("/").content.decode().replace(" ", " ")
+    assert "12 345" in contenu  # offres_ouvertes
+    assert "200 000" in contenu  # services_di
+    assert "6 000" in contenu  # prescripteurs_actifs
+
+
+def test_villes_proxy_mappe_slug_et_label(client):
+    feed = {
+        "results": [
+            {"text": "Lyon (69)", "id": "lyon-69"},
+            {"text": "Lyon 1er (69)", "id": "lyon-1er-69"},
+        ]
+    }
+    with mock.patch(
+        "accueil.views.urllib.request.urlopen",
+        side_effect=lambda *a, **k: io.BytesIO(json.dumps(feed).encode()),
+    ):
+        data = client.get("/api/villes?q=lyon").json()
+    assert data["resultats"][0] == {"slug": "lyon-69", "label": "Lyon (69)"}
+    assert len(data["resultats"]) == 2
+
+
+def test_villes_requete_vide(client):
+    # No query -> no upstream call, empty list.
+    assert client.get("/api/villes").json() == {"resultats": []}
+
+
+def test_hero_cible_les_trois_recherches(client):
+    contenu = client.get("/").content.decode()
+    assert "emplois.inclusion.beta.gouv.fr/search/employers" in contenu
+    assert "emplois.inclusion.beta.gouv.fr/search/prescribers" in contenu
+    assert "emplois.inclusion.beta.gouv.fr/search/services" in contenu
+    assert 'name="category"' in contenu  # services thematic select
+    assert 'value="creer-une-entreprise"' in contenu
+
+
+def test_stats_repli_si_flux_indisponible(client):
+    # When the feed cannot be reached, the last known values are shown.
+    with mock.patch("accueil.views.urllib.request.urlopen", side_effect=OSError("down")):
+        contenu = client.get("/").content.decode().replace(" ", " ")
+    assert "11 553" in contenu
+    assert "198 430" in contenu
+    assert "5 310" in contenu
     # The height reporter, without which the iframe embed cannot size itself.
     assert "/static/accueil/js/resize-reporter.js" in contenu
 

@@ -2,163 +2,255 @@
 {% load static %}
 
 {% block head %}
+  <script src="{% static 'accueil/js/hero.js' %}" defer></script>
+  <script src="{% static 'accueil/js/villes.js' %}" defer></script>
+  <script src="{% static 'accueil/js/select-theme.js' %}" defer></script>
   <script src="{% static 'accueil/js/profils.js' %}" defer></script>
 {% endblock %}
 
 {% block contenu %}
     <main>
-      <section class="section profils" id="pour-qui">
-        <div class="section__contenu">
-          <p class="section__surtitre">Pour qui&nbsp;?</p>
-          <h2 class="section__titre">Un parcours adapté à chaque profil</h2>
+      <section class="hero">
+        <div class="hero__contenu">
+          <img class="hero__visuel" src="{% static 'accueil/img/hero.webp' %}" alt="" width="485" height="272">
 
-          {# Tab bar: revealed by js/profils.js; without JS the four profiles are stacked. #}
-          <div class="profils__onglets" role="tablist" aria-label="Profils" hidden>
-            <button type="button" class="profils__onglet est-actif" role="tab" id="onglet-prescripteur"
-                    aria-controls="profil-prescripteur" aria-selected="true">
-              <svg class="icone" aria-hidden="true"><use href="#ri-home-smile-2-line"/></svg>
-              Prescripteur / orienteur
-            </button>
-            <button type="button" class="profils__onglet" role="tab" id="onglet-employeur"
-                    aria-controls="profil-employeur" aria-selected="false">
-              <svg class="icone" aria-hidden="true"><use href="#ri-community-line"/></svg>
-              Employeur inclusif
-            </button>
-            <button type="button" class="profils__onglet" role="tab" id="onglet-institution"
-                    aria-controls="profil-institution" aria-selected="false">
-              <svg class="icone" aria-hidden="true"><use href="#ri-government-line"/></svg>
-              Institution partenaire
-            </button>
-            <button type="button" class="profils__onglet" role="tab" id="onglet-candidat"
-                    aria-controls="profil-candidat" aria-selected="false">
-              <svg class="icone" aria-hidden="true"><use href="#ri-user-line"/></svg>
-              Candidat
-            </button>
+          <h1 class="hero__titre">Tous les emplois, les services inclusifs,<br>et les accompagnateurs autour de vous</h1>
+          <p class="hero__sous-titre">Que recherchez-vous&nbsp;?</p>
+
+          <div class="recherche">
+            <div class="recherche__onglets" role="tablist" aria-label="Type de recherche">
+              <button type="button" class="recherche__onglet est-actif" role="tab"
+                      id="onglet-emploi" aria-controls="form-emploi" aria-selected="true">
+                <svg class="icone" aria-hidden="true"><use href="#ri-briefcase-line"/></svg>
+                <span class="onglet__court">Emploi</span><span class="onglet__long">Un emploi inclusif</span>
+              </button>
+              <button type="button" class="recherche__onglet" role="tab"
+                      id="onglet-insertion" aria-controls="form-insertion" aria-selected="false">
+                <svg class="icone" aria-hidden="true"><use href="#ri-compass-3-line"/></svg>
+                <span class="onglet__court">Insertion</span><span class="onglet__long">Une offre d'insertion</span>
+              </button>
+              <button type="button" class="recherche__onglet" role="tab"
+                      id="onglet-accompagnateur" aria-controls="form-accompagnateur" aria-selected="false">
+                <svg class="icone" aria-hidden="true"><use href="#ri-user-line"/></svg>
+                <span class="onglet__court">Accompagnateur</span><span class="onglet__long">Un accompagnateur</span>
+              </button>
+            </div>
+
+            <form class="recherche__barre" id="form-emploi" role="search" method="get" target="_top"
+                  action="https://emplois.inclusion.beta.gouv.fr/search/employers"
+                  data-recherche-ville
+                  data-resultats="https://emplois.inclusion.beta.gouv.fr/search/employers/results">
+              <div class="champ champ--ville">
+                <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+                <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
+                       placeholder="Rechercher autour de …"
+                       role="combobox" aria-expanded="false" aria-autocomplete="list"
+                       aria-controls="sugg-emploi" data-ville-saisie>
+                <input type="hidden" name="city" data-ville-slug>
+                <ul class="suggestions" id="sugg-emploi" role="listbox" aria-label="Villes proposées" hidden></ul>
+              </div>
+              <button type="submit" class="bouton recherche__bouton">
+                <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+                <span>Rechercher</span>
+              </button>
+            </form>
+
+            <form class="recherche__barre" id="form-accompagnateur" role="search" method="get" target="_top" hidden
+                  action="https://emplois.inclusion.beta.gouv.fr/search/prescribers"
+                  data-recherche-ville
+                  data-resultats="https://emplois.inclusion.beta.gouv.fr/search/prescribers/results">
+              <div class="champ champ--ville">
+                <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+                <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
+                       placeholder="Rechercher autour de…"
+                       role="combobox" aria-expanded="false" aria-autocomplete="list"
+                       aria-controls="sugg-accompagnateur" data-ville-saisie>
+                <input type="hidden" name="city" data-ville-slug>
+                <ul class="suggestions" id="sugg-accompagnateur" role="listbox" aria-label="Villes proposées" hidden></ul>
+              </div>
+              <button type="submit" class="bouton recherche__bouton">
+                <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+                <span>Rechercher</span>
+              </button>
+            </form>
+
+            <form class="recherche__barre" id="form-insertion" role="search" method="get" target="_top" hidden
+                  action="https://emplois.inclusion.beta.gouv.fr/search/services"
+                  data-recherche-ville
+                  data-resultats="https://emplois.inclusion.beta.gouv.fr/search/services/results">
+              <div class="champ champ--ville">
+                <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+                <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
+                       placeholder="Ville ou code postal"
+                       role="combobox" aria-expanded="false" aria-autocomplete="list"
+                       aria-controls="sugg-insertion" data-ville-saisie>
+                <input type="hidden" name="city" data-ville-slug>
+                <ul class="suggestions" id="sugg-insertion" role="listbox" aria-label="Villes proposées" hidden></ul>
+              </div>
+              <span class="champ__separateur" aria-hidden="true"></span>
+              <div class="champ champ--theme" data-select-theme>
+                <svg class="icone" aria-hidden="true"><use href="#ri-compass-3-line"/></svg>
+                <select class="champ__select" name="category" aria-label="Thématique">
+                  <option value="">Sélectionnez une thématique</option>
+                  <option value="choisir-un-metier">Choisir un métier</option>
+                  <option value="creer-une-entreprise">Créer une entreprise</option>
+                  <option value="difficultes-administratives-ou-juridiques">Difficultés administratives ou juridiques</option>
+                  <option value="difficultes-financieres">Difficultés financières</option>
+                  <option value="equipement-et-alimentation">Équipement et alimentation</option>
+                  <option value="famille">Famille</option>
+                  <option value="lecture-ecriture-calcul">Lecture, écriture et calcul</option>
+                  <option value="logement-hebergement">Logement et hébergement</option>
+                  <option value="mobilite">Mobilité</option>
+                  <option value="numerique">Numérique</option>
+                  <option value="preparer-sa-candidature">Préparer sa candidature</option>
+                  <option value="remobilisation">Remobilisation</option>
+                  <option value="sante">Santé</option>
+                  <option value="se-former">Se former</option>
+                  <option value="souvrir-a-linternational">S'ouvrir à l'international</option>
+                  <option value="trouver-un-emploi">Trouver un emploi</option>
+                </select>
+              </div>
+              <button type="submit" class="bouton recherche__bouton">
+                <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+                <span>Rechercher</span>
+              </button>
+            </form>
           </div>
 
-          <article class="profil" id="profil-prescripteur" role="tabpanel" aria-labelledby="onglet-prescripteur">
-            <div class="profil__grille">
-              <div>
-                <h3 class="profil__titre">Orientez vos candidats vers l'emploi durable</h3>
-                <p class="profil__chapo">Adressez vos bénéficiaires aux employeurs inclusifs de votre territoire et suivez chaque parcours depuis votre espace.</p>
-                <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-                  <span>Créer un compte</span>
-                </a>
-              </div>
-              <ol class="profil__etapes">
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">1</span>
-                  <div><b class="etape__titre">Créer votre compte prescripteur</b><span class="etape__detail">Avec ProConnect, en quelques minutes.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">2</span>
-                  <div><b class="etape__titre">Rechercher un employeur ou une solution</b><span class="etape__detail">Emplois inclusifs et services d'accompagnement, au même endroit.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">3</span>
-                  <div><b class="etape__titre">Adresser la candidature</b><span class="etape__detail">Le dossier de votre bénéficiaire suit, sans ressaisie.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">4</span>
-                  <div><b class="etape__titre">Suivre le parcours</b><span class="etape__detail">Candidatures, PASS IAE et récap de parcours dans votre espace.</span></div>
-                </li>
-              </ol>
-            </div>
-          </article>
+          <p class="hero__note">Recherche libre et sans compte. Créez un compte pour postuler, orienter ou publier.</p>
+        </div>
+      </section>
 
-          <article class="profil" id="profil-employeur" role="tabpanel" aria-labelledby="onglet-employeur">
-            <div class="profil__grille">
-              <div>
-                <h3 class="profil__titre">Recrutez et gérez vos PASS IAE en ligne</h3>
-                <p class="profil__chapo">SIAE, GEIQ, EA ou facilitateur&nbsp;: publiez vos postes et gérez vos obligations déclaratives sans changer d'outil.</p>
-                <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-                  <span>Créer un compte</span>
-                </a>
-              </div>
-              <ol class="profil__etapes">
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">1</span>
-                  <div><b class="etape__titre">Créer le compte de votre structure</b><span class="etape__detail">Et inviter vos collaborateurs à vous rejoindre.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">2</span>
-                  <div><b class="etape__titre">Publier vos fiches de poste</b><span class="etape__detail">Visibles des candidats et des prescripteurs habilités.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">3</span>
-                  <div><b class="etape__titre">Recevoir et traiter les candidatures</b><span class="etape__detail">Trier, répondre et planifier vos entretiens.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">4</span>
-                  <div><b class="etape__titre">Obtenir le PASS IAE dès l'embauche</b><span class="etape__detail">Et déclarer votre activité pour vos financements.</span></div>
-                </li>
-              </ol>
-            </div>
-          </article>
+      <section class="stats" aria-label="Chiffres clés">
+        <div class="section__contenu stats__grille">
+          <div class="stat">
+            <img class="stat__illu" src="{% static 'accueil/img/stat-emploi.webp' %}" alt="" width="122" height="86">
+            <b class="stat__nombre">{{ chiffres.offres_ouvertes }}</b>
+            <span class="stat__label">offres d'emploi inclusif</span>
+          </div>
+          <div class="stat">
+            <img class="stat__illu" src="{% static 'accueil/img/stat-insertion.webp' %}" alt="" width="122" height="86">
+            <b class="stat__nombre">{{ chiffres.services_di }}</b>
+            <span class="stat__label">offres d'insertion</span>
+          </div>
+          <div class="stat">
+            <img class="stat__illu" src="{% static 'accueil/img/stat-prescripteurs.webp' %}" alt="" width="122" height="86">
+            <b class="stat__nombre">{{ chiffres.prescripteurs_actifs }}</b>
+            <span class="stat__label">prescripteurs habilités</span>
+          </div>
+        </div>
+      </section>
 
-          <article class="profil" id="profil-institution" role="tabpanel" aria-labelledby="onglet-institution">
-            <div class="profil__grille">
-              <div>
-                <h3 class="profil__titre">Pilotez l'insertion sur votre territoire</h3>
-                <p class="profil__chapo">DDETS, conseils départementaux, France Travail&nbsp;: disposez d'une vision consolidée de l'offre et des parcours d'insertion.</p>
-                <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-                  <span>Créer un compte</span>
-                </a>
-              </div>
-              <ol class="profil__etapes">
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">1</span>
-                  <div><b class="etape__titre">Créer votre compte institution</b><span class="etape__detail">Avec votre adresse professionnelle, via ProConnect.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">2</span>
-                  <div><b class="etape__titre">Accéder aux tableaux de bord</b><span class="etape__detail">Indicateurs territoriaux actualisés en continu.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">3</span>
-                  <div><b class="etape__titre">Suivre le déploiement des dispositifs</b><span class="etape__detail">IAE, immersions, accompagnement&nbsp;: une vision d'ensemble.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">4</span>
-                  <div><b class="etape__titre">Exploiter les données ouvertes</b><span class="etape__detail">Le socle data·inclusion, documenté et réutilisable.</span></div>
-                </li>
-              </ol>
+      <section class="section section--grisee bloc-recherche" id="emplois" data-recherche-section>
+        <div class="section__contenu">
+          <p class="section__surtitre">Je fais une recherche</p>
+          <h2 class="section__titre">Emplois inclusifs</h2>
+          <div class="bloc-recherche__grille">
+            <div class="cartes-media">
+              <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=G" target="_top">
+                <div class="carte-media__media">
+                  <img src="{% static 'accueil/img/emploi-restauration.jpg' %}" alt="" loading="lazy">
+                  <span class="badge badge--emploi">Emploi</span>
+                </div>
+                <div class="carte-media__corps">
+                  <div class="carte-media__entete">
+                    <span class="carte-media__pastille carte-media__pastille--emploi">
+                    <svg class="icone" aria-hidden="true"><use href="#ri-restaurant-line"/></svg>
+                  </span>
+                    <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+                  </div>
+                  <h3 class="carte-media__titre">Les métiers de la restauration recrutent</h3>
+                  <p class="carte-media__stat">+250 postes ce trimestre</p>
+                  <p class="carte-media__texte">Les entreprises et chantiers d'insertion forment leurs salariés aux métiers de la restauration.</p>
+                </div>
+              </a>
+              <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=F" target="_top">
+                <div class="carte-media__media">
+                  <img src="{% static 'accueil/img/emploi-batiment.jpg' %}" alt="" loading="lazy">
+                  <span class="badge badge--emploi">Emploi</span>
+                </div>
+                <div class="carte-media__corps">
+                  <div class="carte-media__entete">
+                    <span class="carte-media__pastille carte-media__pastille--emploi">
+                    <svg class="icone" aria-hidden="true"><use href="#ri-hammer-line"/></svg>
+                  </span>
+                    <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+                  </div>
+                  <h3 class="carte-media__titre">Le bâtiment cherche des bras</h3>
+                  <p class="carte-media__stat">180 offres ce mois-ci</p>
+                  <p class="carte-media__texte">Chantiers, rénovation, second œuvre&nbsp;: de nombreuses structures recrutent en insertion.</p>
+                </div>
+              </a>
             </div>
-          </article>
 
-          <article class="profil" id="profil-candidat" role="tabpanel" aria-labelledby="onglet-candidat">
-            <div class="profil__grille">
-              <div>
-                <h3 class="profil__titre">Trouvez un emploi près de chez vous</h3>
-                <p class="profil__chapo">Recherchez un emploi inclusif, postulez et suivez vos candidatures — seul ou avec votre accompagnateur.</p>
-                <a class="bouton" href="#">
-                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-                  <span>Créer un compte</span>
-                </a>
-              </div>
-              <ol class="profil__etapes">
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">1</span>
-                  <div><b class="etape__titre">Créer votre compte</b><span class="etape__detail">En quelques minutes, sans justificatif.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">2</span>
-                  <div><b class="etape__titre">Rechercher un emploi inclusif</b><span class="etape__detail">Autour de chez vous, selon vos critères.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">3</span>
-                  <div><b class="etape__titre">Postuler ou être accompagné</b><span class="etape__detail">Seul ou avec l'aide d'un prescripteur.</span></div>
-                </li>
-                <li class="etape">
-                  <span class="etape__numero" aria-hidden="true">4</span>
-                  <div><b class="etape__titre">Suivre vos candidatures</b><span class="etape__detail">Et retrouver votre récap de parcours à tout moment.</span></div>
-                </li>
-              </ol>
+            <div class="pastilles">
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=H" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-building-2-line"/></svg> Industrie</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=N" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-truck-line"/></svg> Transport et logistique</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=A" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-plant-line"/></svg> Agriculture et pêche</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=I" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-tools-line"/></svg> Installation et maintenance</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=L" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-mic-line"/></svg> Spectacle</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=C" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-bank-line"/></svg> Banque, assurance, immobilier</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=B" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-brush-line"/></svg> Art et façonnage d'ouvrages d'art</a>
+              <a class="lien-fleche" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results" target="_top">Voir tous les secteurs <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg></a>
             </div>
-          </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section bloc-recherche bloc-recherche--inverse" id="services" data-recherche-section>
+        <div class="section__contenu">
+          <p class="section__surtitre">Je fais une recherche</p>
+          <h2 class="section__titre">Services d'insertion</h2>
+          <div class="bloc-recherche__grille">
+            <div class="pastilles">
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=choisir-un-metier" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-briefcase-line"/></svg> Choisir un métier</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=mobilite" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-car-line"/></svg> Mobilité</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=famille" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-group-line"/></svg> Famille</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=creer-une-entreprise" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-rocket-line"/></svg> Créer une entreprise</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=preparer-sa-candidature" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-file-list-3-line"/></svg> Préparer sa candidature</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=se-former" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-graduation-cap-line"/></svg> Se former</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=difficultes-financieres" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-money-euro-circle-line"/></svg> Difficultés financières</a>
+              <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=sante" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-heart-pulse-line"/></svg> Santé</a>
+              <a class="lien-fleche" href="https://emplois.inclusion.beta.gouv.fr/search/services/results" target="_top">Voir toutes les thématiques <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg></a>
+            </div>
+
+            <div class="cartes-media">
+              <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=mobilite" target="_top">
+                <div class="carte-media__media">
+                  <img src="{% static 'accueil/img/service-mobilite.jpg' %}" alt="" loading="lazy">
+                  <span class="badge badge--service">Service</span>
+                </div>
+                <div class="carte-media__corps">
+                  <div class="carte-media__entete">
+                    <span class="carte-media__pastille carte-media__pastille--service">
+                    <svg class="icone" aria-hidden="true"><use href="#ri-car-line"/></svg>
+                  </span>
+                    <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+                  </div>
+                  <h3 class="carte-media__titre">La mobilité, un frein en moins</h3>
+                  <p class="carte-media__stat carte-media__stat--service">Permis, transport, véhicule</p>
+                  <p class="carte-media__texte">Aide au permis, location solidaire, covoiturage&nbsp;: des solutions pour vos déplacements vers l'emploi.</p>
+                </div>
+              </a>
+              <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=numerique" target="_top">
+                <div class="carte-media__media">
+                  <img src="{% static 'accueil/img/service-numerique.jpg' %}" alt="" loading="lazy">
+                  <span class="badge badge--service">Service</span>
+                </div>
+                <div class="carte-media__corps">
+                  <div class="carte-media__entete">
+                    <span class="carte-media__pastille carte-media__pastille--service">
+                    <svg class="icone" aria-hidden="true"><use href="#ri-computer-line"/></svg>
+                  </span>
+                    <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+                  </div>
+                  <h3 class="carte-media__titre">Le numérique s'ouvre à l'inclusion</h3>
+                  <p class="carte-media__stat carte-media__stat--service">60 parcours de formation</p>
+                  <p class="carte-media__texte">Développement, support, data&nbsp;: de nouveaux métiers accessibles via des parcours adaptés.</p>
+                </div>
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -188,11 +280,6 @@
               <p class="carte__texte">Suivre vos indicateurs et les tableaux de bord territoriaux, actualisés en continu.</p>
             </div>
             <div class="carte">
-              <span class="carte__pictogramme carte__pictogramme--communaute"><svg class="icone" aria-hidden="true"><use href="#ri-group-line"/></svg></span>
-              <h3 class="carte__titre">Échanger entre professionnels</h3>
-              <p class="carte__texte">Poser vos questions et partager vos pratiques avec les professionnels de l'inclusion.</p>
-            </div>
-            <div class="carte">
               <span class="carte__pictogramme carte__pictogramme--parcours"><svg class="icone" aria-hidden="true"><use href="#ri-route-line"/></svg></span>
               <h3 class="carte__titre">Accompagner les parcours</h3>
               <p class="carte__texte">Centraliser le suivi de vos bénéficiaires&nbsp;: récap de parcours, immersions professionnelles, historique partagé.</p>
@@ -201,100 +288,209 @@
         </div>
       </section>
 
-      <section class="section espace" id="un-seul-espace">
-        <div class="section__contenu espace__grille">
-          <div>
-            <p class="section__surtitre">Un seul espace</p>
-            <h2 class="section__titre">Vos services deviennent des fonctionnalités</h2>
-            <p class="espace__texte">Les services que vous utilisiez séparément — chacun avec son adresse et son compte — sont désormais rassemblés. Vous vous connectez une seule fois et retrouvez tout votre environnement de travail.</p>
-            <p class="espace__texte">Vos données circulent entre les fonctionnalités&nbsp;: plus de ressaisie, plus de double compte.</p>
-            <p class="espace__garantie">
-              <svg class="icone" aria-hidden="true"><use href="#ri-shield-star-line"/></svg>
-              Un compte unique, sécurisé par ProConnect
-            </p>
-          </div>
-          <div class="services">
-            <div class="service">
-              <span class="service__puce service__puce--emploi" aria-hidden="true"></span>
-              <span class="service__nom">Les emplois de l'inclusion</span>
-              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
-              <span class="service__description">Recrutement, candidatures et PASS IAE</span>
-            </div>
-            <div class="service">
-              <span class="service__puce service__puce--info" aria-hidden="true"></span>
-              <span class="service__nom">DORA</span>
-              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
-              <span class="service__description">Recherche de solutions d'insertion</span>
-            </div>
-            <div class="service">
-              <span class="service__puce service__puce--pilotage" aria-hidden="true"></span>
-              <span class="service__nom">Le pilotage de l'inclusion</span>
-              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
-              <span class="service__description">Tableaux de bord et statistiques</span>
-            </div>
-            <div class="service">
-              <span class="service__puce service__puce--communaute" aria-hidden="true"></span>
-              <span class="service__nom">La communauté de l'inclusion</span>
-              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
-              <span class="service__description">Échanges entre professionnels</span>
-            </div>
-            <div class="service">
-              <span class="service__puce service__puce--important" aria-hidden="true"></span>
-              <span class="service__nom">Mon Récap'</span>
-              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
-              <span class="service__description">Suivi des parcours</span>
-            </div>
-            <div class="service">
-              <span class="service__puce service__puce--ciel" aria-hidden="true"></span>
-              <span class="service__nom">Immersion Facilitée</span>
-              <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
-              <span class="service__description">Immersions professionnelles</span>
-            </div>
-            <p class="services__note">Le marché de l'inclusion reste un service indépendant.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="section section--lisere temoignages" id="temoignages">
+      <section class="section temoignages" id="temoignages">
         <div class="section__contenu">
           <p class="section__surtitre">Témoignages</p>
           <h2 class="section__titre">Ils utilisent la plateforme au quotidien</h2>
-          <div class="temoignages__grille">
-            <figure class="temoignage">
-              <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
-              <blockquote class="temoignage__citation">Un seul compte pour tout mon quotidien&nbsp;: orienter, suivre, échanger. Je gagne un temps précieux à chaque accompagnement.</blockquote>
-              <figcaption class="temoignage__auteur">
-                <b class="temoignage__nom">Nadia B.</b>
-                <span class="temoignage__role">Conseillère en insertion, Mission locale — Lille</span>
-              </figcaption>
-            </figure>
-            <figure class="temoignage">
-              <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
-              <blockquote class="temoignage__citation">Nous délivrons les PASS IAE en ligne et suivons nos indicateurs au même endroit. L'outil s'est effacé derrière le métier.</blockquote>
-              <figcaption class="temoignage__auteur">
-                <b class="temoignage__nom">Marc D.</b>
-                <span class="temoignage__role">Directeur de SIAE — Nantes</span>
-              </figcaption>
-            </figure>
-            <figure class="temoignage">
-              <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
-              <blockquote class="temoignage__citation">Les tableaux de bord territoriaux nous donnent enfin une vision consolidée de l'offre d'insertion du département.</blockquote>
-              <figcaption class="temoignage__auteur">
-                <b class="temoignage__nom">Claire M.</b>
-                <span class="temoignage__role">Cheffe de projet insertion, Conseil départemental</span>
-              </figcaption>
-            </figure>
+          <div class="temoignages__conteneur">
+            <div class="temoignages__grille">
+              <figure class="temoignage">
+                <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
+                <blockquote class="temoignage__citation">Un seul compte pour tout mon quotidien&nbsp;: orienter, suivre, échanger. Je gagne un temps précieux à chaque accompagnement.</blockquote>
+                <figcaption class="temoignage__auteur">
+                  <b class="temoignage__nom">Nadia B.</b>
+                  <span class="temoignage__role">Conseillère en insertion, Mission locale — Lille</span>
+                </figcaption>
+              </figure>
+              <figure class="temoignage">
+                <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
+                <blockquote class="temoignage__citation">Nous délivrons les PASS IAE en ligne et suivons nos indicateurs au même endroit. L'outil s'est effacé derrière le métier.</blockquote>
+                <figcaption class="temoignage__auteur">
+                  <b class="temoignage__nom">Marc D.</b>
+                  <span class="temoignage__role">Directeur de SIAE — Nantes</span>
+                </figcaption>
+              </figure>
+            </div>
+            <img class="temoignages__illu" src="{% static 'accueil/img/temoignages-illustration.webp' %}" alt="" width="560" height="340">
           </div>
         </div>
       </section>
 
-      <section class="appel" id="creer-un-compte">
-        <h2 class="appel__titre">Créer votre compte ne prend que quelques minutes</h2>
-        <p class="appel__texte">Rejoignez les professionnels de l'inclusion déjà présents sur la plateforme.</p>
-        <a class="bouton bouton--inverse" href="#">
-          <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-          <span>Créer un compte</span>
-        </a>
+      <section class="section section--lisere profils" id="pour-qui">
+        <div class="section__contenu">
+          <p class="section__surtitre">Pour qui&nbsp;?</p>
+          <h2 class="section__titre">Un parcours adapté à chaque profil</h2>
+
+          <div class="profils__onglets" role="tablist" aria-label="Profils" hidden>
+            <button type="button" class="profils__onglet est-actif" role="tab" id="onglet-prescripteur"
+                    aria-controls="profil-prescripteur" aria-selected="true">
+              <svg class="icone" aria-hidden="true"><use href="#ri-home-smile-2-line"/></svg>
+              Prescripteur / orienteur
+            </button>
+            <button type="button" class="profils__onglet" role="tab" id="onglet-employeur"
+                    aria-controls="profil-employeur" aria-selected="false">
+              <svg class="icone" aria-hidden="true"><use href="#ri-community-line"/></svg>
+              Employeur inclusif
+            </button>
+            <button type="button" class="profils__onglet" role="tab" id="onglet-institution"
+                    aria-controls="profil-institution" aria-selected="false">
+              <svg class="icone" aria-hidden="true"><use href="#ri-government-line"/></svg>
+              Institution partenaire
+            </button>
+            <button type="button" class="profils__onglet" role="tab" id="onglet-candidat"
+                    aria-controls="profil-candidat" aria-selected="false">
+              <svg class="icone" aria-hidden="true"><use href="#ri-user-line"/></svg>
+              Candidat
+            </button>
+          </div>
+
+          <article class="profil" id="profil-prescripteur" role="tabpanel" aria-labelledby="onglet-prescripteur">
+            <div class="profil__grille">
+              <div>
+                <h3 class="profil__titre">Orientez vos candidats vers l'emploi durable</h3>
+                <p class="profil__chapo">Adressez vos bénéficiaires aux employeurs inclusifs de votre territoire et suivez chaque parcours depuis votre espace.</p>
+                <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/professional/user" target="_top">
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
+                  <span>S'inscrire</span>
+                </a>
+              </div>
+              <ol class="profil__etapes">
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">1</span>
+                  <div><b class="etape__titre">Créer votre compte prescripteur</b><span class="etape__detail">Avec ProConnect, en quelques minutes.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">2</span>
+                  <div><b class="etape__titre">Rechercher un employeur ou une solution</b><span class="etape__detail">Emplois inclusifs et services d'accompagnement, au même endroit.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">3</span>
+                  <div><b class="etape__titre">Adresser la candidature</b><span class="etape__detail">Le dossier de votre bénéficiaire suit, sans ressaisie.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">4</span>
+                  <div><b class="etape__titre">Suivre le parcours</b><span class="etape__detail">Candidatures, PASS IAE et récap de parcours dans votre espace.</span></div>
+                </li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="profil" id="profil-employeur" role="tabpanel" aria-labelledby="onglet-employeur">
+            <div class="profil__grille">
+              <div>
+                <h3 class="profil__titre">Recrutez et gérez vos PASS IAE en ligne</h3>
+                <p class="profil__chapo">SIAE, GEIQ, EA ou facilitateur&nbsp;: publiez vos postes et gérez vos obligations déclaratives sans changer d'outil.</p>
+                <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/professional/user" target="_top">
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
+                  <span>S'inscrire</span>
+                </a>
+              </div>
+              <ol class="profil__etapes">
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">1</span>
+                  <div><b class="etape__titre">Créer le compte de votre structure</b><span class="etape__detail">Et inviter vos collaborateurs à vous rejoindre.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">2</span>
+                  <div><b class="etape__titre">Publier vos fiches de poste</b><span class="etape__detail">Visibles des candidats et des prescripteurs habilités.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">3</span>
+                  <div><b class="etape__titre">Recevoir et traiter les candidatures</b><span class="etape__detail">Trier, répondre et planifier vos entretiens.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">4</span>
+                  <div><b class="etape__titre">Obtenir le PASS IAE dès l'embauche</b><span class="etape__detail">Et déclarer votre activité pour vos financements.</span></div>
+                </li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="profil" id="profil-institution" role="tabpanel" aria-labelledby="onglet-institution">
+            <div class="profil__grille">
+              <div>
+                <h3 class="profil__titre">Pilotez l'insertion sur votre territoire</h3>
+                <p class="profil__chapo">DDETS, conseils départementaux, France Travail&nbsp;: disposez d'une vision consolidée de l'offre et des parcours d'insertion.</p>
+                <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/professional/user" target="_top">
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
+                  <span>S'inscrire</span>
+                </a>
+              </div>
+              <ol class="profil__etapes">
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">1</span>
+                  <div><b class="etape__titre">Créer votre compte institution</b><span class="etape__detail">Avec votre adresse professionnelle, via ProConnect.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">2</span>
+                  <div><b class="etape__titre">Accéder aux tableaux de bord</b><span class="etape__detail">Indicateurs territoriaux actualisés en continu.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">3</span>
+                  <div><b class="etape__titre">Suivre le déploiement des dispositifs</b><span class="etape__detail">IAE, immersions, accompagnement&nbsp;: une vision d'ensemble.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">4</span>
+                  <div><b class="etape__titre">Exploiter les données ouvertes</b><span class="etape__detail">Le socle data·inclusion, documenté et réutilisable.</span></div>
+                </li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="profil" id="profil-candidat" role="tabpanel" aria-labelledby="onglet-candidat">
+            <div class="profil__grille">
+              <div>
+                <h3 class="profil__titre">Trouvez un emploi près de chez vous</h3>
+                <p class="profil__chapo">Recherchez un emploi inclusif, postulez et suivez vos candidatures — seul ou avec votre accompagnateur.</p>
+                <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/job_seeker/start" target="_top">
+                  <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
+                  <span>S'inscrire</span>
+                </a>
+              </div>
+              <ol class="profil__etapes">
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">1</span>
+                  <div><b class="etape__titre">Créer votre compte</b><span class="etape__detail">En quelques minutes, sans justificatif.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">2</span>
+                  <div><b class="etape__titre">Rechercher un emploi inclusif</b><span class="etape__detail">Autour de chez vous, selon vos critères.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">3</span>
+                  <div><b class="etape__titre">Postuler ou être accompagné</b><span class="etape__detail">Seul ou avec l'aide d'un prescripteur.</span></div>
+                </li>
+                <li class="etape">
+                  <span class="etape__numero" aria-hidden="true">4</span>
+                  <div><b class="etape__titre">Suivre vos candidatures</b><span class="etape__detail">Et retrouver votre récap de parcours à tout moment.</span></div>
+                </li>
+              </ol>
+            </div>
+          </article>
+        </div>
       </section>
+
+      <dialog class="modale-ville" id="modale-ville" aria-labelledby="modale-ville-titre">
+        <form class="modale-ville__form" data-modale-form>
+          <button type="button" class="modale-ville__fermer" aria-label="Fermer" data-modale-fermer>
+            <svg class="icone" aria-hidden="true"><use href="#ri-close-line"/></svg>
+          </button>
+          <h2 class="modale-ville__titre" id="modale-ville-titre">Autour de quelle ville&nbsp;?</h2>
+          <p class="modale-ville__contexte" data-modale-contexte></p>
+          <div class="ville-filtre__box">
+            <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+            <input class="ville-filtre__saisie" type="search" autocomplete="off" aria-label="Ville"
+                   placeholder="Ex.&nbsp;: Lyon, Marseille, Lille…"
+                   role="combobox" aria-expanded="false" aria-autocomplete="list"
+                   aria-controls="sugg-modale" data-ville-saisie>
+            <input type="hidden" data-ville-slug>
+            <ul class="suggestions" id="sugg-modale" role="listbox" aria-label="Villes proposées" hidden></ul>
+          </div>
+          <button type="submit" class="bouton modale-ville__valider">
+            <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+            <span>Voir les résultats</span>
+          </button>
+        </form>
+      </dialog>
     </main>
 {% endblock %}
