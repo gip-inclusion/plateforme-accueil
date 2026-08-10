@@ -5,7 +5,7 @@ description = "Vitrine server-rendered pour La plateforme de l'inclusion"
 requires-python = ">=3.14"
 license = "AGPL-3.0-or-later"
 dependencies = [
-    "django>=6.0",
+    "django>=6.0.8",
     "gunicorn>=23.0",
     "whitenoise>=6.8",
 ]
