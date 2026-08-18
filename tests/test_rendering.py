@@ -7,8 +7,8 @@ def test_index_renders(client):
     response = client.get("/")
     assert response.status_code == 200
     contenu = response.content.decode()
-    assert "<title>Plateforme de l'inclusion</title>" in contenu
-    assert "Un parcours adapté à chaque profil" in contenu
+    assert "<title>La plateforme de l'inclusion</title>" in contenu
+    assert "Des services utiles à tous les pros du Réseau pour l'emploi." in contenu
 
 
 def test_stats_affichent_le_flux(client):

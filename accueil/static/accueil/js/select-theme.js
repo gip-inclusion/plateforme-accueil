@@ -40,10 +40,18 @@
 
     var actif = -1;
 
-    var elems = options.map(function (opt, i) {
+    // The empty placeholder option stays in the <select> (it drives the button
+    // label and the no-JS fallback) but is not shown as a row in the dropdown.
+    // elems only holds the selectable rows; each keeps its <option> index.
+    var elems = [];
+    options.forEach(function (opt, i) {
+      if (opt.value === "") {
+        return;
+      }
       var li = document.createElement("li");
       li.className = "suggestions__item";
       li.id = prefixe + "-opt-" + i;
+      li.dataset.index = i;
       li.setAttribute("role", "option");
       li.setAttribute("aria-selected", opt.selected ? "true" : "false");
       if (opt.dataset.icon) {
@@ -54,12 +62,13 @@
         li.appendChild(svg);
       }
       li.appendChild(document.createTextNode(opt.textContent));
-      li.addEventListener("mousedown", function (e) {
-        e.preventDefault();
+      // Select on click (mouseup), not mousedown, so the :active state shows
+      // while the row is pressed before the dropdown closes.
+      li.addEventListener("click", function () {
         choisir(i);
       });
       liste.appendChild(li);
-      return li;
+      elems.push(li);
     });
 
     function majValeur() {
@@ -79,10 +88,21 @@
       }
     }
 
+    // elems position of the currently selected option (-1 when the placeholder
+    // is selected, so nothing is highlighted).
+    function positionActuelle() {
+      for (var i = 0; i < elems.length; i++) {
+        if (Number(elems[i].dataset.index) === select.selectedIndex) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
     function ouvrir() {
       liste.hidden = false;
       declencheur.setAttribute("aria-expanded", "true");
-      surligner(select.selectedIndex);
+      surligner(positionActuelle());
     }
 
     function fermer() {
@@ -119,7 +139,7 @@
         if (liste.hidden) {
           ouvrir();
         } else if (actif >= 0) {
-          choisir(actif);
+          choisir(Number(elems[actif].dataset.index));
         }
       } else if (e.key === "Escape") {
         fermer();
