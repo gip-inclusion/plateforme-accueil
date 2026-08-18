@@ -1,7 +1,8 @@
 /* Matomo Tag Manager container bootstrap.
  *
- * Vendor snippet, moved out of the page because inline <script> is banned
- * (see CLAUDE.md). Loaded from base.html so every page is measured.
+ * Vendor snippet, kept in its own file because the page carries no inline
+ * script. Loaded from base.html so every page is measured, and deliberately
+ * without defer: the container has to boot before the rest of the page.
  */
 
 var _mtm = (window._mtm = window._mtm || []);
