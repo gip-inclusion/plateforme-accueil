@@ -44,6 +44,11 @@ rendu client, pas de gros framework JS.
 La page est une liste de sections, pas un gros gabarit. `index.html` ne contient
 qu'une boucle : **on n'y ajoute jamais de HTML.**
 
+Deux sections qui affichent la même chose partagent un gabarit et se
+distinguent par des attributs déclarés (`anchor`, `modifiers`, et ce qui leur
+est propre) — voir `search.py`, `jobs.py` et `services.py`. On ne duplique pas
+un gabarit pour changer une classe CSS.
+
 Une section = deux fichiers, même clé :
 
 - `accueil/sections/<key>.py` — une classe `SectionType` décorée par
@@ -64,6 +69,9 @@ les en-têtes (`kicker`, `title`, `intro`) le sont partout, le reste non.
 Un texte qui contient du balisage ne devient pas éditable tel quel : le contenu
 d'un rédacteur n'est jamais marqué `safe`. Le titre du héros porte un saut de
 ligne et passe par `|linebreaksbr` (voir `hero.py`).
+
+Une liste répétable (cartes, raccourcis) se déclare avec `ListField`, dont
+chaque élément est validé par un formulaire ordinaire.
 
 Les valeurs `initial` sont du contenu de production : elles se relisent en revue
 comme du texte, pas comme du code.

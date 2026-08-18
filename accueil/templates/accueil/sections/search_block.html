@@ -1,0 +1,16 @@
+<section class="section {{ section.modifiers }}" id="{{ section.anchor }}" data-recherche-section>
+  <div class="section__contenu">
+    <p class="section__surtitre">{{ content.kicker }}</p>
+    <h2 class="section__titre">{{ content.title }}</h2>
+    <p class="section__intro">{{ content.intro }}</p>
+    <div class="bloc-recherche__grille">
+      {% if section.cards_first %}
+        {% include "accueil/sections/_search-cards.html" %}
+        {% include "accueil/sections/_search-shortcuts.html" %}
+      {% else %}
+        {% include "accueil/sections/_search-shortcuts.html" %}
+        {% include "accueil/sections/_search-cards.html" %}
+      {% endif %}
+    </div>
+  </div>
+</section>

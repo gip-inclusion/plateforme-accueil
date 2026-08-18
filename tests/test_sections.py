@@ -1,5 +1,6 @@
 import pytest
 from django import forms
+from django.core.exceptions import ValidationError
 from django.template.loader import get_template
 from django.utils.html import escape
 
@@ -26,6 +27,18 @@ def test_every_section_has_its_template():
         get_template(section_type.template)  # raises TemplateDoesNotExist
 
 
+def _texts(value):
+    """Every string a declared default contains, lists and nested forms included."""
+    if isinstance(value, str):
+        yield from value.split("\n")  # the hero title is multi-line
+    elif isinstance(value, dict):
+        for nested in value.values():
+            yield from _texts(nested)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _texts(item)
+
+
 def test_every_opened_field_renders_its_default(client):
     # Whatever a section declares must actually reach the page: a field whose
     # template variable was forgotten would otherwise sit there editable and
@@ -33,8 +46,8 @@ def test_every_opened_field_renders_its_default(client):
     body = client.get("/").content.decode()
     for section in sections.registry.sections():
         for name, value in section.content.items():
-            for line in str(value).split("\n"):  # the hero title is multi-line
-                assert escape(line) in body, f"{section.key}.{name}"
+            for text in _texts(value):
+                assert escape(text) in body, f"{section.key}.{name}"
 
 
 def test_a_section_without_overrides_renders_the_code_values(client):
@@ -83,3 +96,43 @@ def test_registry_rejects_an_incomplete_section():
     registry = Registry()
     with pytest.raises(ValueError, match="`key` et `template`"):
         registry.register(type("Empty", (SectionType,), {}))
+
+
+class Item(forms.Form):
+    label = forms.CharField()
+
+
+def test_list_field_validates_each_item():
+    field = sections.ListField(Item)
+    assert field.clean([{"label": "Un"}, {"label": "Deux"}]) == [{"label": "Un"}, {"label": "Deux"}]
+
+
+def test_list_field_rejects_an_invalid_item():
+    field = sections.ListField(Item)
+    with pytest.raises(ValidationError, match="Élément 2"):
+        field.clean([{"label": "Un"}, {"label": ""}])
+
+
+def test_list_field_rejects_a_non_list():
+    with pytest.raises(ValidationError, match="liste"):
+        sections.ListField(Item).clean({"label": "Un"})
+
+
+def test_list_field_enforces_its_bounds():
+    with pytest.raises(ValidationError, match="au moins"):
+        sections.ListField(Item, min_num=2).clean([{"label": "Un"}])
+    with pytest.raises(ValidationError, match="au plus"):
+        sections.ListField(Item, max_num=1).clean([{"label": "Un"}, {"label": "Deux"}])
+
+
+def test_list_field_treats_empty_as_no_items():
+    assert sections.ListField(Item).clean(None) == []
+
+
+def test_the_two_search_blocks_share_one_template():
+    jobs, services = sections.jobs.Jobs, sections.services.Services
+    assert jobs.template == services.template
+    # They differ only in presentation, declared rather than forked into a
+    # second template.
+    assert jobs.cards_first != services.cards_first
+    assert (jobs.badge_kind, services.badge_kind) == ("emploi", "service")

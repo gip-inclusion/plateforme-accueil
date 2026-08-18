@@ -1,0 +1,6 @@
+<div class="pastilles">
+  {% for shortcut in content.shortcuts %}
+    <a class="pastille-lien" href="{{ shortcut.href }}" target="_top"><svg class="icone" aria-hidden="true"><use href="#{{ shortcut.icon }}"/></svg> {{ shortcut.label }}</a>
+  {% endfor %}
+  <a class="lien-fleche" href="{{ content.see_all_href }}" target="_top">{{ content.see_all_label }} <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg></a>
+</div>

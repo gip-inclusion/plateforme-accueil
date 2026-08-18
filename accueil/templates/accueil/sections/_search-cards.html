@@ -1,0 +1,22 @@
+{% load static %}
+<div class="cartes-media">
+  {% for card in content.cards %}
+    <a class="carte-media" href="{{ card.href }}" target="_top">
+      <div class="carte-media__media">
+        <img src="{% static card.image %}" alt="" loading="lazy">
+        <span class="badge badge--{{ section.badge_kind }}">{{ section.badge_label }}</span>
+      </div>
+      <div class="carte-media__corps">
+        <div class="carte-media__entete">
+          <span class="carte-media__pastille carte-media__pastille--{{ section.badge_kind }}">
+            <svg class="icone" aria-hidden="true"><use href="#{{ card.icon }}"/></svg>
+          </span>
+          <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+        </div>
+        <h3 class="carte-media__titre">{{ card.title }}</h3>
+        <p class="carte-media__stat{{ section.stat_modifier }}">{{ card.stat }}</p>
+        <p class="carte-media__texte">{{ card.text }}</p>
+      </div>
+    </a>
+  {% endfor %}
+</div>
