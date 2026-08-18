@@ -11,39 +11,35 @@ DEBUG = os.environ.get("DEBUG", "") == "1"
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
-# The admin is the stopgap editing UI, until /pilotage/ and Authentik land. It
-# is off unless explicitly switched on, so a deploy never exposes a login form
-# backed by local passwords.
+# The admin is the stopgap editing UI, until /pilotage/ and Authentik land.
+# Only its URLs are gated, so a deploy never exposes a login form backed by
+# local passwords. The apps stay installed in every environment: making
+# INSTALLED_APPS conditional would make the set of migrations depend on the
+# environment, which is a good way to lose a table.
 ADMIN_ENABLED = os.environ.get("ADMIN_ENABLED", "1" if DEBUG else "") == "1"
 
 INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.messages",
+    "django.contrib.sessions",
     "django.contrib.staticfiles",
     "accueil",
 ]
-if ADMIN_ENABLED:
-    INSTALLED_APPS += [
-        "django.contrib.admin",
-        "django.contrib.auth",
-        "django.contrib.contenttypes",
-        "django.contrib.messages",
-        "django.contrib.sessions",
-    ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csp.ContentSecurityPolicyMiddleware",
+    # Needed by the admin. None of them sets a cookie on the public page,
+    # which has no form that posts — there is a test pinning that down.
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
 ]
-if ADMIN_ENABLED:
-    # Only the admin needs sessions, authentication and CSRF; the public page
-    # has no form that posts, and must keep setting no cookie at all.
-    MIDDLEWARE += [
-        "django.contrib.sessions.middleware.SessionMiddleware",
-        "django.middleware.csrf.CsrfViewMiddleware",
-        "django.contrib.auth.middleware.AuthenticationMiddleware",
-        "django.contrib.messages.middleware.MessageMiddleware",
-    ]
 
 ROOT_URLCONF = "config.urls"
 
@@ -58,8 +54,6 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ]
-            if ADMIN_ENABLED
-            else []
         },
     },
 ]

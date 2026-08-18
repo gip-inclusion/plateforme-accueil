@@ -1,4 +1,7 @@
+from django.core.cache import cache
 from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 
 class Page(models.Model):
@@ -27,7 +30,15 @@ class Section(models.Model):
     kind = models.CharField(max_length=40, verbose_name="type de section")
     position = models.PositiveIntegerField(verbose_name="ordre")
     active = models.BooleanField(default=True, verbose_name="affichée")
-    content = models.JSONField(default=dict, blank=True, verbose_name="écarts au texte du code")
+    content = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="textes personnalisés",
+        help_text=(
+            "Uniquement les textes qui remplacent ceux du code, au format JSON — "
+            'par exemple {"note": "Mon texte"}. Vide : la section affiche les textes du code.'
+        ),
+    )
 
     class Meta:
         verbose_name = "section"
@@ -38,3 +49,14 @@ class Section(models.Model):
 
     def __str__(self):
         return f"{self.kind} ({self.position})"
+
+
+@receiver(post_save, sender=Section)
+@receiver(post_delete, sender=Section)
+def _forget_cached_overrides(sender, **kwargs):
+    """An edit shows up on the page at once, instead of waiting for the cache to
+    lapse. Across several instances the TTL remains the upper bound: this only
+    invalidates the cache of the process that saved."""
+    from accueil.content import OVERRIDES_CACHE_KEY
+
+    cache.delete(OVERRIDES_CACHE_KEY)

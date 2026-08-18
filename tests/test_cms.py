@@ -52,15 +52,23 @@ def test_an_override_replaces_the_code_text(page, client):
 def test_a_disabled_section_disappears(page, client):
     assert "temoignage" in client.get("/").content.decode()
     Section.objects.filter(kind="testimonials").update(active=False)
-    cache.clear()  # otherwise the overrides pointer still serves the old value
+    cache.clear()  # `update()` fires no signal, so the cache still holds
     assert "temoignage" not in client.get("/").content.decode()
 
 
-def test_overrides_are_cached_briefly(page, client):
+def test_saving_a_section_shows_up_at_once(page, client):
+    assert "temoignage" in client.get("/").content.decode()
+    section = Section.objects.get(kind="testimonials")
+    section.active = False
+    section.save()
+    assert "temoignage" not in client.get("/").content.decode()
+
+
+def test_a_queryset_update_still_waits_for_the_cache(page, client):
     client.get("/")
+    # `update()` bypasses signals, and another instance's cache cannot be
+    # invalidated anyway: OVERRIDES_CACHE_TTL remains the upper bound.
     Section.objects.filter(kind="testimonials").update(active=False)
-    # Deliberate: serverless instances cannot invalidate each other's local
-    # cache, so a change takes effect within OVERRIDES_CACHE_TTL, not instantly.
     assert "temoignage" in client.get("/").content.decode()
 
 
