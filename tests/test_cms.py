@@ -1,3 +1,4 @@
+import json
 from unittest import mock
 
 import pytest
@@ -9,8 +10,10 @@ from django.test import override_settings
 from django.utils.html import escape
 
 from accueil import content
+from accueil.forms import section_form_class
 from accueil.models import Page, Section
 from accueil.sections import registry
+from accueil.sections.features import Features
 
 
 # Every test here needs the database; the suite skips them when it is absent.
@@ -159,3 +162,56 @@ def test_a_javascript_url_never_reaches_the_page(page, client):
     Section.objects.filter(kind="jobs").update(content={"see_all_href": "javascript:alert(1)"})
     cache.clear()
     assert "javascript:alert(1)" not in client.get("/").content.decode()
+
+
+def _submitted(section_type, **changes):
+    """A full, valid submission for a section, with the given fields changed."""
+    defaults = section_type.defaults()
+    data = {"position": 10, "active": "on"}
+    for name, value in defaults.items():
+        data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
+    data.update(changes)
+    return data
+
+
+def test_editing_stores_only_what_changed(page):
+    section = Section.objects.get(kind="features")
+    form_class = section_form_class(Features)
+    form = form_class(_submitted(Features), instance=section)
+    assert form.is_valid(), form.errors
+    form.save()
+    section.refresh_from_db()
+    # Nothing was touched, so nothing is stored: the page still follows the code.
+    assert section.content == {}
+
+
+def test_editing_stores_the_difference(page):
+    section = Section.objects.get(kind="features")
+    form = section_form_class(Features)(_submitted(Features, title="Un autre titre"), instance=section)
+    assert form.is_valid(), form.errors
+    form.save()
+    section.refresh_from_db()
+    assert section.content == {"title": "Un autre titre"}
+
+
+def test_editing_reports_invalid_json(page):
+    section = Section.objects.get(kind="features")
+    form = section_form_class(Features)(_submitted(Features, steps="{pas du json"), instance=section)
+    assert not form.is_valid()
+    assert "JSON invalide" in form.errors["steps"][0]
+
+
+def test_editing_reports_an_invalid_list_item(page):
+    section = Section.objects.get(kind="features")
+    data = _submitted(Features, steps=json.dumps([{"icon": "ri-x", "title": ""}]))
+    form = section_form_class(Features)(data, instance=section)
+    assert not form.is_valid()
+    assert "Élément 1" in form.errors["steps"][0]
+
+
+def test_the_editor_is_seeded_with_what_the_page_shows(page):
+    section = Section.objects.get(kind="features")
+    section.content = {"title": "Titre édité"}
+    form = section_form_class(Features)(instance=section)
+    assert form.fields["title"].initial == "Titre édité"
+    assert form.fields["kicker"].initial == Features.defaults()["kicker"]

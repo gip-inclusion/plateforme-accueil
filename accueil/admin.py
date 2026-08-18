@@ -8,6 +8,7 @@ mounted when ADMIN_ENABLED is set.
 
 from django.contrib import admin
 
+from accueil.forms import SectionForm, section_form_class
 from accueil.models import Page, Section
 from accueil.sections import registry
 
@@ -47,8 +48,15 @@ class SectionAdmin(admin.ModelAdmin):
     list_editable = ("position", "active")
     list_filter = ("active",)
     ordering = ("position",)
-    fields = ("page", "kind", "position", "active", "content")
-    readonly_fields = ("page", "kind")
+    form = SectionForm
+
+    def get_form(self, request, obj=None, **kwargs):
+        # The editable fields are whatever the section type declares, so the
+        # form class depends on the row being edited.
+        declared = _declared(obj.kind) if obj else None
+        if declared is not None:
+            kwargs["form"] = section_form_class(declared)
+        return super().get_form(request, obj, **kwargs)
 
     @admin.display(description="section", ordering="position")
     def name(self, section):
