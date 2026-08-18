@@ -13,6 +13,13 @@ class Hero(SectionType):
     template = "accueil/sections/hero.html"
 
     class Form(forms.Form):
+        # Stored with a newline and rendered with |linebreaksbr: editor copy is
+        # never marked safe, so the <br> cannot come from the field itself.
+        title = forms.CharField(
+            label="Titre",
+            widget=forms.Textarea,
+            initial="Tous les emplois, les services inclusifs,\net les accompagnateurs autour de vous",
+        )
         # Reference example of an opened field: the literal moved from the
         # template to `initial`, and the template now reads `content.note`.
         # Every other string on the page is still literal, which is fine.

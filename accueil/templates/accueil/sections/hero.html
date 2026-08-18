@@ -3,7 +3,7 @@
   <div class="hero__contenu">
     <img class="hero__visuel" src="{% static 'accueil/img/hero.webp' %}" alt="" width="485" height="272">
 
-    <h1 class="hero__titre">Tous les emplois, les services inclusifs,<br>et les accompagnateurs autour de vous</h1>
+    <h1 class="hero__titre">{{ content.title|linebreaksbr }}</h1>
 
     <div class="recherche">
       <div class="recherche__onglets" role="tablist" aria-label="Type de recherche">

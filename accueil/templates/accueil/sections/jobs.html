@@ -1,9 +1,9 @@
 {% load static %}
 <section class="section section--grisee bloc-recherche" id="emplois" data-recherche-section>
   <div class="section__contenu">
-    <p class="section__surtitre">L'inclusion par l'emploi</p>
-    <h2 class="section__titre">Des postes en entreprises et structures d'insertion, partout en France.</h2>
-    <p class="section__intro">Les employeurs inclusifs embauchent en priorité les personnes éloignées de l'emploi. Choisissez un secteur pour découvrir les offres près de chez vous.</p>
+    <p class="section__surtitre">{{ content.kicker }}</p>
+    <h2 class="section__titre">{{ content.title }}</h2>
+    <p class="section__intro">{{ content.intro }}</p>
     <div class="bloc-recherche__grille">
       <div class="cartes-media">
         <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=G" target="_top">

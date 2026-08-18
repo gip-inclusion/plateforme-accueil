@@ -1,8 +1,8 @@
 {% load static %}
 <section class="stats" aria-label="Chiffres clés">
   <div class="section__contenu">
-    <p class="section__surtitre">Toutes les ressources, tous les partenaires</p>
-    <h2 class="section__titre">Ça se passe sur La plateforme de l'inclusion.</h2>
+    <p class="section__surtitre">{{ content.kicker }}</p>
+    <h2 class="section__titre">{{ content.title }}</h2>
     <div class="stats__grille">
     <div class="stat">
       <img class="stat__illu" src="{% static 'accueil/img/stat-emploi.webp' %}" alt="" width="122" height="86">

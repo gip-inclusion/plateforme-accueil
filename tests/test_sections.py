@@ -1,6 +1,7 @@
 import pytest
 from django import forms
 from django.template.loader import get_template
+from django.utils.html import escape
 
 from accueil import sections
 from accueil.sections.base import Registry, SectionType
@@ -23,6 +24,17 @@ def test_registry_lists_sections_in_order():
 def test_every_section_has_its_template():
     for section_type in sections.registry.types():
         get_template(section_type.template)  # raises TemplateDoesNotExist
+
+
+def test_every_opened_field_renders_its_default(client):
+    # Whatever a section declares must actually reach the page: a field whose
+    # template variable was forgotten would otherwise sit there editable and
+    # inert. Compared escaped, since Django escapes the apostrophes.
+    body = client.get("/").content.decode()
+    for section in sections.registry.sections():
+        for name, value in section.content.items():
+            for line in str(value).split("\n"):  # the hero title is multi-line
+                assert escape(line) in body, f"{section.key}.{name}"
 
 
 def test_a_section_without_overrides_renders_the_code_values(client):

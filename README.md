@@ -76,8 +76,9 @@ une interface d'édition — on le déplace dans un formulaire, où sa valeur
 <p class="hero__note">{{ content.note }}</p>
 ```
 
-Pas de migration, rien à reprendre : les autres textes restent en dur. Un seul
-champ est ouvert pour l'instant (`hero.py`), à titre d'exemple.
+Pas de migration, rien à reprendre : les autres textes restent en dur. Les
+en-têtes de toutes les sections (surtitre, titre, introduction) sont ouverts ;
+le reste attend un vrai besoin.
 
 Avec une base, chaque section a une ligne qui porte son ordre, sa visibilité et
 ses écarts de texte — une ligne vierge rend exactement le code. Sans base, ou si

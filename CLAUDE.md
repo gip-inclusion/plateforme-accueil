@@ -58,8 +58,12 @@ long terme : un contenu qui change une fois par an n'a rien à gagner à devenir
 
 Pour rendre un texte éditable, deux lignes et aucune migration : un champ dans
 `Form` dont `initial` reprend le texte exact, et `{{ content.<name> }}` à la
-place du littéral dans le gabarit. On ouvre un champ à la fois, quand le besoin
-est réel — voir `hero.py`, seul exemple ouvert à ce jour.
+place du littéral dans le gabarit. On ouvre un champ quand le besoin est réel —
+les en-têtes (`kicker`, `title`, `intro`) le sont partout, le reste non.
+
+Un texte qui contient du balisage ne devient pas éditable tel quel : le contenu
+d'un rédacteur n'est jamais marqué `safe`. Le titre du héros porte un saut de
+ligne et passe par `|linebreaksbr` (voir `hero.py`).
 
 Les valeurs `initial` sont du contenu de production : elles se relisent en revue
 comme du texte, pas comme du code.

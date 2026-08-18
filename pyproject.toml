@@ -36,6 +36,9 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 # Generated files: rewrapping them by hand is lost at the next makemigrations.
 "*/migrations/*" = ["E501"]
+# Section declarations hold production copy; sentences are read as text in
+# review, so they are not wrapped.
+"accueil/sections/*" = ["E501"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

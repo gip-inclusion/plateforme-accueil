@@ -2,13 +2,17 @@ import io
 import json
 from unittest import mock
 
+from django.utils.html import escape
+
 
 def test_index_renders(client):
     response = client.get("/")
     assert response.status_code == 200
     body = response.content.decode()
     assert "<title>La plateforme de l'inclusion</title>" in body
-    assert "Des services utiles à tous les pros du Réseau pour l'emploi." in body
+    # Escaped: the sentence now comes from a section field, and Django escapes
+    # the apostrophe.
+    assert escape("Des services utiles à tous les pros du Réseau pour l'emploi.") in body
 
 
 def test_figures_come_from_the_feed(client):

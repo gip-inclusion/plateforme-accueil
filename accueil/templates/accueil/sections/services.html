@@ -1,9 +1,9 @@
 {% load static %}
 <section class="section bloc-recherche bloc-recherche--inverse" id="services" data-recherche-section>
   <div class="section__contenu">
-    <p class="section__surtitre">Les services d'insertion</p>
-    <h2 class="section__titre">Un accompagnement pour lever les freins à l’emploi.</h2>
-    <p class="section__intro">Mobilité, logement, santé, formation… Sélectionnez une thématique pour trouver les services de votre territoire.</p>
+    <p class="section__surtitre">{{ content.kicker }}</p>
+    <h2 class="section__titre">{{ content.title }}</h2>
+    <p class="section__intro">{{ content.intro }}</p>
     <div class="bloc-recherche__grille">
       <div class="pastilles">
         <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=choisir-un-metier" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-briefcase-line"/></svg> Choisir un métier</a>
