@@ -173,31 +173,18 @@ p {
 }
 
 /* Tighten the title when a lead paragraph follows it. */
-.section__titre:has(+ .section__intro),
-.section__titre:has(+ .cibles) {
+.section__titre:has(+ .section__intro) {
   margin-bottom: 0.75rem;
+}
+
+.section__intro:has(+ .exemples) {
+  margin-bottom: 1rem;
 }
 
 .section__intro {
   max-width: 46rem;
   margin: 0 0 2rem;
   line-height: 1.6;
-  color: var(--secondary);
-}
-
-/* Illustrative list of the structure types a search section concerns.
-   Plain muted text (no pills/borders) so it never reads as clickable. */
-.cibles {
-  max-width: 60rem;
-  margin: 0 0 2rem;
-  font-size: 0.9375rem;
-  line-height: 1.7;
-  color: var(--fg-muted);
-}
-
-.cibles__label {
-  margin-right: 0.25rem;
-  font-weight: 700;
   color: var(--secondary);
 }
 
@@ -1208,8 +1195,14 @@ p {
 
 /* Accompagnateurs section: a plain informational list of types (not buttons)
    plus a single search CTA. */
-.types-list__intro {
-  margin: 0 0 0.625rem;
+/* Illustrative structure types: a plain "Par exemple :" caption above a
+   borderless icon+label list (not buttons). */
+.exemples {
+  margin: 0 0 1.75rem;
+}
+
+.exemples__legende {
+  margin: 0 0 0.75rem;
   font-size: 0.8125rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1221,7 +1214,7 @@ p {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1.75rem;
-  margin: 0 0 1.75rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
