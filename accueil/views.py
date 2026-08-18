@@ -25,7 +25,7 @@ KEY_FIGURES_FALLBACK = {
 # City autocomplete proxied from "les emplois de l'inclusion". The same endpoint
 # backs the employer and prescriber searches; it is proxied server-side because
 # it sends no CORS headers, so the embedded page cannot call it directly.
-CITIES_URL = "https://emplois.inclusion.beta.gouv.fr/autocomplete/cities"
+CITIES_URL = "https://plateforme.inclusion.gouv.fr/autocomplete/cities"
 CITIES_CACHE_TTL = 300  # seconds
 CITIES_MAX = 8
 
