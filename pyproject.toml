@@ -16,6 +16,7 @@ dev = [
     "ruff>=0.16.1",
     "pytest>=8.3",
     "pytest-django>=4.11",
+    "pytest-env>=1.1",
 ]
 
 [tool.ruff]
@@ -43,3 +44,6 @@ ban-relative-imports = "all"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
+# pytest-django configures Django before any conftest runs, so the admin gate
+# has to be set here. Off outside DEBUG, but the tests need it on.
+env = ["ADMIN_ENABLED=1"]

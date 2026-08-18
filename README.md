@@ -31,6 +31,16 @@ uv run python manage.py sync_sections   # une ligne par section déclarée
 Le port 5434 évite les collisions avec les bases d'autres projets ; il se change
 avec `POSTGRES_PORT`.
 
+En attendant l'interface d'édition, l'admin Django permet de réordonner, masquer
+et surcharger les sections. Il n'est branché que si `ADMIN_ENABLED=1` (implicite
+avec `DEBUG=1`) — jamais en production tant que l'authentification n'est pas en
+place :
+
+```bash
+uv run python manage.py createsuperuser
+make dev     # puis http://localhost:8000/admin/
+```
+
 Le déploiement est automatique à chaque push sur `main`.
 
 ## Structure de la page

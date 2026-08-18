@@ -1,6 +1,7 @@
 from unittest import mock
 
 import pytest
+from django.apps import apps
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import override_settings
@@ -80,3 +81,34 @@ def test_an_unreachable_database_falls_back_to_the_defaults(page, client):
         response = client.get("/")
     assert response.status_code == 200
     assert registry.sections()[0].content["note"] in response.content.decode()
+
+
+def test_the_admin_is_installed_in_tests():
+    # Guards the two tests below: without this the admin gate would make them
+    # pass vacuously.
+    assert apps.is_installed("django.contrib.admin")
+
+
+def test_the_admin_requires_a_login(client):
+    response = client.get("/admin/", follow=False)
+    assert response.status_code == 302
+    assert "/admin/login/" in response["Location"]
+
+
+def test_the_public_page_sets_no_cookie(client):
+    # The page is embedded in an iframe: adding sessions and CSRF for the admin
+    # must not start setting cookies on the public page.
+    assert client.get("/").cookies == {}
+
+
+def test_the_admin_is_off_by_default_outside_debug(monkeypatch):
+    # A deploy must never expose a login form backed by local passwords.
+    monkeypatch.delenv("ADMIN_ENABLED", raising=False)
+    monkeypatch.delenv("DEBUG", raising=False)
+    import importlib
+
+    import config.settings
+
+    reloaded = importlib.reload(config.settings)
+    assert reloaded.ADMIN_ENABLED is False
+    importlib.reload(config.settings)  # restore the module for the rest of the suite
