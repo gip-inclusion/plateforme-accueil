@@ -27,12 +27,13 @@ def _isolated_cache():
 
 @pytest.fixture(autouse=True)
 def _mocked_feed():
-    # Never reach the network in tests: serve the canned feed. A test that needs
-    # the failure path re-patches urlopen to raise.
+    # Never reach the network in tests: serve the canned feed to both callers
+    # (the key figures and the city proxy). A test that needs the failure path
+    # re-patches urlopen to raise.
     def _response(*args, **kwargs):
         return io.BytesIO(json.dumps(KEY_FIGURES_FEED).encode())
 
-    with mock.patch("accueil.views.urllib.request.urlopen", side_effect=_response):
+    with mock.patch("urllib.request.urlopen", side_effect=_response):
         yield
 
 

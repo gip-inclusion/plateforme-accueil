@@ -27,16 +27,21 @@ def test_every_section_has_its_template():
         get_template(section_type.template)  # raises TemplateDoesNotExist
 
 
-def _texts(value):
-    """Every string a declared default contains, lists and nested forms included."""
-    if isinstance(value, str):
-        yield from value.split("\n")  # the hero title is multi-line
-    elif isinstance(value, dict):
-        for nested in value.values():
-            yield from _texts(nested)
-    elif isinstance(value, (list, tuple)):
-        for item in value:
-            yield from _texts(item)
+def _displayed(section_type, content):
+    """(name, text) for every declared default the page is meant to show.
+
+    Walks the declarations rather than the values, so that references — ids the
+    page consumes but never prints — can be skipped.
+    """
+    for name, field in section_type.Form.base_fields.items():
+        if isinstance(field, sections.ListField):
+            for item in content.get(name) or []:
+                for sub_name, sub_field in field.item_form.base_fields.items():
+                    if isinstance(sub_field, sections.Reference):
+                        continue
+                    yield f"{name}.{sub_name}", item.get(sub_name)
+        elif not isinstance(field, sections.Reference):
+            yield name, content.get(name)
 
 
 def test_every_opened_field_renders_its_default(client):
@@ -45,9 +50,11 @@ def test_every_opened_field_renders_its_default(client):
     # inert. Compared escaped, since Django escapes the apostrophes.
     body = client.get("/").content.decode()
     for section in sections.registry.sections():
-        for name, value in section.content.items():
-            for text in _texts(value):
-                assert escape(text) in body, f"{section.key}.{name}"
+        for name, value in _displayed(type(section), section.content):
+            if not isinstance(value, str):
+                continue  # numbers are reformatted before display
+            for line in value.split("\n"):  # the hero title is multi-line
+                assert escape(line) in body, f"{section.key}.{name}"
 
 
 def test_a_section_without_overrides_renders_the_code_values(client):

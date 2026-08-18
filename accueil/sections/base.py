@@ -16,6 +16,12 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 
+class Reference(forms.CharField):
+    """An identifier the page consumes but never displays — a feed id, for
+    instance. Distinguished from copy so that tooling (and tests) can tell
+    editable prose from a key that must match something upstream."""
+
+
 class ListField(forms.Field):
     """A repeatable block, stored as a list of dictionaries.
 

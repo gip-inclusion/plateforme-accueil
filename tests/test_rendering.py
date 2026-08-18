@@ -31,7 +31,7 @@ def test_cities_proxy_maps_slug_and_label(client):
         ]
     }
     with mock.patch(
-        "accueil.views.urllib.request.urlopen",
+        "urllib.request.urlopen",
         side_effect=lambda *a, **k: io.BytesIO(json.dumps(feed).encode()),
     ):
         data = client.get("/api/cities?q=lyon").json()
@@ -55,7 +55,7 @@ def test_hero_targets_the_three_searches(client):
 
 def test_figures_fall_back_when_feed_is_down(client):
     # When the feed cannot be reached, the last known values are shown.
-    with mock.patch("accueil.views.urllib.request.urlopen", side_effect=OSError("down")):
+    with mock.patch("urllib.request.urlopen", side_effect=OSError("down")):
         body = client.get("/").content.decode().replace(" ", " ")
     assert "11 553" in body
     assert "198 430" in body
