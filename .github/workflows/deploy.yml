@@ -33,8 +33,8 @@ jobs:
             echo "DATABASE_URL absent : migrations ignorées."
             exit 0
           fi
-          uv run python manage.py migrate --noinput
-          uv run python manage.py sync_sections
+          uv run --no-dev python manage.py migrate --noinput
+          uv run --no-dev python manage.py sync_sections
 
       - name: Install Scaleway CLI
         run: |
