@@ -1,153 +1,41 @@
-<section class="section section--lisere profils" id="pour-qui">
+<section class="section {{ section.modifiers }}" id="{{ section.anchor }}">
   <div class="section__contenu">
     <p class="section__surtitre">{{ content.kicker }}</p>
     <h2 class="section__titre">{{ content.title }}</h2>
 
     <div class="profils__onglets" role="tablist" aria-label="Profils" hidden>
-      <button type="button" class="profils__onglet est-actif" role="tab" id="onglet-prescripteur"
-              aria-controls="profil-prescripteur" aria-selected="true">
-        <svg class="icone" aria-hidden="true"><use href="#ri-home-smile-2-line"/></svg>
-        Accompagnateur
-      </button>
-      <button type="button" class="profils__onglet" role="tab" id="onglet-employeur"
-              aria-controls="profil-employeur" aria-selected="false">
-        <svg class="icone" aria-hidden="true"><use href="#ri-community-line"/></svg>
-        Employeur inclusif
-      </button>
-      <button type="button" class="profils__onglet" role="tab" id="onglet-institution"
-              aria-controls="profil-institution" aria-selected="false">
-        <svg class="icone" aria-hidden="true"><use href="#ri-government-line"/></svg>
-        Institution partenaire
-      </button>
-      <button type="button" class="profils__onglet" role="tab" id="onglet-candidat"
-              aria-controls="profil-candidat" aria-selected="false">
-        <svg class="icone" aria-hidden="true"><use href="#ri-user-line"/></svg>
-        Candidat
-      </button>
+      {% for profile in content.profiles %}
+        <button type="button" class="profils__onglet{% if forloop.first %} est-actif{% endif %}" role="tab"
+                id="onglet-{{ profile.slug }}" aria-controls="profil-{{ profile.slug }}"
+                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+          <svg class="icone" aria-hidden="true"><use href="#{{ profile.icon }}"/></svg>
+          {{ profile.tab_label }}
+        </button>
+      {% endfor %}
     </div>
 
-    <article class="profil" id="profil-prescripteur" role="tabpanel" aria-labelledby="onglet-prescripteur">
-      <div class="profil__grille">
-        <div>
-          <h3 class="profil__titre">Orientez vos candidats vers l'emploi durable</h3>
-          <p class="profil__chapo">Adressez vos bénéficiaires aux employeurs inclusifs de votre territoire et suivez chaque parcours depuis votre espace.</p>
-          <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/professional/user" target="_top">
-            <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-            <span>S'inscrire</span>
-          </a>
+    {% for profile in content.profiles %}
+      <article class="profil" id="profil-{{ profile.slug }}" role="tabpanel"
+               aria-labelledby="onglet-{{ profile.slug }}">
+        <div class="profil__grille">
+          <div>
+            <h3 class="profil__titre">{{ profile.title }}</h3>
+            <p class="profil__chapo">{{ profile.chapo }}</p>
+            <a class="bouton" href="{{ profile.cta_href }}" target="_top">
+              <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
+              <span>{{ profile.cta_label }}</span>
+            </a>
+          </div>
+          <ol class="profil__etapes">
+            {% for step in profile.steps %}
+              <li class="etape">
+                <span class="etape__numero" aria-hidden="true">{{ forloop.counter }}</span>
+                <div><b class="etape__titre">{{ step.title }}</b><span class="etape__detail">{{ step.detail }}</span></div>
+              </li>
+            {% endfor %}
+          </ol>
         </div>
-        <ol class="profil__etapes">
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">1</span>
-            <div><b class="etape__titre">Créer votre compte prescripteur</b><span class="etape__detail">Avec ProConnect, en quelques minutes.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">2</span>
-            <div><b class="etape__titre">Rechercher un employeur ou une solution</b><span class="etape__detail">Emplois inclusifs et services d'accompagnement, au même endroit.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">3</span>
-            <div><b class="etape__titre">Adresser la candidature</b><span class="etape__detail">Le dossier de votre bénéficiaire suit, sans ressaisie.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">4</span>
-            <div><b class="etape__titre">Suivre le parcours</b><span class="etape__detail">Candidatures, PASS IAE et récap de parcours dans votre espace.</span></div>
-          </li>
-        </ol>
-      </div>
-    </article>
-
-    <article class="profil" id="profil-employeur" role="tabpanel" aria-labelledby="onglet-employeur">
-      <div class="profil__grille">
-        <div>
-          <h3 class="profil__titre">Recrutez et gérez vos PASS IAE en ligne</h3>
-          <p class="profil__chapo">SIAE, GEIQ, EA ou facilitateur&nbsp;: publiez vos postes et gérez vos obligations déclaratives sans changer d'outil.</p>
-          <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/professional/user" target="_top">
-            <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-            <span>S'inscrire</span>
-          </a>
-        </div>
-        <ol class="profil__etapes">
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">1</span>
-            <div><b class="etape__titre">Créer le compte de votre structure</b><span class="etape__detail">Et inviter vos collaborateurs à vous rejoindre.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">2</span>
-            <div><b class="etape__titre">Publier vos fiches de poste</b><span class="etape__detail">Visibles des candidats et des prescripteurs habilités.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">3</span>
-            <div><b class="etape__titre">Recevoir et traiter les candidatures</b><span class="etape__detail">Trier, répondre et planifier vos entretiens.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">4</span>
-            <div><b class="etape__titre">Obtenir le PASS IAE dès l'embauche</b><span class="etape__detail">Et déclarer votre activité pour vos financements.</span></div>
-          </li>
-        </ol>
-      </div>
-    </article>
-
-    <article class="profil" id="profil-institution" role="tabpanel" aria-labelledby="onglet-institution">
-      <div class="profil__grille">
-        <div>
-          <h3 class="profil__titre">Pilotez l'insertion sur votre territoire</h3>
-          <p class="profil__chapo">DDETS, conseils départementaux, France Travail&nbsp;: disposez d'une vision consolidée de l'offre et des parcours d'insertion.</p>
-          <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/professional/user" target="_top">
-            <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-            <span>S'inscrire</span>
-          </a>
-        </div>
-        <ol class="profil__etapes">
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">1</span>
-            <div><b class="etape__titre">Créer votre compte institution</b><span class="etape__detail">Avec votre adresse professionnelle, via ProConnect.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">2</span>
-            <div><b class="etape__titre">Accéder aux tableaux de bord</b><span class="etape__detail">Indicateurs territoriaux actualisés en continu.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">3</span>
-            <div><b class="etape__titre">Suivre le déploiement des dispositifs</b><span class="etape__detail">IAE, immersions, accompagnement&nbsp;: une vision d'ensemble.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">4</span>
-            <div><b class="etape__titre">Exploiter les données ouvertes</b><span class="etape__detail">Le socle data·inclusion, documenté et réutilisable.</span></div>
-          </li>
-        </ol>
-      </div>
-    </article>
-
-    <article class="profil" id="profil-candidat" role="tabpanel" aria-labelledby="onglet-candidat">
-      <div class="profil__grille">
-        <div>
-          <h3 class="profil__titre">Trouvez un emploi près de chez vous</h3>
-          <p class="profil__chapo">Recherchez un emploi inclusif, postulez et suivez vos candidatures — seul ou avec votre accompagnateur.</p>
-          <a class="bouton" href="https://emplois.inclusion.beta.gouv.fr/signup/job_seeker/start" target="_top">
-            <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
-            <span>S'inscrire</span>
-          </a>
-        </div>
-        <ol class="profil__etapes">
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">1</span>
-            <div><b class="etape__titre">Créer votre compte</b><span class="etape__detail">En quelques minutes, sans justificatif.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">2</span>
-            <div><b class="etape__titre">Rechercher un emploi inclusif</b><span class="etape__detail">Autour de chez vous, selon vos critères.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">3</span>
-            <div><b class="etape__titre">Postuler ou être accompagné</b><span class="etape__detail">Seul ou avec l'aide d'un prescripteur.</span></div>
-          </li>
-          <li class="etape">
-            <span class="etape__numero" aria-hidden="true">4</span>
-            <div><b class="etape__titre">Suivre vos candidatures</b><span class="etape__detail">Et retrouver votre récap de parcours à tout moment.</span></div>
-          </li>
-        </ol>
-      </div>
-    </article>
+      </article>
+    {% endfor %}
   </div>
 </section>
