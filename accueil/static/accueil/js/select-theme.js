@@ -1,164 +1,147 @@
 /* Enhances the thematic <select> into a custom dropdown that matches the city
    suggestions. The native <select> stays in the DOM (hidden) as the source of
    truth and the no-JS fallback, so the form submits the same "category" value. */
-(function () {
-  "use strict";
 
-  var counter = 0;
+const SVG_NS = "http://www.w3.org/2000/svg";
 
-  function wire(champ) {
-    var select = champ.querySelector("select");
-    if (!select) {
+let counter = 0;
+
+const icon = (name, className) => {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", className);
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = `<use href="#${name}"/>`;
+  return svg;
+};
+
+const wire = (field) => {
+  const select = field.querySelector("select");
+  if (!select) {
+    return;
+  }
+  const options = [...select.options];
+  const prefix = `theme-${counter++}`;
+
+  const value = document.createElement("span");
+  value.className = "select-theme__valeur";
+
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "select-theme__declencheur";
+  trigger.setAttribute("role", "combobox");
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-label", select.getAttribute("aria-label") || "");
+  trigger.append(value, icon("ri-arrow-down-s-line", "icone select-theme__chevron"));
+
+  const list = document.createElement("ul");
+  list.className = "suggestions suggestions--theme";
+  list.id = `${prefix}-liste`;
+  list.setAttribute("role", "listbox");
+  list.hidden = true;
+
+  let active = -1;
+
+  // The empty placeholder option stays in the <select> (it drives the button
+  // label and the no-JS fallback) but is not shown as a row in the dropdown.
+  // `rows` only holds the selectable ones; each keeps its <option> index.
+  const rows = [];
+  options.forEach((option, index) => {
+    if (option.value === "") {
       return;
     }
-    var options = Array.prototype.slice.call(select.options);
-    var prefix = "theme-" + counter++;
+    const row = document.createElement("li");
+    row.className = "suggestions__item";
+    row.id = `${prefix}-opt-${index}`;
+    row.dataset.index = index;
+    row.setAttribute("role", "option");
+    row.setAttribute("aria-selected", option.selected ? "true" : "false");
+    if (option.dataset.icon) {
+      row.append(icon(option.dataset.icon, "icone"));
+    }
+    row.append(option.textContent);
+    // Select on click (mouseup), not mousedown, so the :active state shows
+    // while the row is pressed before the dropdown closes.
+    row.addEventListener("click", () => pick(index));
+    list.append(row);
+    rows.push(row);
+  });
 
-    var value = document.createElement("span");
-    value.className = "select-theme__valeur";
+  const updateValue = () => {
+    const option = options[select.selectedIndex] || options[0];
+    value.textContent = option.textContent;
+    value.classList.toggle("select-theme__valeur--vide", option.value === "");
+  };
 
-    var chevron = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    chevron.setAttribute("class", "icone select-theme__chevron");
-    chevron.setAttribute("aria-hidden", "true");
-    chevron.innerHTML = '<use href="#ri-arrow-down-s-line"/>';
-
-    var trigger = document.createElement("button");
-    trigger.type = "button";
-    trigger.className = "select-theme__declencheur";
-    trigger.setAttribute("role", "combobox");
-    trigger.setAttribute("aria-haspopup", "listbox");
-    trigger.setAttribute("aria-expanded", "false");
-    trigger.setAttribute("aria-label", select.getAttribute("aria-label") || "");
-    trigger.appendChild(value);
-    trigger.appendChild(chevron);
-
-    var list = document.createElement("ul");
-    list.className = "suggestions suggestions--theme";
-    list.id = prefix + "-liste";
-    list.setAttribute("role", "listbox");
-    list.hidden = true;
-
-    var active = -1;
-
-    // The empty placeholder option stays in the <select> (it drives the button
-    // label and the no-JS fallback) but is not shown as a row in the dropdown.
-    // elems only holds the selectable rows; each keeps its <option> index.
-    var elems = [];
-    options.forEach(function (opt, i) {
-      if (opt.value === "") {
-        return;
-      }
-      var li = document.createElement("li");
-      li.className = "suggestions__item";
-      li.id = prefix + "-opt-" + i;
-      li.dataset.index = i;
-      li.setAttribute("role", "option");
-      li.setAttribute("aria-selected", opt.selected ? "true" : "false");
-      if (opt.dataset.icon) {
-        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("class", "icone");
-        svg.setAttribute("aria-hidden", "true");
-        svg.innerHTML = '<use href="#' + opt.dataset.icon + '"/>';
-        li.appendChild(svg);
-      }
-      li.appendChild(document.createTextNode(opt.textContent));
-      // Select on click (mouseup), not mousedown, so the :active state shows
-      // while the row is pressed before the dropdown closes.
-      li.addEventListener("click", function () {
-        pick(i);
-      });
-      list.appendChild(li);
-      elems.push(li);
+  const highlight = (position) => {
+    rows.forEach((row, index) => {
+      row.setAttribute("aria-selected", index === position ? "true" : "false");
     });
-
-    function updateValue() {
-      var opt = options[select.selectedIndex] || options[0];
-      value.textContent = opt.textContent;
-      value.classList.toggle("select-theme__valeur--vide", opt.value === "");
+    active = position;
+    if (position >= 0) {
+      trigger.setAttribute("aria-activedescendant", rows[position].id);
+      rows[position].scrollIntoView({ block: "nearest" });
     }
+  };
 
-    function highlight(i) {
-      elems.forEach(function (e, idx) {
-        e.setAttribute("aria-selected", idx === i ? "true" : "false");
-      });
-      active = i;
-      if (i >= 0) {
-        trigger.setAttribute("aria-activedescendant", elems[i].id);
-        elems[i].scrollIntoView({ block: "nearest" });
-      }
-    }
+  // Position in `rows` of the currently selected option (-1 when the
+  // placeholder is selected, so nothing is highlighted).
+  const currentPosition = () => rows.findIndex((row) => Number(row.dataset.index) === select.selectedIndex);
 
-    // elems position of the currently selected option (-1 when the placeholder
-    // is selected, so nothing is highlighted).
-    function currentPosition() {
-      for (var i = 0; i < elems.length; i++) {
-        if (Number(elems[i].dataset.index) === select.selectedIndex) {
-          return i;
-        }
-      }
-      return -1;
-    }
+  const open = () => {
+    list.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    highlight(currentPosition());
+  };
 
-    function open() {
-      list.hidden = false;
-      trigger.setAttribute("aria-expanded", "true");
-      highlight(currentPosition());
-    }
+  const closeList = () => {
+    list.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.removeAttribute("aria-activedescendant");
+  };
 
-    function closeList() {
-      list.hidden = true;
-      trigger.setAttribute("aria-expanded", "false");
-      trigger.removeAttribute("aria-activedescendant");
-    }
+  const pick = (index) => {
+    select.selectedIndex = index;
+    updateValue();
+    closeList();
+    trigger.focus();
+  };
 
-    function pick(i) {
-      select.selectedIndex = i;
-      updateValue();
-      closeList();
-      trigger.focus();
-    }
+  trigger.addEventListener("click", () => (list.hidden ? open() : closeList()));
 
-    trigger.addEventListener("click", function () {
+  trigger.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
       if (list.hidden) {
         open();
       } else {
-        closeList();
+        highlight((active + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length);
       }
-    });
-
-    trigger.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        e.preventDefault();
-        if (list.hidden) {
-          open();
-        } else {
-          highlight((active + (e.key === "ArrowDown" ? 1 : -1) + elems.length) % elems.length);
-        }
-      } else if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        if (list.hidden) {
-          open();
-        } else if (active >= 0) {
-          pick(Number(elems[active].dataset.index));
-        }
-      } else if (e.key === "Escape") {
-        closeList();
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (list.hidden) {
+        open();
+      } else if (active >= 0) {
+        pick(Number(rows[active].dataset.index));
       }
-    });
+    } else if (event.key === "Escape") {
+      closeList();
+    }
+  });
 
-    document.addEventListener("click", function (e) {
-      if (!champ.contains(e.target)) {
-        closeList();
-      }
-    });
+  document.addEventListener("click", (event) => {
+    if (!field.contains(event.target)) {
+      closeList();
+    }
+  });
 
-    select.setAttribute("tabindex", "-1");
-    select.setAttribute("aria-hidden", "true");
-    champ.classList.add("select-theme--enrichi");
-    champ.appendChild(trigger);
-    champ.appendChild(list);
-    updateValue();
-  }
+  select.setAttribute("tabindex", "-1");
+  select.setAttribute("aria-hidden", "true");
+  field.classList.add("select-theme--enrichi");
+  field.append(trigger, list);
+  updateValue();
+};
 
-  Array.prototype.forEach.call(document.querySelectorAll("[data-select-theme]"), wire);
-})();
+for (const field of document.querySelectorAll("[data-select-theme]")) {
+  wire(field);
+}

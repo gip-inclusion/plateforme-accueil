@@ -2,10 +2,10 @@
 {% load static %}
 
 {% block head %}
-  <script src="{% static 'accueil/js/hero.js' %}" defer></script>
-  <script src="{% static 'accueil/js/cities.js' %}" defer></script>
-  <script src="{% static 'accueil/js/select-theme.js' %}" defer></script>
-  <script src="{% static 'accueil/js/profiles.js' %}" defer></script>
+  <script type="module" src="{% static 'accueil/js/hero.js' %}"></script>
+  <script type="module" src="{% static 'accueil/js/cities.js' %}"></script>
+  <script type="module" src="{% static 'accueil/js/select-theme.js' %}"></script>
+  <script type="module" src="{% static 'accueil/js/profiles.js' %}"></script>
 {% endblock %}
 
 {% block content %}

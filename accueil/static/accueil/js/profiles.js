@@ -1,34 +1,28 @@
 /* Tabs for the "Pour qui ?" section (progressive enhancement).
    Without JavaScript the tab bar stays hidden and the four profiles are
    stacked; with it, the bar is revealed and one panel shows at a time. */
-(function () {
-  "use strict";
 
-  var bar = document.querySelector(".profils__onglets");
-  if (!bar) {
-    return;
-  }
+const bar = document.querySelector(".profils__onglets");
 
-  var tabs = Array.prototype.slice.call(bar.querySelectorAll(".profils__onglet"));
+if (bar) {
+  const tabs = [...bar.querySelectorAll(".profils__onglet")];
 
-  function activate(tab) {
-    tabs.forEach(function (o) {
-      var active = o === tab;
-      o.classList.toggle("est-actif", active);
-      o.setAttribute("aria-selected", active ? "true" : "false");
-      var panel = document.getElementById(o.getAttribute("aria-controls"));
+  const activate = (chosen) => {
+    for (const tab of tabs) {
+      const active = tab === chosen;
+      tab.classList.toggle("est-actif", active);
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+      const panel = document.getElementById(tab.getAttribute("aria-controls"));
       if (panel) {
         panel.hidden = !active;
       }
-    });
-  }
+    }
+  };
 
-  tabs.forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      activate(tab);
-    });
-  });
+  for (const tab of tabs) {
+    tab.addEventListener("click", () => activate(tab));
+  }
 
   bar.hidden = false;
   activate(tabs[0]);
-})();
+}

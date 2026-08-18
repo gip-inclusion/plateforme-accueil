@@ -7,240 +7,226 @@
      results filtered by both.
    Without JavaScript the forms and pill/card links still work (they land on the
    target search page with the filter preselected, where the city is entered). */
-(function () {
-  "use strict";
 
-  var DELAY = 250;
+const DELAY = 250;
 
-  function debounce(fn, delay) {
-    var t;
-    return function () {
-      var args = arguments;
-      clearTimeout(t);
-      t = setTimeout(function () {
-        fn.apply(null, args);
-      }, delay);
-    };
-  }
+const debounce = (fn, delay) => {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+};
 
-  // Wires an input + listbox against /api/cities. onPick({slug,label}) fires
-  // on selection; onEdit() fires whenever the text changes (to drop a stale pick).
-  function autocomplete(container, input, list, onPick, onEdit) {
-    var options = [];
-    var active = -1;
-    var controller = null;
+// Wires an input + listbox against /api/cities. onPick({slug,label}) fires on
+// selection; onEdit() fires whenever the text changes (to drop a stale pick).
+const autocomplete = (container, input, list, onPick, onEdit) => {
+  let options = [];
+  let active = -1;
+  let controller = null;
 
-    function closeList() {
-      list.hidden = true;
-      list.innerHTML = "";
-      options = [];
-      active = -1;
-      input.setAttribute("aria-expanded", "false");
+  const closeList = () => {
+    list.hidden = true;
+    list.replaceChildren();
+    options = [];
+    active = -1;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+  };
+
+  const highlight = (position) => {
+    options.forEach((option, index) => {
+      option.setAttribute("aria-selected", index === position ? "true" : "false");
+    });
+    active = position;
+    if (position >= 0) {
+      input.setAttribute("aria-activedescendant", options[position].id);
+    } else {
       input.removeAttribute("aria-activedescendant");
     }
+  };
 
-    function highlight(i) {
-      options.forEach(function (o, idx) {
-        o.setAttribute("aria-selected", idx === i ? "true" : "false");
+  const pick = (item) => {
+    onPick(item);
+    closeList();
+  };
+
+  const showOptions = (results) => {
+    list.replaceChildren();
+    options = results.map((item, index) => {
+      const row = document.createElement("li");
+      row.className = "suggestions__item";
+      row.id = `${list.id}-opt-${index}`;
+      row.dataset.slug = item.slug;
+      row.setAttribute("role", "option");
+      row.setAttribute("aria-selected", "false");
+      row.textContent = item.label;
+      row.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        pick(item);
       });
-      active = i;
-      if (i >= 0) {
-        input.setAttribute("aria-activedescendant", options[i].id);
-      } else {
-        input.removeAttribute("aria-activedescendant");
-      }
-    }
-
-    function pick(item) {
-      onPick(item);
+      list.append(row);
+      return row;
+    });
+    if (options.length) {
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    } else {
       closeList();
     }
+  };
 
-    function showOptions(results) {
-      list.innerHTML = "";
-      options = results.map(function (item, i) {
-        var li = document.createElement("li");
-        li.className = "suggestions__item";
-        li.id = list.id + "-opt-" + i;
-        li.dataset.slug = item.slug;
-        li.setAttribute("role", "option");
-        li.setAttribute("aria-selected", "false");
-        li.textContent = item.label;
-        li.addEventListener("mousedown", function (e) {
-          e.preventDefault();
-          pick(item);
-        });
-        list.appendChild(li);
-        return li;
-      });
-      if (options.length) {
-        list.hidden = false;
-        input.setAttribute("aria-expanded", "true");
-      } else {
-        closeList();
-      }
+  const search = debounce(async (term) => {
+    controller?.abort();
+    controller = new AbortController();
+    try {
+      const response = await fetch(`/api/cities?q=${encodeURIComponent(term)}`, { signal: controller.signal });
+      const data = await response.json();
+      showOptions(data.results || []);
+    } catch {
+      /* aborted or failed: leave the list closed */
     }
+  }, DELAY);
 
-    var search = debounce(function (term) {
-      if (controller) {
-        controller.abort();
-      }
-      controller = new AbortController();
-      fetch("/api/cities?q=" + encodeURIComponent(term), { signal: controller.signal })
-        .then(function (r) {
-          return r.json();
-        })
-        .then(function (data) {
-          showOptions(data.results || []);
-        })
-        .catch(function () {
-          /* aborted or failed: leave the list closed */
-        });
-    }, DELAY);
-
-    input.addEventListener("input", function () {
-      if (onEdit) {
-        onEdit();
-      }
-      var term = input.value.trim();
-      if (term.length < 1) {
-        closeList();
-        return;
-      }
-      search(term);
-    });
-
-    input.addEventListener("keydown", function (e) {
-      if (list.hidden) {
-        return;
-      }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        highlight((active + 1) % options.length);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        highlight((active - 1 + options.length) % options.length);
-      } else if (e.key === "Enter") {
-        if (active >= 0) {
-          e.preventDefault();
-          pick({ label: options[active].textContent, slug: options[active].dataset.slug });
-        }
-      } else if (e.key === "Escape") {
-        closeList();
-      }
-    });
-
-    document.addEventListener("click", function (e) {
-      if (!container.contains(e.target)) {
-        closeList();
-      }
-    });
-  }
-
-  function wireForm(form) {
-    var input = form.querySelector("[data-ville-saisie]");
-    var slug = form.querySelector("[data-ville-slug]");
-    var list = form.querySelector(".suggestions");
-    if (!input || !slug || !list) {
+  input.addEventListener("input", () => {
+    onEdit?.();
+    const term = input.value.trim();
+    if (term.length < 1) {
+      closeList();
       return;
     }
-    var searchAction = form.getAttribute("action");
-    var resultsAction = form.getAttribute("data-resultats");
-    autocomplete(
-      form,
-      input,
-      list,
-      function (item) {
-        input.value = item.label;
-        slug.value = item.slug;
-        form.setAttribute("action", resultsAction);
-      },
-      function () {
-        slug.value = "";
-        form.setAttribute("action", searchAction);
-      }
-    );
-  }
-
-  // The shared "which city?" modal. Returns { open(href, label) } or null.
-  function initModal() {
-    var modal = document.getElementById("modale-ville");
-    if (!modal || typeof modal.showModal !== "function") {
-      return null;
-    }
-    var form = modal.querySelector("[data-modale-form]");
-    var input = modal.querySelector("[data-ville-saisie]");
-    var slug = modal.querySelector("[data-ville-slug]");
-    var list = modal.querySelector(".suggestions");
-    var context = modal.querySelector("[data-modale-contexte]");
-    var targetHref = null;
-
-    autocomplete(
-      modal,
-      input,
-      list,
-      function (item) {
-        input.value = item.label;
-        slug.value = item.slug;
-      },
-      function () {
-        slug.value = "";
-      }
-    );
-
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (!slug.value) {
-        input.focus();
-        return;
-      }
-      var url = new URL(targetHref);
-      url.searchParams.set("city", slug.value);
-      window.top.location.href = url.toString();
-    });
-
-    modal.querySelector("[data-modale-fermer]").addEventListener("click", function () {
-      modal.close();
-    });
-    // Click on the backdrop (the dialog element itself) closes the modal.
-    modal.addEventListener("click", function (e) {
-      if (e.target === modal) {
-        modal.close();
-      }
-    });
-
-    return {
-      open: function (href, label) {
-        targetHref = href;
-        input.value = "";
-        slug.value = "";
-        if (context) {
-          context.textContent = label || "";
-        }
-        modal.showModal();
-        input.focus();
-      },
-    };
-  }
-
-  function wireSection(section, modal) {
-    if (!modal) {
-      return;
-    }
-    var links = section.querySelectorAll(".pastille-lien, .lien-fleche, .carte-media, .recherche-cta");
-    Array.prototype.forEach.call(links, function (link) {
-      link.addEventListener("click", function (e) {
-        e.preventDefault();
-        var title = link.querySelector(".carte-media__titre");
-        var label = (title ? title.textContent : link.textContent).trim().replace(/\s+/g, " ");
-        modal.open(link.href, label);
-      });
-    });
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll("[data-recherche-ville]"), wireForm);
-  var modal = initModal();
-  Array.prototype.forEach.call(document.querySelectorAll("[data-recherche-section]"), function (section) {
-    wireSection(section, modal);
+    search(term);
   });
-})();
+
+  input.addEventListener("keydown", (event) => {
+    if (list.hidden) {
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      highlight((active + 1) % options.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      highlight((active - 1 + options.length) % options.length);
+    } else if (event.key === "Enter" && active >= 0) {
+      event.preventDefault();
+      pick({ label: options[active].textContent, slug: options[active].dataset.slug });
+    } else if (event.key === "Escape") {
+      closeList();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!container.contains(event.target)) {
+      closeList();
+    }
+  });
+};
+
+const wireForm = (form) => {
+  const input = form.querySelector("[data-ville-saisie]");
+  const slug = form.querySelector("[data-ville-slug]");
+  const list = form.querySelector(".suggestions");
+  if (!input || !slug || !list) {
+    return;
+  }
+  const searchAction = form.getAttribute("action");
+  const resultsAction = form.getAttribute("data-resultats");
+  autocomplete(
+    form,
+    input,
+    list,
+    (item) => {
+      input.value = item.label;
+      slug.value = item.slug;
+      form.setAttribute("action", resultsAction);
+    },
+    () => {
+      slug.value = "";
+      form.setAttribute("action", searchAction);
+    },
+  );
+};
+
+// The shared "which city?" modal. Returns { open(href, label) } or null.
+const initModal = () => {
+  const modal = document.getElementById("modale-ville");
+  if (!modal || typeof modal.showModal !== "function") {
+    return null;
+  }
+  const form = modal.querySelector("[data-modale-form]");
+  const input = modal.querySelector("[data-ville-saisie]");
+  const slug = modal.querySelector("[data-ville-slug]");
+  const list = modal.querySelector(".suggestions");
+  const context = modal.querySelector("[data-modale-contexte]");
+  let targetHref = null;
+
+  autocomplete(
+    modal,
+    input,
+    list,
+    (item) => {
+      input.value = item.label;
+      slug.value = item.slug;
+    },
+    () => {
+      slug.value = "";
+    },
+  );
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!slug.value) {
+      input.focus();
+      return;
+    }
+    const url = new URL(targetHref);
+    url.searchParams.set("city", slug.value);
+    window.top.location.href = url.toString();
+  });
+
+  modal.querySelector("[data-modale-fermer]").addEventListener("click", () => modal.close());
+  // Click on the backdrop (the dialog element itself) closes the modal.
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      modal.close();
+    }
+  });
+
+  return {
+    open(href, label) {
+      targetHref = href;
+      input.value = "";
+      slug.value = "";
+      if (context) {
+        context.textContent = label || "";
+      }
+      modal.showModal();
+      input.focus();
+    },
+  };
+};
+
+const wireSection = (section, modal) => {
+  if (!modal) {
+    return;
+  }
+  const links = section.querySelectorAll(".pastille-lien, .lien-fleche, .carte-media, .recherche-cta");
+  for (const link of links) {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const title = link.querySelector(".carte-media__titre");
+      const label = (title ? title.textContent : link.textContent).trim().replace(/\s+/g, " ");
+      modal.open(link.href, label);
+    });
+  }
+};
+
+for (const form of document.querySelectorAll("[data-recherche-ville]")) {
+  wireForm(form);
+}
+
+const modal = initModal();
+for (const section of document.querySelectorAll("[data-recherche-section]")) {
+  wireSection(section, modal);
+}

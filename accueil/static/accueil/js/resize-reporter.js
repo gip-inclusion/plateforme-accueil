@@ -10,19 +10,15 @@
    observed <body> is replaced and the observer goes silent. Hence also the
    window `resize` event (blind to node identity) and a MutationObserver that
    re-attaches the observation to the current <body>. */
-(function () {
-  "use strict";
 
-  if (window.parent === window) {
-    return; // not framed
-  }
+if (window.parent !== window) {
+  let lastHeight = 0;
+  let scheduledMeasure = null;
+  let observedBody = null;
 
-  var lastHeight = 0;
-  var scheduledMeasure = null;
-  var observer = "ResizeObserver" in window ? new ResizeObserver(scheduleMeasure) : null;
-  var observedBody = null;
+  const observer = "ResizeObserver" in window ? new ResizeObserver(() => scheduleMeasure()) : null;
 
-  function attachObserver() {
+  const attachObserver = () => {
     if (observer === null || document.body === observedBody) {
       return;
     }
@@ -30,50 +26,40 @@
     observer.disconnect();
     observer.observe(document.documentElement); // iframe resizes
     observer.observe(observedBody); // content changes
-  }
+  };
 
-  function contentHeight() {
-    var bottom = 0;
-    var children = document.body.children;
-    for (var i = 0; i < children.length; i++) {
-      var element = children[i];
-      var style = window.getComputedStyle(element);
+  const contentHeight = () => {
+    let bottom = 0;
+    for (const element of document.body.children) {
+      const style = window.getComputedStyle(element);
       if (style.position === "fixed") {
         continue; // out of flow, tracks the viewport rather than the content
       }
-      var rect = element.getBoundingClientRect();
-      var bottomMargin = parseFloat(style.marginBottom) || 0;
-      bottom = Math.max(bottom, rect.bottom + bottomMargin);
+      const bottomMargin = parseFloat(style.marginBottom) || 0;
+      bottom = Math.max(bottom, element.getBoundingClientRect().bottom + bottomMargin);
     }
     return Math.ceil(bottom + window.scrollY);
-  }
+  };
 
-  function publishHeight() {
+  const publishHeight = () => {
     scheduledMeasure = null;
     attachObserver();
-    var height = contentHeight();
+    const height = contentHeight();
     if (Math.abs(height - lastHeight) < 2) {
       return; // slack, so rounding does not ping-pong between host and iframe
     }
     lastHeight = height;
-    window.parent.postMessage(
-      {
-        source: "plateforme-accueil",
-        type: "resize",
-        height: height,
-      },
-      "*"
-    );
-  }
+    window.parent.postMessage({ source: "plateforme-accueil", type: "resize", height }, "*");
+  };
 
-  function scheduleMeasure() {
+  const scheduleMeasure = () => {
     if (scheduledMeasure === null) {
       scheduledMeasure = window.requestAnimationFrame(publishHeight);
     }
-  }
+  };
 
   attachObserver();
   window.addEventListener("load", scheduleMeasure);
   window.addEventListener("resize", scheduleMeasure);
   new MutationObserver(scheduleMeasure).observe(document, { childList: true, subtree: true });
-})();
+}

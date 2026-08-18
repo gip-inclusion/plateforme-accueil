@@ -60,6 +60,17 @@ def test_figures_fall_back_when_feed_is_down(client):
     assert "/static/accueil/js/resize-reporter.js" in body
 
 
+def test_analytics_is_not_deferred(client):
+    # Modules are implicitly deferred, so switching the page scripts to
+    # type="module" must not drag the tag manager along: the container has to
+    # boot before the page builds, or visits are under-counted.
+    head = client.get("/").content.decode().split("</head>")[0]
+    (tag,) = [line for line in head.splitlines() if "js/matomo.js" in line]
+    assert "defer" not in tag
+    assert "async" not in tag
+    assert "module" not in tag
+
+
 def test_index_loads_analytics(client):
     # Must be in the <head>: the tag manager has to boot before the page
     # builds, so a tag that drifted into the <body> would under-measure.
