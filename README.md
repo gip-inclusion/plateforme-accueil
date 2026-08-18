@@ -20,6 +20,40 @@ make lint      # ruff
 
 Le déploiement est automatique à chaque push sur `main`.
 
+## Structure de la page
+
+La page est une suite de sections. `index.html` n'est qu'une boucle ; le HTML
+vit dans `accueil/templates/accueil/sections/`, un fichier par section.
+
+Chaque section se déclare dans `accueil/sections/<key>.py` :
+
+```python
+@registry.register
+class Testimonials(SectionType):
+    key = "testimonials"
+    label = "Témoignages"
+    position = 70  # espacée de 10, pour insérer facilement
+    template = "accueil/sections/testimonials.html"
+```
+
+Les textes sont écrits en dur dans le gabarit, et c'est très bien ainsi.
+
+Pour qu'un texte devienne modifiable sans toucher au code — plus tard, depuis
+une interface d'édition — on le déplace dans un formulaire, où sa valeur
+`initial` reste la valeur affichée :
+
+```python
+    class Form(forms.Form):
+        note = forms.CharField(label="Note sous la recherche", initial="Recherche libre…")
+```
+
+```html
+<p class="hero__note">{{ content.note }}</p>
+```
+
+Pas de migration, rien à reprendre : les autres textes restent en dur. Un seul
+champ est ouvert pour l'instant (`hero.py`), à titre d'exemple.
+
 ## Embarquer la page en iframe
 
 Le tag recommandé côté site hôte :

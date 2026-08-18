@@ -1,0 +1,58 @@
+{% load static %}
+<section class="section bloc-recherche bloc-recherche--inverse" id="services" data-recherche-section>
+  <div class="section__contenu">
+    <p class="section__surtitre">Les services d'insertion</p>
+    <h2 class="section__titre">Un accompagnement pour lever les freins à l’emploi.</h2>
+    <p class="section__intro">Mobilité, logement, santé, formation… Sélectionnez une thématique pour trouver les services de votre territoire.</p>
+    <div class="bloc-recherche__grille">
+      <div class="pastilles">
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=choisir-un-metier" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-briefcase-line"/></svg> Choisir un métier</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=mobilite" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-car-line"/></svg> Mobilité</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=famille" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-group-line"/></svg> Famille</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=creer-une-entreprise" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-rocket-line"/></svg> Créer une entreprise</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=preparer-sa-candidature" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-file-list-3-line"/></svg> Préparer sa candidature</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=se-former" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-graduation-cap-line"/></svg> Se former</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=difficultes-financieres" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-money-euro-circle-line"/></svg> Difficultés financières</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=sante" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-heart-pulse-line"/></svg> Santé</a>
+        <a class="lien-fleche" href="https://emplois.inclusion.beta.gouv.fr/search/services/results" target="_top">Voir toutes les thématiques <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg></a>
+      </div>
+
+      <div class="cartes-media">
+        <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=mobilite" target="_top">
+          <div class="carte-media__media">
+            <img src="{% static 'accueil/img/service-mobilite.jpg' %}" alt="" loading="lazy">
+            <span class="badge badge--service">Service</span>
+          </div>
+          <div class="carte-media__corps">
+            <div class="carte-media__entete">
+              <span class="carte-media__pastille carte-media__pastille--service">
+              <svg class="icone" aria-hidden="true"><use href="#ri-car-line"/></svg>
+            </span>
+              <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+            </div>
+            <h3 class="carte-media__titre">La mobilité, un frein en moins</h3>
+            <p class="carte-media__stat carte-media__stat--service">Permis, transport, véhicule</p>
+            <p class="carte-media__texte">Aide au permis, location solidaire, covoiturage&nbsp;: des solutions pour vos déplacements vers l'emploi.</p>
+          </div>
+        </a>
+        <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/services/results?category=numerique" target="_top">
+          <div class="carte-media__media">
+            <img src="{% static 'accueil/img/service-numerique.jpg' %}" alt="" loading="lazy">
+            <span class="badge badge--service">Service</span>
+          </div>
+          <div class="carte-media__corps">
+            <div class="carte-media__entete">
+              <span class="carte-media__pastille carte-media__pastille--service">
+              <svg class="icone" aria-hidden="true"><use href="#ri-computer-line"/></svg>
+            </span>
+              <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+            </div>
+            <h3 class="carte-media__titre">Le numérique s'ouvre à l'inclusion</h3>
+            <p class="carte-media__stat carte-media__stat--service">60 parcours de formation</p>
+            <p class="carte-media__texte">Développement, support, data&nbsp;: de nouveaux métiers accessibles via des parcours adaptés.</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

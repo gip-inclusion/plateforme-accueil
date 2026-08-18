@@ -1,0 +1,57 @@
+{% load static %}
+<section class="section section--grisee bloc-recherche" id="emplois" data-recherche-section>
+  <div class="section__contenu">
+    <p class="section__surtitre">L'inclusion par l'emploi</p>
+    <h2 class="section__titre">Des postes en entreprises et structures d'insertion, partout en France.</h2>
+    <p class="section__intro">Les employeurs inclusifs embauchent en priorité les personnes éloignées de l'emploi. Choisissez un secteur pour découvrir les offres près de chez vous.</p>
+    <div class="bloc-recherche__grille">
+      <div class="cartes-media">
+        <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=G" target="_top">
+          <div class="carte-media__media">
+            <img src="{% static 'accueil/img/emploi-restauration.jpg' %}" alt="" loading="lazy">
+            <span class="badge badge--emploi">Emploi</span>
+          </div>
+          <div class="carte-media__corps">
+            <div class="carte-media__entete">
+              <span class="carte-media__pastille carte-media__pastille--emploi">
+              <svg class="icone" aria-hidden="true"><use href="#ri-restaurant-line"/></svg>
+            </span>
+              <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+            </div>
+            <h3 class="carte-media__titre">Les métiers de la restauration recrutent</h3>
+            <p class="carte-media__stat">+250 postes ce trimestre</p>
+            <p class="carte-media__texte">Les entreprises et chantiers d'insertion forment leurs salariés aux métiers de la restauration.</p>
+          </div>
+        </a>
+        <a class="carte-media" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=F" target="_top">
+          <div class="carte-media__media">
+            <img src="{% static 'accueil/img/emploi-batiment.jpg' %}" alt="" loading="lazy">
+            <span class="badge badge--emploi">Emploi</span>
+          </div>
+          <div class="carte-media__corps">
+            <div class="carte-media__entete">
+              <span class="carte-media__pastille carte-media__pastille--emploi">
+              <svg class="icone" aria-hidden="true"><use href="#ri-hammer-line"/></svg>
+            </span>
+              <svg class="icone carte-media__fleche" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg>
+            </div>
+            <h3 class="carte-media__titre">Le bâtiment cherche des bras</h3>
+            <p class="carte-media__stat">180 offres ce mois-ci</p>
+            <p class="carte-media__texte">Chantiers, rénovation, second œuvre&nbsp;: de nombreuses structures recrutent en insertion.</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="pastilles">
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=H" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-building-2-line"/></svg> Industrie</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=N" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-truck-line"/></svg> Transport et logistique</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=A" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-plant-line"/></svg> Agriculture et pêche</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=I" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-tools-line"/></svg> Installation et maintenance</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=L" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-mic-line"/></svg> Spectacle</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=C" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-bank-line"/></svg> Banque, assurance, immobilier</a>
+        <a class="pastille-lien" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=B" target="_top"><svg class="icone" aria-hidden="true"><use href="#ri-brush-line"/></svg> Art et façonnage d'ouvrages d'art</a>
+        <a class="lien-fleche" href="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results" target="_top">Voir tous les secteurs <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>

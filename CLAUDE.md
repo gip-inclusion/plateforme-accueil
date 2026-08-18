@@ -39,6 +39,31 @@ templates sont dans `accueil/templates/`, les statiques dans `accueil/static/`.
 Côté serveur uniquement (templates Django). **Pas de templating JS**, pas de
 rendu client, pas de gros framework JS.
 
+### Sections
+
+La page est une liste de sections, pas un gros gabarit. `index.html` ne contient
+qu'une boucle : **on n'y ajoute jamais de HTML.**
+
+Une section = deux fichiers, même clé :
+
+- `accueil/sections/<key>.py` — une classe `SectionType` décorée par
+  `@registry.register`, avec `key`, `label`, `position` et `template`.
+  `position` est espacée de 10, pour insérer sans tout renuméroter.
+- `accueil/templates/accueil/sections/<key>.html` — le HTML, avec
+  `{% load static %}` en tête s'il en a besoin.
+
+Les textes vivent en dur dans le gabarit. **C'est l'état normal**, y compris à
+long terme : un contenu qui change une fois par an n'a rien à gagner à devenir
+éditable.
+
+Pour rendre un texte éditable, deux lignes et aucune migration : un champ dans
+`Form` dont `initial` reprend le texte exact, et `{{ content.<name> }}` à la
+place du littéral dans le gabarit. On ouvre un champ à la fois, quand le besoin
+est réel — voir `hero.py`, seul exemple ouvert à ce jour.
+
+Les valeurs `initial` sont du contenu de production : elles se relisent en revue
+comme du texte, pas comme du code.
+
 ### Langue
 
 Comme sur `les-emplois` et `Autometa` :

@@ -1,0 +1,24 @@
+{% load static %}
+<section class="stats" aria-label="Chiffres clés">
+  <div class="section__contenu">
+    <p class="section__surtitre">Toutes les ressources, tous les partenaires</p>
+    <h2 class="section__titre">Ça se passe sur La plateforme de l'inclusion.</h2>
+    <div class="stats__grille">
+    <div class="stat">
+      <img class="stat__illu" src="{% static 'accueil/img/stat-emploi.webp' %}" alt="" width="122" height="86">
+      <b class="stat__nombre">{{ figures.offres_ouvertes }}</b>
+      <span class="stat__label">offres d'emploi inclusif</span>
+    </div>
+    <div class="stat">
+      <img class="stat__illu" src="{% static 'accueil/img/stat-insertion.webp' %}" alt="" width="122" height="86">
+      <b class="stat__nombre">{{ figures.services_di }}</b>
+      <span class="stat__label">services d'insertion</span>
+    </div>
+    <div class="stat">
+      <img class="stat__illu" src="{% static 'accueil/img/stat-prescripteurs.webp' %}" alt="" width="122" height="86">
+      <b class="stat__nombre">{{ figures.prescripteurs_actifs }}</b>
+      <span class="stat__label">prescripteurs habilités</span>
+    </div>
+    </div>
+  </div>
+</section>

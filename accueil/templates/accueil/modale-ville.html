@@ -1,0 +1,22 @@
+<dialog class="modale-ville" id="modale-ville" aria-labelledby="modale-ville-titre">
+  <form class="modale-ville__form" data-modale-form>
+    <button type="button" class="modale-ville__fermer" aria-label="Fermer" data-modale-fermer>
+      <svg class="icone" aria-hidden="true"><use href="#ri-close-line"/></svg>
+    </button>
+    <h2 class="modale-ville__titre" id="modale-ville-titre">Autour de quelle ville&nbsp;?</h2>
+    <p class="modale-ville__contexte" data-modale-contexte></p>
+    <div class="ville-filtre__box">
+      <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+      <input class="ville-filtre__saisie" type="search" autocomplete="off" aria-label="Ville"
+             placeholder="Ex.&nbsp;: Lyon, Marseille, Lille…"
+             role="combobox" aria-expanded="false" aria-autocomplete="list"
+             aria-controls="sugg-modale" data-ville-saisie>
+      <input type="hidden" data-ville-slug>
+      <ul class="suggestions" id="sugg-modale" role="listbox" aria-label="Villes proposées" hidden></ul>
+    </div>
+    <button type="submit" class="bouton modale-ville__valider">
+      <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+      <span>Voir les résultats</span>
+    </button>
+  </form>
+</dialog>

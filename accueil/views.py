@@ -6,6 +6,8 @@ from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import render
 
+from accueil import sections
+
 
 # Public open-data feed backing the "key figures" band.
 KEY_FIGURES_URL = "https://statistiques.inclusion.gouv.fr/dashboards/chiffres-cles-plateforme/data.json"
@@ -62,7 +64,11 @@ def _key_figures():
 
 
 def index(request):
-    return render(request, "accueil/index.html", {"figures": _key_figures()})
+    return render(
+        request,
+        "accueil/index.html",
+        {"figures": _key_figures(), "sections": sections.registry.sections()},
+    )
 
 
 def cities(request):

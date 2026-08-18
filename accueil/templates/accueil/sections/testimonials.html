@@ -1,0 +1,28 @@
+{% load static %}
+<section class="section temoignages" id="temoignages">
+  <div class="section__contenu">
+    <p class="section__surtitre">Témoignages</p>
+    <h2 class="section__titre">Ils utilisent La plateforme de l'inclusion.</h2>
+    <div class="temoignages__conteneur">
+      <div class="temoignages__grille">
+        <figure class="temoignage">
+          <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
+          <blockquote class="temoignage__citation">Un seul compte pour tout mon quotidien&nbsp;: orienter, suivre, échanger. Je gagne un temps précieux à chaque accompagnement.</blockquote>
+          <figcaption class="temoignage__auteur">
+            <b class="temoignage__nom">Nadia B.</b>
+            <span class="temoignage__role">Conseillère en insertion, Mission locale — Lille</span>
+          </figcaption>
+        </figure>
+        <figure class="temoignage">
+          <svg class="icone" aria-hidden="true"><use href="#ri-double-quotes-l"/></svg>
+          <blockquote class="temoignage__citation">Nous délivrons les PASS IAE en ligne et suivons nos indicateurs au même endroit. L'outil s'est effacé derrière le métier.</blockquote>
+          <figcaption class="temoignage__auteur">
+            <b class="temoignage__nom">Marc D.</b>
+            <span class="temoignage__role">Directeur de SIAE — Nantes</span>
+          </figcaption>
+        </figure>
+      </div>
+      <img class="temoignages__illu" src="{% static 'accueil/img/temoignages-illustration.webp' %}" alt="" width="560" height="340">
+    </div>
+  </div>
+</section>

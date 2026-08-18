@@ -1,0 +1,110 @@
+{% load static %}
+<section class="hero">
+  <div class="hero__contenu">
+    <img class="hero__visuel" src="{% static 'accueil/img/hero.webp' %}" alt="" width="485" height="272">
+
+    <h1 class="hero__titre">Tous les emplois, les services inclusifs,<br>et les accompagnateurs autour de vous</h1>
+
+    <div class="recherche">
+      <div class="recherche__onglets" role="tablist" aria-label="Type de recherche">
+        <button type="button" class="recherche__onglet est-actif" role="tab"
+                id="onglet-emploi" aria-controls="form-emploi" aria-selected="true">
+          <svg class="icone" aria-hidden="true"><use href="#ri-briefcase-line"/></svg>
+          <span class="onglet__court">Emploi</span><span class="onglet__long">Un emploi inclusif</span>
+        </button>
+        <button type="button" class="recherche__onglet" role="tab"
+                id="onglet-insertion" aria-controls="form-insertion" aria-selected="false">
+          <svg class="icone" aria-hidden="true"><use href="#ri-compass-3-line"/></svg>
+          <span class="onglet__court">Insertion</span><span class="onglet__long">Un service d'insertion</span>
+        </button>
+        <button type="button" class="recherche__onglet" role="tab"
+                id="onglet-accompagnateur" aria-controls="form-accompagnateur" aria-selected="false">
+          <svg class="icone" aria-hidden="true"><use href="#ri-user-line"/></svg>
+          <span class="onglet__court">Accompagnateur</span><span class="onglet__long">Un accompagnateur</span>
+        </button>
+      </div>
+
+      <form class="recherche__barre" id="form-emploi" role="search" method="get" target="_top"
+            action="https://emplois.inclusion.beta.gouv.fr/search/employers"
+            data-recherche-ville
+            data-resultats="https://emplois.inclusion.beta.gouv.fr/search/employers/results">
+        <div class="champ champ--ville">
+          <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+          <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
+                 placeholder="Ville ou code postal"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list"
+                 aria-controls="sugg-emploi" data-ville-saisie>
+          <input type="hidden" name="city" data-ville-slug>
+          <ul class="suggestions" id="sugg-emploi" role="listbox" aria-label="Villes proposées" hidden></ul>
+        </div>
+        <button type="submit" class="bouton recherche__bouton">
+          <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+          <span>Rechercher</span>
+        </button>
+      </form>
+
+      <form class="recherche__barre" id="form-accompagnateur" role="search" method="get" target="_top" hidden
+            action="https://emplois.inclusion.beta.gouv.fr/search/prescribers"
+            data-recherche-ville
+            data-resultats="https://emplois.inclusion.beta.gouv.fr/search/prescribers/results">
+        <div class="champ champ--ville">
+          <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+          <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
+                 placeholder="Ville ou code postal"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list"
+                 aria-controls="sugg-accompagnateur" data-ville-saisie>
+          <input type="hidden" name="city" data-ville-slug>
+          <ul class="suggestions" id="sugg-accompagnateur" role="listbox" aria-label="Villes proposées" hidden></ul>
+        </div>
+        <button type="submit" class="bouton recherche__bouton">
+          <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+          <span>Rechercher</span>
+        </button>
+      </form>
+
+      <form class="recherche__barre" id="form-insertion" role="search" method="get" target="_top" hidden
+            action="https://emplois.inclusion.beta.gouv.fr/search/services"
+            data-recherche-ville
+            data-resultats="https://emplois.inclusion.beta.gouv.fr/search/services/results">
+        <div class="champ champ--ville">
+          <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
+          <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
+                 placeholder="Ville ou code postal"
+                 role="combobox" aria-expanded="false" aria-autocomplete="list"
+                 aria-controls="sugg-insertion" data-ville-saisie>
+          <input type="hidden" name="city" data-ville-slug>
+          <ul class="suggestions" id="sugg-insertion" role="listbox" aria-label="Villes proposées" hidden></ul>
+        </div>
+        <span class="champ__separateur" aria-hidden="true"></span>
+        <div class="champ champ--theme" data-select-theme>
+          <svg class="icone" aria-hidden="true"><use href="#ri-compass-3-line"/></svg>
+          <select class="champ__select" name="category" aria-label="Thématique">
+            <option value="">Thématiques</option>
+            <option value="choisir-un-metier" data-icon="ri-briefcase-line">Choisir un métier</option>
+            <option value="creer-une-entreprise" data-icon="ri-rocket-line">Créer une entreprise</option>
+            <option value="difficultes-administratives-ou-juridiques" data-icon="ri-government-line">Difficultés administratives ou juridiques</option>
+            <option value="difficultes-financieres" data-icon="ri-money-euro-circle-line">Difficultés financières</option>
+            <option value="equipement-et-alimentation" data-icon="ri-shopping-basket-2-line">Équipement et alimentation</option>
+            <option value="famille" data-icon="ri-group-line">Famille</option>
+            <option value="lecture-ecriture-calcul" data-icon="ri-book-open-line">Lecture, écriture et calcul</option>
+            <option value="logement-hebergement" data-icon="ri-home-4-line">Logement et hébergement</option>
+            <option value="mobilite" data-icon="ri-car-line">Mobilité</option>
+            <option value="numerique" data-icon="ri-computer-line">Numérique</option>
+            <option value="preparer-sa-candidature" data-icon="ri-file-list-3-line">Préparer sa candidature</option>
+            <option value="remobilisation" data-icon="ri-lightbulb-line">Remobilisation</option>
+            <option value="sante" data-icon="ri-heart-pulse-line">Santé</option>
+            <option value="se-former" data-icon="ri-graduation-cap-line">Se former</option>
+            <option value="souvrir-a-linternational" data-icon="ri-earth-line">S'ouvrir à l'international</option>
+            <option value="trouver-un-emploi" data-icon="ri-search-line">Trouver un emploi</option>
+          </select>
+        </div>
+        <button type="submit" class="bouton recherche__bouton">
+          <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
+          <span>Rechercher</span>
+        </button>
+      </form>
+    </div>
+
+    <p class="hero__note">{{ content.note }}</p>
+  </div>
+</section>
