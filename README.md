@@ -18,6 +18,19 @@ make test      # tests
 make lint      # ruff
 ```
 
+La base de données est **optionnelle** : sans `DATABASE_URL`, la page affiche les
+textes du code. Pour travailler avec :
+
+```bash
+docker compose up -d                    # PostgreSQL sur le port 5434
+export DATABASE_URL=postgres://postgres:password@localhost:5434/plateforme_accueil
+uv run python manage.py migrate
+uv run python manage.py sync_sections   # une ligne par section déclarée
+```
+
+Le port 5434 évite les collisions avec les bases d'autres projets ; il se change
+avec `POSTGRES_PORT`.
+
 Le déploiement est automatique à chaque push sur `main`.
 
 ## Structure de la page
@@ -53,6 +66,11 @@ une interface d'édition — on le déplace dans un formulaire, où sa valeur
 
 Pas de migration, rien à reprendre : les autres textes restent en dur. Un seul
 champ est ouvert pour l'instant (`hero.py`), à titre d'exemple.
+
+Avec une base, chaque section a une ligne qui porte son ordre, sa visibilité et
+ses écarts de texte — une ligne vierge rend exactement le code. Sans base, ou si
+elle est injoignable, la page rend les textes du code. Les réglages sont relus
+au plus toutes les 30 secondes.
 
 ## Embarquer la page en iframe
 

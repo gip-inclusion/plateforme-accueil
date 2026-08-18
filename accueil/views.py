@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import render
 
-from accueil import sections
+from accueil import content
 
 
 # Public open-data feed backing the "key figures" band.
@@ -67,7 +67,7 @@ def index(request):
     return render(
         request,
         "accueil/index.html",
-        {"figures": _key_figures(), "sections": sections.registry.sections()},
+        {"figures": _key_figures(), "sections": content.page_sections()},
     )
 
 

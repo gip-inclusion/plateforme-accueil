@@ -64,6 +64,17 @@ est réel — voir `hero.py`, seul exemple ouvert à ce jour.
 Les valeurs `initial` sont du contenu de production : elles se relisent en revue
 comme du texte, pas comme du code.
 
+### Base de données
+
+Optionnelle, et elle doit le rester : **la page s'affiche sans base**, avec les
+textes du code. Toute lecture passe par `accueil/content.py`, qui retombe sur
+les défauts si la base est absente, injoignable ou pas encore migrée. Aucune
+section ne doit dépendre d'une requête pour s'afficher.
+
+Ce qui est stocké n'est qu'un écart : `Section.content` vide = rendu du code.
+`sync_sections` crée les lignes manquantes et **ne supprime jamais rien**, pour
+qu'un déploiement annulé ne perde pas le travail d'un rédacteur.
+
 ### Langue
 
 Comme sur `les-emplois` et `Autometa` :

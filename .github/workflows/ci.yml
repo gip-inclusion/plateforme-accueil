@@ -11,6 +11,22 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    # The database is optional at runtime, but the CMS tests need one; without
+    # it they are skipped, and regressions would go unnoticed.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v7
 
@@ -27,4 +43,6 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
         run: uv run pytest

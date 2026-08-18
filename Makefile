@@ -1,9 +1,12 @@
 CONTAINER_NAME = plateforme-accueil
 
-.PHONY: help dev test lint fmt deploy
+.PHONY: help db dev test lint fmt deploy
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
+
+db: ## Start the local PostgreSQL container
+	docker compose up -d
 
 dev: ## Run the dev server on :8000
 	DEBUG=1 uv run python manage.py runserver

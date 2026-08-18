@@ -3,6 +3,7 @@ import json
 from unittest import mock
 
 import pytest
+from django.conf import settings
 from django.core.cache import cache
 
 
@@ -33,3 +34,14 @@ def _mocked_feed():
 
     with mock.patch("accueil.views.urllib.request.urlopen", side_effect=_response):
         yield
+
+
+def pytest_collection_modifyitems(config, items):
+    # The database is optional for this project; without DATABASE_URL the CMS
+    # tests have nothing to talk to, and the rest of the suite still runs.
+    if settings.DATABASE_CONFIGURED:
+        return
+    skip = pytest.mark.skip(reason="pas de DATABASE_URL")
+    for item in items:
+        if "django_db" in item.keywords:
+            item.add_marker(skip)
