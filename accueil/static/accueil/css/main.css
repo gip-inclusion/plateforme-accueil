@@ -173,7 +173,8 @@ p {
 }
 
 /* Tighten the title when a lead paragraph follows it. */
-.section__titre:has(+ .section__intro) {
+.section__titre:has(+ .section__intro),
+.section__titre:has(+ .cibles) {
   margin-bottom: 0.75rem;
 }
 
@@ -181,6 +182,22 @@ p {
   max-width: 46rem;
   margin: 0 0 2rem;
   line-height: 1.6;
+  color: var(--secondary);
+}
+
+/* Illustrative list of the structure types a search section concerns.
+   Plain muted text (no pills/borders) so it never reads as clickable. */
+.cibles {
+  max-width: 60rem;
+  margin: 0 0 2rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--fg-muted);
+}
+
+.cibles__label {
+  margin-right: 0.25rem;
+  font-weight: 700;
   color: var(--secondary);
 }
 
