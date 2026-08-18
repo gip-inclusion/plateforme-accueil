@@ -15,7 +15,6 @@
           <img class="hero__visuel" src="{% static 'accueil/img/hero.webp' %}" alt="" width="485" height="272">
 
           <h1 class="hero__titre">Tous les emplois, les services inclusifs,<br>et les accompagnateurs autour de vous</h1>
-          <p class="hero__sous-titre">Que recherchez-vous&nbsp;?</p>
 
           <div class="recherche">
             <div class="recherche__onglets" role="tablist" aria-label="Type de recherche">
@@ -43,7 +42,7 @@
               <div class="champ champ--ville">
                 <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
                 <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
-                       placeholder="Rechercher autour de …"
+                       placeholder="Ville ou code postal"
                        role="combobox" aria-expanded="false" aria-autocomplete="list"
                        aria-controls="sugg-emploi" data-ville-saisie>
                 <input type="hidden" name="city" data-ville-slug>
@@ -62,7 +61,7 @@
               <div class="champ champ--ville">
                 <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>
                 <input class="champ__saisie" type="search" autocomplete="off" aria-label="Ville"
-                       placeholder="Rechercher autour de…"
+                       placeholder="Ville ou code postal"
                        role="combobox" aria-expanded="false" aria-autocomplete="list"
                        aria-controls="sugg-accompagnateur" data-ville-saisie>
                 <input type="hidden" name="city" data-ville-slug>
@@ -123,9 +122,9 @@
 
       <section class="section section--bleu" id="fonctionnalites">
         <div class="section__contenu">
-          <p class="section__surtitre">L'espace de travail commun</p>
-          <h2 class="section__titre">Tout votre quotidien professionnel, au même endroit</h2>
-          <p class="section__intro">La Plateforme réunit l'offre de service et l'IAE&nbsp;: moins d'outils à jongler, plus de temps pour l'accompagnement de vos bénéficiaires.</p>
+          <p class="section__surtitre">L'outil pour travailler ensemble</p>
+          <h2 class="section__titre">Tout votre quotidien professionnel, au même endroit.</h2>
+          <p class="section__intro">La plateforme qui réunit les professionnels de l'inclusion et leurs bénéficiaires.</p>
           <ol class="parcours-frise">
             <li class="parcours-frise__etape">
               <span class="parcours-frise__num">1</span>
@@ -162,7 +161,10 @@
       </section>
 
       <section class="stats" aria-label="Chiffres clés">
-        <div class="section__contenu stats__grille">
+        <div class="section__contenu">
+          <p class="section__surtitre">Toutes les ressources, tous les partenaires</p>
+          <h2 class="section__titre">Ça se passe sur La plateforme de l'inclusion.</h2>
+          <div class="stats__grille">
           <div class="stat">
             <img class="stat__illu" src="{% static 'accueil/img/stat-emploi.webp' %}" alt="" width="122" height="86">
             <b class="stat__nombre">{{ chiffres.offres_ouvertes }}</b>
@@ -177,6 +179,7 @@
             <img class="stat__illu" src="{% static 'accueil/img/stat-prescripteurs.webp' %}" alt="" width="122" height="86">
             <b class="stat__nombre">{{ chiffres.prescripteurs_actifs }}</b>
             <span class="stat__label">prescripteurs habilités</span>
+          </div>
           </div>
         </div>
       </section>
@@ -241,7 +244,7 @@
       <section class="section bloc-recherche bloc-recherche--inverse" id="services" data-recherche-section>
         <div class="section__contenu">
           <p class="section__surtitre">Les services d'insertion</p>
-          <h2 class="section__titre">Un accompagnement pour lever les freins à l'emploi</h2>
+          <h2 class="section__titre">Un accompagnement pour lever les freins à l’emploi.</h2>
           <p class="section__intro">Mobilité, logement, santé, formation… Sélectionnez une thématique pour trouver les services de votre territoire.</p>
           <div class="bloc-recherche__grille">
             <div class="pastilles">
@@ -298,8 +301,8 @@
 
       <section class="section section--grisee accompagnateurs" id="accompagnateurs" data-recherche-section>
         <div class="section__contenu">
-          <p class="section__surtitre">Je fais une recherche</p>
-          <h2 class="section__titre">Un accompagnateur près de chez vous</h2>
+          <p class="section__surtitre">Les professionnels du réseau pour l'emploi</p>
+          <h2 class="section__titre">Un accompagnateur près de chez vous.</h2>
           <p class="section__intro">Des professionnels habilités vous orientent et vous suivent vers l'emploi, gratuitement. Trouvez ceux de votre territoire.</p>
           <div class="exemples">
             <p class="exemples__legende">Par exemple&nbsp;:</p>
@@ -321,7 +324,7 @@
       <section class="section temoignages" id="temoignages">
         <div class="section__contenu">
           <p class="section__surtitre">Témoignages</p>
-          <h2 class="section__titre">Ils utilisent la plateforme au quotidien</h2>
+          <h2 class="section__titre">Ils utilisent La plateforme de l'inclusion.</h2>
           <div class="temoignages__conteneur">
             <div class="temoignages__grille">
               <figure class="temoignage">
@@ -349,13 +352,13 @@
       <section class="section section--lisere profils" id="pour-qui">
         <div class="section__contenu">
           <p class="section__surtitre">Pour qui&nbsp;?</p>
-          <h2 class="section__titre">Un parcours adapté à chaque profil</h2>
+          <h2 class="section__titre">Des services utiles à tous les pros du Réseau pour l'emploi.</h2>
 
           <div class="profils__onglets" role="tablist" aria-label="Profils" hidden>
             <button type="button" class="profils__onglet est-actif" role="tab" id="onglet-prescripteur"
                     aria-controls="profil-prescripteur" aria-selected="true">
               <svg class="icone" aria-hidden="true"><use href="#ri-home-smile-2-line"/></svg>
-              Prescripteur / orienteur
+              Accompagnateur
             </button>
             <button type="button" class="profils__onglet" role="tab" id="onglet-employeur"
                     aria-controls="profil-employeur" aria-selected="false">

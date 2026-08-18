@@ -885,6 +885,10 @@ p {
   color: var(--tertiary);
 }
 
+.suggestions__item:active {
+  background: var(--nuance-08);
+}
+
 /* Thematic dropdown (js/select-theme.js): wide 2-column grid showing every
    theme at once (no scroll), each with an icon. */
 .suggestions--theme {
@@ -943,6 +947,10 @@ p {
 .stats {
   padding: 2.5rem 1rem;
   background: #fff;
+}
+
+.stats .section__contenu {
+  text-align: center;
 }
 
 .stats__grille {
@@ -1186,7 +1194,10 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  margin-top: 0.25rem;
+  /* Extra space above, and a left inset matching the pastille padding so the
+     link lines up with the icons of the pills above it. */
+  margin-top: 1rem;
+  padding-left: 0.875rem;
   color: var(--tertiary);
   font-weight: 700;
   font-size: 0.875rem;
