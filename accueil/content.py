@@ -40,7 +40,10 @@ def _overrides(slug):
     if not settings.DATABASE_CONFIGURED:
         return {}
 
-    overrides = cache.get(OVERRIDES_CACHE_KEY)
+    try:
+        overrides = cache.get(OVERRIDES_CACHE_KEY)
+    except Exception:
+        overrides = None  # a cache outage must not take the page down
     if overrides is not None:
         return overrides
 
@@ -60,5 +63,8 @@ def _overrides(slug):
         # matters more than the overrides. Not cached, so it self-heals.
         return {}
 
-    cache.set(OVERRIDES_CACHE_KEY, overrides, OVERRIDES_CACHE_TTL)
+    try:
+        cache.set(OVERRIDES_CACHE_KEY, overrides, OVERRIDES_CACHE_TTL)
+    except Exception:
+        pass
     return overrides

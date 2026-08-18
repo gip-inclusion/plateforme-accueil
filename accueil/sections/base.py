@@ -18,10 +18,26 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 
-class Reference(forms.CharField):
-    """An identifier the page consumes but never displays — a feed id, for
-    instance. Distinguished from copy so that tooling (and tests) can tell
-    editable prose from a key that must match something upstream."""
+def check_shape(field, value):
+    """Reject a value of the wrong kind before a form stringifies it.
+
+    `CharField.to_python` turns anything into text, so without this a list or a
+    number lands on the page as "[…]" or "42".
+    """
+    if isinstance(field, ListField):
+        expected, ok = "une liste", isinstance(value, list)
+    elif isinstance(field, forms.IntegerField):
+        expected, ok = "un nombre entier", isinstance(value, int) and not isinstance(value, bool)
+    else:
+        expected, ok = "du texte", isinstance(value, str)
+    if not ok:
+        raise ValidationError(f"Cette valeur doit être {expected}.")
+
+
+class Reference(forms.SlugField):
+    """An identifier the page consumes but never displays — a feed id, or a
+    slug tying a tab to its panel. Slug-shaped on purpose: several of these end
+    up in HTML ids, where a space would silently break `aria-controls`."""
 
 
 class ListField(forms.Field):
@@ -33,10 +49,11 @@ class ListField(forms.Field):
     here is what keeps that honest.
     """
 
-    def __init__(self, item_form, *, min_num=0, max_num=None, **kwargs):
+    def __init__(self, item_form, *, min_num=0, max_num=None, unique=None, **kwargs):
         self.item_form = item_form
         self.min_num = min_num
         self.max_num = max_num
+        self.unique = unique  # name of a key that must not repeat across items
         # A list with a minimum is required by definition; deriving it keeps a
         # declaration from contradicting itself.
         kwargs["required"] = min_num > 0
@@ -59,6 +76,12 @@ class ListField(forms.Field):
         for rang, item in enumerate(value, start=1):
             if not isinstance(item, dict):
                 raise ValidationError(f"L'élément {rang} doit être un objet.")
+            for name, sub_field in self.item_form.base_fields.items():
+                if name in item:
+                    try:
+                        check_shape(sub_field, item[name])
+                    except ValidationError as erreur:
+                        raise ValidationError(f"Élément {rang}, {name} : {erreur.messages[0]}") from erreur
             # Merged under the item so that an omitted key falls back to the
             # child form's own default, as it does for a section.
             formulaire = self.item_form({**self.item_defaults(), **item})
@@ -66,6 +89,11 @@ class ListField(forms.Field):
                 premier = next(iter(formulaire.errors.values()))[0]
                 raise ValidationError(f"Élément {rang} : {premier}")
             nettoyes.append(formulaire.cleaned_data)
+
+        if self.unique:
+            valeurs = [item.get(self.unique) for item in nettoyes]
+            if len(set(valeurs)) != len(valeurs):
+                raise ValidationError(f"Le champ « {self.unique} » doit être différent pour chaque élément.")
         return nettoyes
 
 
@@ -105,18 +133,9 @@ class SectionType:
 
     @classmethod
     def clean_value(cls, name, value):
-        """Validate one override against the field that declares it.
-
-        `CharField.clean` happily stringifies anything, so the shape is checked
-        first: a list landing in a text field would otherwise be printed as
-        "[…]" on the page.
-        """
+        """Validate one override against the field that declares it."""
         field = cls.Form.base_fields[name]
-        if isinstance(field, ListField):
-            if not isinstance(value, list):
-                raise ValidationError("Cette valeur doit être une liste.")
-        elif isinstance(value, (list, dict)):
-            raise ValidationError("Cette valeur doit être du texte.")
+        check_shape(field, value)
         return field.clean(value)
 
     @classmethod

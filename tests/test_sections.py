@@ -143,3 +143,40 @@ def test_the_two_search_blocks_share_one_template():
     # second template.
     assert jobs.cards_first != services.cards_first
     assert (jobs.badge_kind, services.badge_kind) == ("emploi", "service")
+
+
+def test_a_list_item_rejects_a_value_of_the_wrong_kind():
+    # Without the per-item check a dict lands on the page as "{'deep': [1, 2]}".
+    field = sections.ListField(Item)
+    with pytest.raises(ValidationError, match="doit être du texte"):
+        field.clean([{"label": {"deep": [1, 2]}}])
+
+
+def test_a_text_field_rejects_a_number():
+    with pytest.raises(ValidationError, match="doit être du texte"):
+        sections.hero.Hero.clean_value("note", 42)
+
+
+def test_a_number_field_rejects_a_boolean():
+    field = sections.registry.types()[2].Form.base_fields["indicators"]
+    with pytest.raises(ValidationError, match="nombre entier"):
+        field.clean([{"key": "x", "label": "l", "image": "i", "fallback": True}])
+
+
+def test_duplicate_slugs_are_refused():
+    # They become HTML ids: a duplicate breaks the tabs and the ARIA wiring.
+    from accueil.sections.profiles import Profiles
+
+    profiles = Profiles.defaults()["profiles"]
+    profiles[1]["slug"] = profiles[0]["slug"]
+    with pytest.raises(ValidationError, match="différent pour chaque"):
+        Profiles.clean_value("profiles", profiles)
+
+
+def test_a_reference_rejects_a_space():
+    from accueil.sections.profiles import Profiles
+
+    profiles = Profiles.defaults()["profiles"]
+    profiles[0]["slug"] = "pro conseil"
+    with pytest.raises(ValidationError, match="Élément 1"):
+        Profiles.clean_value("profiles", profiles)

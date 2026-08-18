@@ -38,6 +38,7 @@ class Profiles(SectionType):
             label="Profils",
             min_num=1,
             max_num=6,
+            unique="slug",
             initial=[
                 {
                     "slug": "prescripteur",

@@ -22,12 +22,21 @@ def _format_french(number):
     return f"{number:,}".replace(",", " ")
 
 
+# A failed fetch is remembered only briefly: one blip should not pin the page
+# to its fallbacks for a whole hour.
+FAILURE_CACHE_TTL = 60  # seconds
+
+
 def _feed():
-    values = cache.get(CACHE_KEY)
+    try:
+        values = cache.get(CACHE_KEY)
+    except Exception:
+        return {}  # a cache outage must not take the page down
     if values is not None:
         return values
 
     values = {}
+    fetched = False
     try:
         with urllib.request.urlopen(FEED_URL, timeout=5) as response:
             data = json.load(response)
@@ -35,12 +44,17 @@ def _feed():
         values = {
             item["id"]: item["value"]
             for item in indicators
-            if isinstance(item, dict) and isinstance(item.get("value"), int) and "id" in item
+            # `isinstance(True, int)` is True, and a boolean would render as 1.
+            if isinstance(item, dict) and "id" in item and type(item.get("value")) is int
         }
+        fetched = True
     except Exception:
         pass  # any failure -> fall back to the values declared in the section
 
-    cache.set(CACHE_KEY, values, CACHE_TTL)
+    try:
+        cache.set(CACHE_KEY, values, CACHE_TTL if fetched else FAILURE_CACHE_TTL)
+    except Exception:
+        pass
     return values
 
 
