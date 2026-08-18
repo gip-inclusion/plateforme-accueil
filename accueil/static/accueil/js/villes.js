@@ -227,7 +227,7 @@
     if (!modale) {
       return;
     }
-    var liens = section.querySelectorAll(".pastille-lien, .lien-fleche, .carte-media");
+    var liens = section.querySelectorAll(".pastille-lien, .lien-fleche, .carte-media, .recherche-cta");
     Array.prototype.forEach.call(liens, function (lien) {
       lien.addEventListener("click", function (e) {
         e.preventDefault();
