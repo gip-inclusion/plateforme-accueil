@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -49,6 +50,33 @@ class Section(models.Model):
 
     def __str__(self):
         return f"{self.kind} ({self.position})"
+
+    def clean(self):
+        """Check the overrides against the fields the section declares.
+
+        Rendering drops anything unusable so the page always works; that is a
+        safety net, not feedback. This is where an editor is told what is
+        wrong, before it is saved.
+        """
+        from accueil.sections import registry
+
+        declared = {section_type.key: section_type for section_type in registry.types()}.get(self.kind)
+        if declared is None or not self.content:
+            return
+        if not isinstance(self.content, dict):
+            raise ValidationError({"content": "Le contenu doit être un objet JSON."})
+
+        problemes = []
+        for name, value in self.content.items():
+            if name not in declared.Form.base_fields:
+                problemes.append(f"{name} : ce champ n'existe pas dans cette section.")
+                continue
+            try:
+                declared.clean_value(name, value)
+            except ValidationError as erreur:
+                problemes.append(f"{name} : {erreur.messages[0]}")
+        if problemes:
+            raise ValidationError({"content": problemes})
 
 
 @receiver(post_save, sender=Section)

@@ -3,8 +3,10 @@ from unittest import mock
 import pytest
 from django.apps import apps
 from django.core.cache import cache
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.management import call_command
 from django.test import override_settings
+from django.utils.html import escape
 
 from accueil import content
 from accueil.models import Page, Section
@@ -120,3 +122,40 @@ def test_the_admin_is_off_by_default_outside_debug(monkeypatch):
     reloaded = importlib.reload(config.settings)
     assert reloaded.ADMIN_ENABLED is False
     importlib.reload(config.settings)  # restore the module for the rest of the suite
+
+
+def test_a_malformed_override_does_not_break_the_page(page, client):
+    # The page must render whatever ended up in the database — that rule is
+    # older than the CMS and must survive it.
+    for garbage in ([1, 2], "texte", 42, {"cards": 5}, {"kicker": []}):
+        Section.objects.filter(kind="jobs").update(content=garbage)
+        cache.clear()
+        assert client.get("/").status_code == 200, garbage
+
+
+def test_an_unusable_override_falls_back_to_the_code(page, client):
+    Section.objects.filter(kind="jobs").update(content={"kicker": []})
+    cache.clear()
+    default = registry.sections()[3].content["kicker"]
+    assert escape(default) in client.get("/").content.decode()
+
+
+def test_saving_an_unknown_field_is_refused(page):
+    section = Section.objects.get(kind="jobs")
+    section.content = {"inexistant": "x"}
+    with pytest.raises(DjangoValidationError, match="n'existe pas"):
+        section.full_clean()
+
+
+def test_saving_a_javascript_url_is_refused(page):
+    section = Section.objects.get(kind="jobs")
+    section.content = {"see_all_href": "javascript:alert(1)"}
+    with pytest.raises(DjangoValidationError, match="see_all_href"):
+        section.full_clean()
+
+
+def test_a_javascript_url_never_reaches_the_page(page, client):
+    # Belt and braces: even written straight to the column, it is dropped.
+    Section.objects.filter(kind="jobs").update(content={"see_all_href": "javascript:alert(1)"})
+    cache.clear()
+    assert "javascript:alert(1)" not in client.get("/").content.decode()

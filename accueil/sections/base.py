@@ -12,6 +12,8 @@ one template variable — no migration, no data backfill.
 See CLAUDE.md, section « Sections », for the authoring contract.
 """
 
+import copy
+
 from django import forms
 from django.core.exceptions import ValidationError
 
@@ -35,11 +37,16 @@ class ListField(forms.Field):
         self.item_form = item_form
         self.min_num = min_num
         self.max_num = max_num
-        kwargs.setdefault("required", False)
+        # A list with a minimum is required by definition; deriving it keeps a
+        # declaration from contradicting itself.
+        kwargs["required"] = min_num > 0
         super().__init__(**kwargs)
 
+    def item_defaults(self):
+        return {name: field.initial for name, field in self.item_form.base_fields.items() if field.initial is not None}
+
     def clean(self, value):
-        if value in self.empty_values:
+        if value is None or value == "":
             value = []
         if not isinstance(value, list):
             raise ValidationError("Cette valeur doit être une liste.")
@@ -52,7 +59,9 @@ class ListField(forms.Field):
         for rang, item in enumerate(value, start=1):
             if not isinstance(item, dict):
                 raise ValidationError(f"L'élément {rang} doit être un objet.")
-            formulaire = self.item_form(item)
+            # Merged under the item so that an omitted key falls back to the
+            # child form's own default, as it does for a section.
+            formulaire = self.item_form({**self.item_defaults(), **item})
             if not formulaire.is_valid():
                 premier = next(iter(formulaire.errors.values()))[0]
                 raise ValidationError(f"Élément {rang} : {premier}")
@@ -76,15 +85,45 @@ class SectionType:
 
     def __init__(self, overrides=None):
         defaults = self.defaults()
-        overrides = overrides or {}
+        # Anything malformed is dropped rather than raised: the page has to
+        # render whatever ended up in the database.
+        if not isinstance(overrides, dict):
+            overrides = {}
         # Unknown keys are ignored rather than rendered: a field removed from
         # the form must not resurrect stale content.
-        self.content = defaults | {key: value for key, value in overrides.items() if key in defaults}
         self.stale_keys = sorted(key for key in overrides if key not in defaults)
+
+        kept = {}
+        for name, value in overrides.items():
+            if name not in defaults:
+                continue
+            try:
+                kept[name] = self.clean_value(name, value)
+            except ValidationError:
+                continue  # unusable override -> the text from the code
+        self.content = defaults | kept
+
+    @classmethod
+    def clean_value(cls, name, value):
+        """Validate one override against the field that declares it.
+
+        `CharField.clean` happily stringifies anything, so the shape is checked
+        first: a list landing in a text field would otherwise be printed as
+        "[…]" on the page.
+        """
+        field = cls.Form.base_fields[name]
+        if isinstance(field, ListField):
+            if not isinstance(value, list):
+                raise ValidationError("Cette valeur doit être une liste.")
+        elif isinstance(value, (list, dict)):
+            raise ValidationError("Cette valeur doit être du texte.")
+        return field.clean(value)
 
     @classmethod
     def defaults(cls):
-        return {name: field.initial for name, field in cls.Form.base_fields.items()}
+        # Copied: `initial` on a list field is a mutable class attribute, and a
+        # section must never be able to mutate it for the whole process.
+        return {name: copy.deepcopy(field.initial) for name, field in cls.Form.base_fields.items()}
 
     def __repr__(self):
         return f"<{type(self).__name__} {self.key}>"
