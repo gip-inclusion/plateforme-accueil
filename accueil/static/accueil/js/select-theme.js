@@ -33,7 +33,7 @@
     declencheur.appendChild(chevron);
 
     var liste = document.createElement("ul");
-    liste.className = "suggestions";
+    liste.className = "suggestions suggestions--theme";
     liste.id = prefixe + "-liste";
     liste.setAttribute("role", "listbox");
     liste.hidden = true;
@@ -46,7 +46,14 @@
       li.id = prefixe + "-opt-" + i;
       li.setAttribute("role", "option");
       li.setAttribute("aria-selected", opt.selected ? "true" : "false");
-      li.textContent = opt.textContent;
+      if (opt.dataset.icon) {
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "icone");
+        svg.setAttribute("aria-hidden", "true");
+        svg.innerHTML = '<use href="#' + opt.dataset.icon + '"/>';
+        li.appendChild(svg);
+      }
+      li.appendChild(document.createTextNode(opt.textContent));
       li.addEventListener("mousedown", function (e) {
         e.preventDefault();
         choisir(i);

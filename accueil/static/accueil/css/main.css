@@ -145,6 +145,10 @@ p {
   background: var(--nuance-10);
 }
 
+.section--bleu {
+  background: var(--button-lightest);
+}
+
 .section--lisere {
   border-top: 1px solid var(--border);
 }
@@ -166,6 +170,18 @@ p {
 .section__titre {
   margin: 0 0 2rem;
   font-size: 1.75rem;
+}
+
+/* Tighten the title when a lead paragraph follows it. */
+.section__titre:has(+ .section__intro) {
+  margin-bottom: 0.75rem;
+}
+
+.section__intro {
+  max-width: 46rem;
+  margin: 0 0 2rem;
+  line-height: 1.6;
+  color: var(--secondary);
 }
 
 @media (min-width: 48rem) {
@@ -586,7 +602,7 @@ p {
 .hero {
   position: relative;
   isolation: isolate;
-  z-index: 1; /* keep the search dropdowns above the sections below */
+  z-index: 10; /* keep the search dropdowns above the sections below */
   padding: 2.5rem 1rem 3rem;
   color: #fff;
   text-align: center;
@@ -846,6 +862,11 @@ p {
   overflow-y: auto;
 }
 
+/* A variant sets display, which would otherwise defeat the [hidden] attribute. */
+.suggestions[hidden] {
+  display: none;
+}
+
 .suggestions__item {
   padding: 0.5rem 0.625rem;
   border-radius: 0.375rem;
@@ -858,6 +879,38 @@ p {
 .suggestions__item[aria-selected="true"] {
   background: var(--button-lightest);
   color: var(--tertiary);
+}
+
+/* Thematic dropdown (js/select-theme.js): wide 2-column grid showing every
+   theme at once (no scroll), each with an icon. */
+.suggestions--theme {
+  top: calc(100% + 0.875rem);
+  left: 0;
+  right: auto;
+  width: 34rem;
+  max-width: min(92vw, 34rem);
+  max-height: none;
+  overflow: visible;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.125rem 0.25rem;
+}
+
+.suggestions--theme .suggestions__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.suggestions--theme .suggestions__item .icone {
+  flex: none;
+  color: var(--tertiary);
+}
+
+@media (min-width: 30rem) {
+  .suggestions--theme {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (min-width: 40rem) {
@@ -1136,6 +1189,44 @@ p {
   text-decoration: none;
 }
 
+/* Accompagnateurs section: a plain informational list of types (not buttons)
+   plus a single search CTA. */
+.types-list__intro {
+  margin: 0 0 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+}
+
+.types-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  margin: 0 0 1.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--secondary);
+  font-size: 0.9375rem;
+}
+
+.type-tag .icone {
+  color: var(--tertiary);
+}
+
+.recherche-cta {
+  min-height: 48px;
+  padding: 0.625rem 1.5rem;
+  font-size: 1rem;
+}
+
 /* City text field, reused inside the "which city?" modal (js/villes.js). */
 .ville-filtre__box {
   position: relative;
@@ -1276,5 +1367,101 @@ p {
 
   .temoignages__conteneur {
     grid-template-columns: 1.7fr 1fr;
+  }
+}
+
+/* ==========================================================================
+   Module: parcours (horizontal numbered steps)
+   ========================================================================== */
+
+
+/* Mobile-first: steps stack vertically, then form a row on wider screens. */
+.parcours-frise {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.parcours-frise__etape {
+  position: relative;
+  padding-left: 3.25rem;
+}
+
+.parcours-frise__num {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--tertiary);
+  color: #fff;
+  font: 700 1rem var(--font-sans);
+}
+
+.parcours-frise__etape:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  left: 1.125rem;
+  top: -1.5rem;
+  width: 2px;
+  height: 1.5rem;
+  background: var(--border);
+}
+
+.parcours-frise__pic {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: var(--tertiary);
+}
+
+.parcours-frise__titre {
+  margin: 0 0 0.375rem;
+  font-size: 1rem;
+}
+
+.parcours-frise__texte {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--secondary);
+}
+
+@media (min-width: 48rem) {
+  .parcours-frise {
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .parcours-frise__etape {
+    flex: 1;
+    padding: 3.25rem 0 0;
+    text-align: center;
+  }
+
+  .parcours-frise__num {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .parcours-frise__etape:not(:first-child)::before {
+    top: 1.125rem;
+    left: auto;
+    right: 50%;
+    width: 100%;
+    height: 2px;
+  }
+
+  .parcours-frise__pic {
+    margin: 0 auto 0.5rem;
   }
 }
