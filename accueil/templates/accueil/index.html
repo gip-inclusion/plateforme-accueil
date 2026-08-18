@@ -3,12 +3,12 @@
 
 {% block head %}
   <script src="{% static 'accueil/js/hero.js' %}" defer></script>
-  <script src="{% static 'accueil/js/villes.js' %}" defer></script>
+  <script src="{% static 'accueil/js/cities.js' %}" defer></script>
   <script src="{% static 'accueil/js/select-theme.js' %}" defer></script>
-  <script src="{% static 'accueil/js/profils.js' %}" defer></script>
+  <script src="{% static 'accueil/js/profiles.js' %}" defer></script>
 {% endblock %}
 
-{% block contenu %}
+{% block content %}
     <main>
       <section class="hero">
         <div class="hero__contenu">
@@ -167,17 +167,17 @@
           <div class="stats__grille">
           <div class="stat">
             <img class="stat__illu" src="{% static 'accueil/img/stat-emploi.webp' %}" alt="" width="122" height="86">
-            <b class="stat__nombre">{{ chiffres.offres_ouvertes }}</b>
+            <b class="stat__nombre">{{ figures.offres_ouvertes }}</b>
             <span class="stat__label">offres d'emploi inclusif</span>
           </div>
           <div class="stat">
             <img class="stat__illu" src="{% static 'accueil/img/stat-insertion.webp' %}" alt="" width="122" height="86">
-            <b class="stat__nombre">{{ chiffres.services_di }}</b>
+            <b class="stat__nombre">{{ figures.services_di }}</b>
             <span class="stat__label">services d'insertion</span>
           </div>
           <div class="stat">
             <img class="stat__illu" src="{% static 'accueil/img/stat-prescripteurs.webp' %}" alt="" width="122" height="86">
-            <b class="stat__nombre">{{ chiffres.prescripteurs_actifs }}</b>
+            <b class="stat__nombre">{{ figures.prescripteurs_actifs }}</b>
             <span class="stat__label">prescripteurs habilités</span>
           </div>
           </div>

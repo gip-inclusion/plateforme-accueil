@@ -41,8 +41,18 @@ rendu client, pas de gros framework JS.
 
 ### Langue
 
-Comme sur `les-emplois` : **les commentaires de code sont en anglais**
-(Python, templates, JS, CSS). Le français reste la langue du contenu affiché,
+Comme sur `les-emplois` et `Autometa` :
+
+- **Les identifiants sont en anglais. Strictement.** Modules, classes,
+  fonctions, variables, champs de modèles, noms de tests, clés de section,
+  noms de fichiers de code. `page_sections()`, jamais
+  `sections_de_la_page()`.
+- Les commentaires sont en anglais de préférence, comme le code existant ; le
+  français est toléré.
+- **Messages de commit en anglais**, titres et descriptions de PR **en
+  français**.
+
+Le français reste la langue du contenu affiché, des `verbose_name` et `label`,
 des noms de classes CSS sémantiques et de la documentation en prose (README,
 ce fichier).
 

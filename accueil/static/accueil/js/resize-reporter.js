@@ -17,63 +17,63 @@
     return; // not framed
   }
 
-  var derniereHauteur = 0;
-  var mesurePlanifiee = null;
-  var observateur = "ResizeObserver" in window ? new ResizeObserver(planifierMesure) : null;
-  var corpsObserve = null;
+  var lastHeight = 0;
+  var scheduledMeasure = null;
+  var observer = "ResizeObserver" in window ? new ResizeObserver(scheduleMeasure) : null;
+  var observedBody = null;
 
-  function arrimerObservateur() {
-    if (observateur === null || document.body === corpsObserve) {
+  function attachObserver() {
+    if (observer === null || document.body === observedBody) {
       return;
     }
-    corpsObserve = document.body;
-    observateur.disconnect();
-    observateur.observe(document.documentElement); // iframe resizes
-    observateur.observe(corpsObserve); // content changes
+    observedBody = document.body;
+    observer.disconnect();
+    observer.observe(document.documentElement); // iframe resizes
+    observer.observe(observedBody); // content changes
   }
 
-  function hauteurContenu() {
-    var bas = 0;
-    var enfants = document.body.children;
-    for (var i = 0; i < enfants.length; i++) {
-      var element = enfants[i];
+  function contentHeight() {
+    var bottom = 0;
+    var children = document.body.children;
+    for (var i = 0; i < children.length; i++) {
+      var element = children[i];
       var style = window.getComputedStyle(element);
       if (style.position === "fixed") {
         continue; // out of flow, tracks the viewport rather than the content
       }
       var rect = element.getBoundingClientRect();
-      var margeBasse = parseFloat(style.marginBottom) || 0;
-      bas = Math.max(bas, rect.bottom + margeBasse);
+      var bottomMargin = parseFloat(style.marginBottom) || 0;
+      bottom = Math.max(bottom, rect.bottom + bottomMargin);
     }
-    return Math.ceil(bas + window.scrollY);
+    return Math.ceil(bottom + window.scrollY);
   }
 
-  function publierHauteur() {
-    mesurePlanifiee = null;
-    arrimerObservateur();
-    var hauteur = hauteurContenu();
-    if (Math.abs(hauteur - derniereHauteur) < 2) {
+  function publishHeight() {
+    scheduledMeasure = null;
+    attachObserver();
+    var height = contentHeight();
+    if (Math.abs(height - lastHeight) < 2) {
       return; // slack, so rounding does not ping-pong between host and iframe
     }
-    derniereHauteur = hauteur;
+    lastHeight = height;
     window.parent.postMessage(
       {
         source: "plateforme-accueil",
         type: "resize",
-        height: hauteur,
+        height: height,
       },
       "*"
     );
   }
 
-  function planifierMesure() {
-    if (mesurePlanifiee === null) {
-      mesurePlanifiee = window.requestAnimationFrame(publierHauteur);
+  function scheduleMeasure() {
+    if (scheduledMeasure === null) {
+      scheduledMeasure = window.requestAnimationFrame(publishHeight);
     }
   }
 
-  arrimerObservateur();
-  window.addEventListener("load", planifierMesure);
-  window.addEventListener("resize", planifierMesure);
-  new MutationObserver(planifierMesure).observe(document, { childList: true, subtree: true });
+  attachObserver();
+  window.addEventListener("load", scheduleMeasure);
+  window.addEventListener("resize", scheduleMeasure);
+  new MutationObserver(scheduleMeasure).observe(document, { childList: true, subtree: true });
 })();

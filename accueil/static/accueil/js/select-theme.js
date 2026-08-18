@@ -4,41 +4,41 @@
 (function () {
   "use strict";
 
-  var compteur = 0;
+  var counter = 0;
 
-  function brancher(champ) {
+  function wire(champ) {
     var select = champ.querySelector("select");
     if (!select) {
       return;
     }
     var options = Array.prototype.slice.call(select.options);
-    var prefixe = "theme-" + compteur++;
+    var prefix = "theme-" + counter++;
 
-    var valeur = document.createElement("span");
-    valeur.className = "select-theme__valeur";
+    var value = document.createElement("span");
+    value.className = "select-theme__valeur";
 
     var chevron = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     chevron.setAttribute("class", "icone select-theme__chevron");
     chevron.setAttribute("aria-hidden", "true");
     chevron.innerHTML = '<use href="#ri-arrow-down-s-line"/>';
 
-    var declencheur = document.createElement("button");
-    declencheur.type = "button";
-    declencheur.className = "select-theme__declencheur";
-    declencheur.setAttribute("role", "combobox");
-    declencheur.setAttribute("aria-haspopup", "listbox");
-    declencheur.setAttribute("aria-expanded", "false");
-    declencheur.setAttribute("aria-label", select.getAttribute("aria-label") || "");
-    declencheur.appendChild(valeur);
-    declencheur.appendChild(chevron);
+    var trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "select-theme__declencheur";
+    trigger.setAttribute("role", "combobox");
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-label", select.getAttribute("aria-label") || "");
+    trigger.appendChild(value);
+    trigger.appendChild(chevron);
 
-    var liste = document.createElement("ul");
-    liste.className = "suggestions suggestions--theme";
-    liste.id = prefixe + "-liste";
-    liste.setAttribute("role", "listbox");
-    liste.hidden = true;
+    var list = document.createElement("ul");
+    list.className = "suggestions suggestions--theme";
+    list.id = prefix + "-liste";
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
 
-    var actif = -1;
+    var active = -1;
 
     // The empty placeholder option stays in the <select> (it drives the button
     // label and the no-JS fallback) but is not shown as a row in the dropdown.
@@ -50,7 +50,7 @@
       }
       var li = document.createElement("li");
       li.className = "suggestions__item";
-      li.id = prefixe + "-opt-" + i;
+      li.id = prefix + "-opt-" + i;
       li.dataset.index = i;
       li.setAttribute("role", "option");
       li.setAttribute("aria-selected", opt.selected ? "true" : "false");
@@ -65,32 +65,32 @@
       // Select on click (mouseup), not mousedown, so the :active state shows
       // while the row is pressed before the dropdown closes.
       li.addEventListener("click", function () {
-        choisir(i);
+        pick(i);
       });
-      liste.appendChild(li);
+      list.appendChild(li);
       elems.push(li);
     });
 
-    function majValeur() {
+    function updateValue() {
       var opt = options[select.selectedIndex] || options[0];
-      valeur.textContent = opt.textContent;
-      valeur.classList.toggle("select-theme__valeur--vide", opt.value === "");
+      value.textContent = opt.textContent;
+      value.classList.toggle("select-theme__valeur--vide", opt.value === "");
     }
 
-    function surligner(i) {
+    function highlight(i) {
       elems.forEach(function (e, idx) {
         e.setAttribute("aria-selected", idx === i ? "true" : "false");
       });
-      actif = i;
+      active = i;
       if (i >= 0) {
-        declencheur.setAttribute("aria-activedescendant", elems[i].id);
+        trigger.setAttribute("aria-activedescendant", elems[i].id);
         elems[i].scrollIntoView({ block: "nearest" });
       }
     }
 
     // elems position of the currently selected option (-1 when the placeholder
     // is selected, so nothing is highlighted).
-    function positionActuelle() {
+    function currentPosition() {
       for (var i = 0; i < elems.length; i++) {
         if (Number(elems[i].dataset.index) === select.selectedIndex) {
           return i;
@@ -99,66 +99,66 @@
       return -1;
     }
 
-    function ouvrir() {
-      liste.hidden = false;
-      declencheur.setAttribute("aria-expanded", "true");
-      surligner(positionActuelle());
+    function open() {
+      list.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      highlight(currentPosition());
     }
 
-    function fermer() {
-      liste.hidden = true;
-      declencheur.setAttribute("aria-expanded", "false");
-      declencheur.removeAttribute("aria-activedescendant");
+    function closeList() {
+      list.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.removeAttribute("aria-activedescendant");
     }
 
-    function choisir(i) {
+    function pick(i) {
       select.selectedIndex = i;
-      majValeur();
-      fermer();
-      declencheur.focus();
+      updateValue();
+      closeList();
+      trigger.focus();
     }
 
-    declencheur.addEventListener("click", function () {
-      if (liste.hidden) {
-        ouvrir();
+    trigger.addEventListener("click", function () {
+      if (list.hidden) {
+        open();
       } else {
-        fermer();
+        closeList();
       }
     });
 
-    declencheur.addEventListener("keydown", function (e) {
+    trigger.addEventListener("keydown", function (e) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        if (liste.hidden) {
-          ouvrir();
+        if (list.hidden) {
+          open();
         } else {
-          surligner((actif + (e.key === "ArrowDown" ? 1 : -1) + elems.length) % elems.length);
+          highlight((active + (e.key === "ArrowDown" ? 1 : -1) + elems.length) % elems.length);
         }
       } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        if (liste.hidden) {
-          ouvrir();
-        } else if (actif >= 0) {
-          choisir(Number(elems[actif].dataset.index));
+        if (list.hidden) {
+          open();
+        } else if (active >= 0) {
+          pick(Number(elems[active].dataset.index));
         }
       } else if (e.key === "Escape") {
-        fermer();
+        closeList();
       }
     });
 
     document.addEventListener("click", function (e) {
       if (!champ.contains(e.target)) {
-        fermer();
+        closeList();
       }
     });
 
     select.setAttribute("tabindex", "-1");
     select.setAttribute("aria-hidden", "true");
     champ.classList.add("select-theme--enrichi");
-    champ.appendChild(declencheur);
-    champ.appendChild(liste);
-    majValeur();
+    champ.appendChild(trigger);
+    champ.appendChild(list);
+    updateValue();
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll("[data-select-theme]"), brancher);
+  Array.prototype.forEach.call(document.querySelectorAll("[data-select-theme]"), wire);
 })();

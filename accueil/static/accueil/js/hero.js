@@ -4,30 +4,30 @@
 (function () {
   "use strict";
 
-  var barre = document.querySelector(".recherche__onglets");
-  if (!barre) {
+  var bar = document.querySelector(".recherche__onglets");
+  if (!bar) {
     return;
   }
 
-  var onglets = Array.prototype.slice.call(barre.querySelectorAll(".recherche__onglet"));
+  var tabs = Array.prototype.slice.call(bar.querySelectorAll(".recherche__onglet"));
 
-  function activer(onglet) {
-    onglets.forEach(function (o) {
-      var actif = o === onglet;
-      o.classList.toggle("est-actif", actif);
-      o.setAttribute("aria-selected", actif ? "true" : "false");
-      var champs = document.getElementById(o.getAttribute("aria-controls"));
-      if (champs) {
-        champs.hidden = !actif;
+  function activate(tab) {
+    tabs.forEach(function (o) {
+      var active = o === tab;
+      o.classList.toggle("est-actif", active);
+      o.setAttribute("aria-selected", active ? "true" : "false");
+      var fields = document.getElementById(o.getAttribute("aria-controls"));
+      if (fields) {
+        fields.hidden = !active;
       }
     });
   }
 
-  onglets.forEach(function (onglet) {
-    onglet.addEventListener("click", function () {
-      activer(onglet);
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      activate(tab);
     });
   });
 
-  activer(onglets[0]);
+  activate(tabs[0]);
 })();

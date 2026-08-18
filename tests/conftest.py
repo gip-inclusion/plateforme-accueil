@@ -7,7 +7,7 @@ from django.core.cache import cache
 
 
 # Canned key-figures feed served in place of the network by default.
-CHIFFRES_FLUX = {
+KEY_FIGURES_FEED = {
     "indicators": [
         {"id": "offres_ouvertes", "value": 12345},
         {"id": "services_di", "value": 200000},
@@ -17,7 +17,7 @@ CHIFFRES_FLUX = {
 
 
 @pytest.fixture(autouse=True)
-def _cache_isole():
+def _isolated_cache():
     # Key-figures are cached per process; keep tests independent.
     cache.clear()
     yield
@@ -25,11 +25,11 @@ def _cache_isole():
 
 
 @pytest.fixture(autouse=True)
-def _flux_mocke():
+def _mocked_feed():
     # Never reach the network in tests: serve the canned feed. A test that needs
     # the failure path re-patches urlopen to raise.
-    def _reponse(*args, **kwargs):
-        return io.BytesIO(json.dumps(CHIFFRES_FLUX).encode())
+    def _response(*args, **kwargs):
+        return io.BytesIO(json.dumps(KEY_FIGURES_FEED).encode())
 
-    with mock.patch("accueil.views.urllib.request.urlopen", side_effect=_reponse):
+    with mock.patch("accueil.views.urllib.request.urlopen", side_effect=_response):
         yield

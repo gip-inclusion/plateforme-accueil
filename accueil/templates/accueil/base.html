@@ -1,10 +1,10 @@
 {% load static %}
 <!doctype html>
-<html lang="{% block langue %}fr{% endblock %}">
+<html lang="{% block lang %}fr{% endblock %}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block titre %}La plateforme de l'inclusion{% endblock %}</title>
+    <title>{% block title %}La plateforme de l'inclusion{% endblock %}</title>
 
     <script src="{% static 'accueil/js/matomo.js' %}"></script>
 
@@ -14,6 +14,6 @@
   </head>
   <body>
     {% include "accueil/icones.svg" %}
-    {% block contenu %}{% endblock %}
+    {% block content %}{% endblock %}
   </body>
 </html>

@@ -6,20 +6,20 @@ from unittest import mock
 def test_index_renders(client):
     response = client.get("/")
     assert response.status_code == 200
-    contenu = response.content.decode()
-    assert "<title>La plateforme de l'inclusion</title>" in contenu
-    assert "Des services utiles à tous les pros du Réseau pour l'emploi." in contenu
+    body = response.content.decode()
+    assert "<title>La plateforme de l'inclusion</title>" in body
+    assert "Des services utiles à tous les pros du Réseau pour l'emploi." in body
 
 
-def test_stats_affichent_le_flux(client):
+def test_figures_come_from_the_feed(client):
     # Numbers come from the (mocked) key-figures feed, formatted for French.
-    contenu = client.get("/").content.decode().replace(" ", " ")
-    assert "12 345" in contenu  # offres_ouvertes
-    assert "200 000" in contenu  # services_di
-    assert "6 000" in contenu  # prescripteurs_actifs
+    body = client.get("/").content.decode().replace(" ", " ")
+    assert "12 345" in body  # offres_ouvertes
+    assert "200 000" in body  # services_di
+    assert "6 000" in body  # prescripteurs_actifs
 
 
-def test_villes_proxy_mappe_slug_et_label(client):
+def test_cities_proxy_maps_slug_and_label(client):
     feed = {
         "results": [
             {"text": "Lyon (69)", "id": "lyon-69"},
@@ -30,51 +30,51 @@ def test_villes_proxy_mappe_slug_et_label(client):
         "accueil.views.urllib.request.urlopen",
         side_effect=lambda *a, **k: io.BytesIO(json.dumps(feed).encode()),
     ):
-        data = client.get("/api/villes?q=lyon").json()
-    assert data["resultats"][0] == {"slug": "lyon-69", "label": "Lyon (69)"}
-    assert len(data["resultats"]) == 2
+        data = client.get("/api/cities?q=lyon").json()
+    assert data["results"][0] == {"slug": "lyon-69", "label": "Lyon (69)"}
+    assert len(data["results"]) == 2
 
 
-def test_villes_requete_vide(client):
+def test_cities_empty_query(client):
     # No query -> no upstream call, empty list.
-    assert client.get("/api/villes").json() == {"resultats": []}
+    assert client.get("/api/cities").json() == {"results": []}
 
 
-def test_hero_cible_les_trois_recherches(client):
-    contenu = client.get("/").content.decode()
-    assert "emplois.inclusion.beta.gouv.fr/search/employers" in contenu
-    assert "emplois.inclusion.beta.gouv.fr/search/prescribers" in contenu
-    assert "emplois.inclusion.beta.gouv.fr/search/services" in contenu
-    assert 'name="category"' in contenu  # services thematic select
-    assert 'value="creer-une-entreprise"' in contenu
+def test_hero_targets_the_three_searches(client):
+    body = client.get("/").content.decode()
+    assert "emplois.inclusion.beta.gouv.fr/search/employers" in body
+    assert "emplois.inclusion.beta.gouv.fr/search/prescribers" in body
+    assert "emplois.inclusion.beta.gouv.fr/search/services" in body
+    assert 'name="category"' in body  # services thematic select
+    assert 'value="creer-une-entreprise"' in body
 
 
-def test_stats_repli_si_flux_indisponible(client):
+def test_figures_fall_back_when_feed_is_down(client):
     # When the feed cannot be reached, the last known values are shown.
     with mock.patch("accueil.views.urllib.request.urlopen", side_effect=OSError("down")):
-        contenu = client.get("/").content.decode().replace(" ", " ")
-    assert "11 553" in contenu
-    assert "198 430" in contenu
-    assert "5 310" in contenu
+        body = client.get("/").content.decode().replace(" ", " ")
+    assert "11 553" in body
+    assert "198 430" in body
+    assert "5 310" in body
     # The height reporter, without which the iframe embed cannot size itself.
-    assert "/static/accueil/js/resize-reporter.js" in contenu
+    assert "/static/accueil/js/resize-reporter.js" in body
 
 
 def test_index_loads_analytics(client):
     # Must be in the <head>: the tag manager has to boot before the page
     # builds, so a tag that drifted into the <body> would under-measure.
-    entete = client.get("/").content.decode().split("</head>")[0]
-    assert "/static/accueil/js/matomo.js" in entete
+    head = client.get("/").content.decode().split("</head>")[0]
+    assert "/static/accueil/js/matomo.js" in head
 
 
 def test_index_inlines_svg_sprite(client):
     # The sprite is inlined and referenced by bare fragment: an external
     # reference (file#id) is blocked in a sandboxed iframe without
     # allow-same-origin, where the origin is opaque.
-    contenu = client.get("/").content.decode()
-    assert '<symbol viewBox="0 0 24 24" id="ri-user-add-line">' in contenu
-    assert 'href="#ri-user-add-line"' in contenu
-    assert "icones.svg" not in contenu
+    body = client.get("/").content.decode()
+    assert '<symbol viewBox="0 0 24 24" id="ri-user-add-line">' in body
+    assert 'href="#ri-user-add-line"' in body
+    assert "icones.svg" not in body
 
 
 def test_index_allows_iframe_embedding(client):
@@ -91,18 +91,18 @@ def test_index_allows_iframe_embedding(client):
 
 def test_index_has_no_inline_styles_or_scripts(client):
     response = client.get("/")
-    contenu = response.content.decode()
-    assert "style=" not in contenu
-    assert "<style" not in contenu
-    assert "<script>" not in contenu  # external scripts (src=…) only
+    body = response.content.decode()
+    assert "style=" not in body
+    assert "<style" not in body
+    assert "<script>" not in body  # external scripts (src=…) only
 
 
 def test_static_assets_are_served(client):
-    for chemin in (
+    for path in (
         "/static/accueil/js/iframe-embed.js",
         "/static/accueil/js/matomo.js",
-        "/static/accueil/js/profils.js",
+        "/static/accueil/js/profiles.js",
         "/static/accueil/css/main.css",
         "/static/accueil/fonts/Marianne-Regular.woff2",
     ):
-        assert client.get(chemin).status_code == 200, chemin
+        assert client.get(path).status_code == 200, path
