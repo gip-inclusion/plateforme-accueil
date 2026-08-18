@@ -41,7 +41,9 @@ uv run python manage.py createsuperuser
 make dev     # puis http://localhost:8000/admin/
 ```
 
-Le déploiement est automatique à chaque push sur `main`.
+Le déploiement est automatique à chaque push sur `main` ; il applique les
+migrations avant de basculer la nouvelle révision, et ne fait rien de ce côté
+si aucune base n'est configurée.
 
 ## Structure de la page
 

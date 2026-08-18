@@ -14,6 +14,28 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+
+      - name: Install dependencies
+        # Only the runtime deps: this job runs migrations, not the test suite.
+        run: uv sync --frozen --no-dev
+
+      # Migrations run before the new revision takes traffic. They are additive,
+      # so the revision still in place keeps working while they apply. The step
+      # is a no-op without DATABASE_URL: the database stays optional, and the
+      # page renders the code defaults without one.
+      - name: Migrate the database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL absent : migrations ignorées."
+            exit 0
+          fi
+          uv run python manage.py migrate --noinput
+          uv run python manage.py sync_sections
+
       - name: Install Scaleway CLI
         run: |
           SCW_URL=$(curl -fsSL https://api.github.com/repos/scaleway/scaleway-cli/releases/latest | grep -o 'https://[^"]*linux_amd64' | head -1)
