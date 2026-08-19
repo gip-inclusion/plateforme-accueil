@@ -643,7 +643,7 @@ p {
 }
 
 .hero__titre {
-  margin: 0 0 0.5rem;
+  margin: 0 0 2rem;
   font-size: clamp(1.6rem, 4.2vw, 2.5rem);
   color: #fff;
 }
