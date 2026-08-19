@@ -154,9 +154,11 @@
   font-size: 0.8125rem;
 }
 
+/* Confirming action last and rightmost, cancel to its left. */
 .editeur__actions {
   display: flex;
   gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 .revenir {

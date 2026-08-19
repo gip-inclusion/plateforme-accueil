@@ -25,5 +25,6 @@ class Hero(SectionType):
         # Every other string on the page is still literal, which is fine.
         note = forms.CharField(
             label="Note sous la recherche",
+            widget=forms.Textarea(attrs={"rows": 3}),
             initial="Recherche libre et sans compte. Créez un compte pour postuler, orienter ou publier.",
         )
