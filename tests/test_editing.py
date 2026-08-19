@@ -1,5 +1,7 @@
 """The editing UI: who gets in, and what the page must never become."""
 
+import json
+
 import pytest
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -87,3 +89,76 @@ def test_the_controls_refuse_a_get(client, editor):
     client.force_login(editor)
     section = Section.objects.get(kind="testimonials")
     assert client.get(reverse("edition:toggle", args=[section.pk])).status_code == 405
+
+
+def test_the_editor_shows_the_declared_fields(client, editor):
+    from accueil.models import Section
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="features")
+    body = client.get(reverse("edition:section", args=[section.pk])).content.decode()
+    for field in ('name="kicker"', 'name="title"', 'name="intro"', 'name="steps"'):
+        assert field in body
+
+
+def test_saving_stores_only_the_change(client, editor):
+    from accueil.models import Section
+    from accueil.sections.features import Features
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="features")
+    data = {"position": section.position, "active": "on"}
+    for name, value in Features.defaults().items():
+        data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
+    data["title"] = "Un titre revu"
+
+    response = client.post(reverse("edition:section", args=[section.pk]), data)
+    assert response.status_code == 302
+    section.refresh_from_db()
+    assert section.content == {"title": "Un titre revu"}
+    assert "Un titre revu" in client.get("/").content.decode()
+
+
+def test_an_invalid_list_is_reported_not_saved(client, editor):
+    from accueil.models import Section
+    from accueil.sections.features import Features
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="features")
+    data = {"position": section.position, "active": "on"}
+    for name, value in Features.defaults().items():
+        data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
+    data["steps"] = "{pas du json"
+
+    response = client.post(reverse("edition:section", args=[section.pk]), data)
+    assert response.status_code == 200  # redisplayed with the error
+    assert "JSON invalide" in response.content.decode()
+    section.refresh_from_db()
+    assert section.content == {}
+
+
+def test_an_overridden_field_is_flagged_and_can_be_reverted(client, editor):
+    from accueil.models import Section
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="features")
+    section.content = {"title": "Un titre revu"}
+    section.save()
+
+    body = client.get(reverse("edition:section", args=[section.pk])).content.decode()
+    assert "Revenir au texte du code" in body
+
+    client.post(reverse("edition:reset-field", args=[section.pk, "title"]))
+    section.refresh_from_db()
+    assert section.content == {}
+    # The page follows the code again.
+    assert "Un titre revu" not in client.get("/").content.decode()
+
+
+def test_the_editor_refuses_an_unknown_section(client, editor):
+    from accueil.models import Page, Section
+
+    client.force_login(editor)
+    orphan = Section.objects.create(page=Page.objects.get(slug="accueil"), kind="disparue", position=999)
+    response = client.get(reverse("edition:section", args=[orphan.pk]), follow=True)
+    assert "n&#x27;existe plus dans le code" in response.content.decode()

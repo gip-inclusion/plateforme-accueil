@@ -155,3 +155,138 @@ body.edition {
     grid-column: 2;
   }
 }
+
+/* Messages ------------------------------------------------------------- */
+
+.messages {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.message {
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.25rem;
+}
+
+.message--success {
+  background: #b8fec9;
+}
+
+.message--error {
+  background: #ffe9e6;
+}
+
+/* Section editor ------------------------------------------------------- */
+
+.fil a {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.editeur {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid var(--edition-trait);
+  border-radius: 0.5rem;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+}
+
+.champ label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 700;
+}
+
+.champ input[type="text"],
+.champ input[type="url"],
+.champ input[type="number"],
+.champ textarea {
+  padding: 0.5rem;
+  font: inherit;
+  border: 1px solid var(--edition-trait);
+  border-radius: 0.25rem;
+}
+
+.champ textarea {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.8125rem;
+}
+
+.champ__aide {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #666;
+}
+
+.champ__erreur {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #ce0500;
+}
+
+.champ--erreur input,
+.champ--erreur textarea {
+  border-color: #ce0500;
+}
+
+.editeur__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bouton--primaire {
+  color: #fff;
+  background: var(--edition-accent);
+  border-color: var(--edition-accent);
+}
+
+/* Reverting to the text held in the code ------------------------------- */
+
+.revenir {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid var(--edition-trait);
+  border-radius: 0.5rem;
+}
+
+.revenir h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.revenir__liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.revenir__liste li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.375rem 0;
+}
+
+.revenir__liste form {
+  margin: 0;
+}
+
+.revenir__liste button {
+  padding: 0.25rem 0.625rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid var(--edition-trait);
+  border-radius: 0.25rem;
+}

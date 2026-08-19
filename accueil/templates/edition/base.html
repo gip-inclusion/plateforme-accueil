@@ -15,6 +15,13 @@
         {% if oidc_enabled %}<a href="{% url 'oidc_logout' %}">Se déconnecter</a>{% endif %}
       </p>
     </header>
-    <main class="edition__contenu">{% block contenu %}{% endblock %}</main>
+    <main class="edition__contenu">
+      {% if messages %}
+        <ul class="messages">
+          {% for message in messages %}<li class="message message--{{ message.tags }}">{{ message }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+      {% block contenu %}{% endblock %}
+    </main>
   </body>
 </html>

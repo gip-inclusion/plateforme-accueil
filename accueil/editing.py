@@ -9,14 +9,16 @@ requires an account that Authentik put in the editing group.
 """
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.clickjacking import xframe_options_deny
 from django.views.decorators.csp import csp_override
 from django.views.decorators.http import require_POST
 
 from accueil.auth import may_publish
+from accueil.forms import section_form_class
 from accueil.models import Page, Section
 from accueil.sections import registry
 
@@ -46,7 +48,7 @@ def _plan(page):
                 "known": section_type is not None,
                 "customised": bool(section.content),
                 "summary": _summary(section_type, section) if section_type else "type absent du code",
-                "url": reverse("admin:accueil_section_change", args=[section.pk]),
+                "url": reverse("edition:section", args=[section.pk]),
             }
         )
     return plan
@@ -104,3 +106,56 @@ def toggle(request, pk):
     section.active = not section.active
     section.save(update_fields=["active"])
     return redirect("edition:plan")
+
+
+def _declared(kind):
+    return {section_type.key: section_type for section_type in registry.types()}.get(kind)
+
+
+@editor_view
+def section(request, pk):
+    """Edit one section through the fields it declares.
+
+    No per-section code: the form comes from the declaration, and only the
+    values that differ from the code are stored.
+    """
+    row = get_object_or_404(Section, pk=pk)
+    declared = _declared(row.kind)
+    if declared is None:
+        messages.error(request, f"La section « {row.kind} » n'existe plus dans le code.")
+        return redirect("edition:plan")
+
+    form_class = section_form_class(declared)
+    if request.method == "POST":
+        form = form_class(request.POST, instance=row)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Section enregistrée.")
+            return redirect("edition:plan")
+    else:
+        form = form_class(instance=row)
+
+    overridden = set(row.content)
+    return render(
+        request,
+        "edition/section.html",
+        {
+            "row": row,
+            "name": declared.label,
+            "form": form,
+            # Which fields an editor has moved away from the code, so that a
+            # wording changed in a pull request cannot go unnoticed.
+            "overridden": overridden,
+        },
+    )
+
+
+@require_POST
+@editor_view
+def reset_field(request, pk, name):
+    """Drop one override, so the field follows the code again."""
+    row = get_object_or_404(Section, pk=pk)
+    if row.content.pop(name, None) is not None:
+        row.save(update_fields=["content"])
+        messages.success(request, f"« {name} » suit de nouveau le texte du code.")
+    return redirect("edition:section", pk=pk)

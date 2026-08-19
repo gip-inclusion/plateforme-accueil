@@ -1,0 +1,58 @@
+{% extends "edition/base.html" %}
+
+{% block titre %}{{ name }}{% endblock %}
+
+{% block contenu %}
+  <p class="fil"><a href="{% url 'edition:plan' %}">‹ Plan de la page</a></p>
+
+  <div class="plan__entete">
+    <h1>{{ name }}</h1>
+    <p class="plan__actions">
+      <a class="bouton bouton--secondaire" href="/#{{ row.kind }}" target="_blank" rel="noopener">Prévisualiser</a>
+    </p>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="alerte">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <form class="editeur" method="post">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="champ{% if field.errors %} champ--erreur{% endif %}">
+        <label for="{{ field.id_for_label }}">
+          {{ field.label }}
+          {% if field.name in overridden %}<span class="etiquette">modifié</span>{% endif %}
+        </label>
+        {{ field }}
+        {% if field.help_text %}<p class="champ__aide">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}<p class="champ__erreur">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <div class="editeur__actions">
+      <button class="bouton bouton--primaire" type="submit">Enregistrer</button>
+      <a class="bouton" href="{% url 'edition:plan' %}">Annuler</a>
+    </div>
+  </form>
+
+  {% if overridden %}
+    <section class="revenir">
+      <h2>Revenir au texte du code</h2>
+      <p>
+        Ces champs ont été modifiés ici. Tant qu'ils le sont, une reformulation
+        faite dans le code ne s'affichera pas.
+      </p>
+      <ul class="revenir__liste">
+        {% for name in overridden %}
+          <li>
+            <code>{{ name }}</code>
+            <form method="post" action="{% url 'edition:reset-field' row.pk name %}">
+              {% csrf_token %}
+              <button type="submit">Revenir au texte du code</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}
