@@ -70,6 +70,17 @@ class SectionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # House-theme classes, so the editing UI gets real form controls. The
+        # admin ignores them, which is fine — it is on its way out.
+        for field in self.fields.values():
+            widget = field.widget
+            if isinstance(widget, forms.CheckboxInput):
+                widget.attrs.setdefault("class", "form-check-input")
+            elif isinstance(widget, forms.Select):
+                widget.attrs.setdefault("class", "form-select")
+            else:
+                widget.attrs["class"] = f"form-control {widget.attrs.get('class', '')}".strip()
+
         if self.section_type is None or not self.instance.pk:
             return
         # Seed each field with what the page currently shows: the code default,

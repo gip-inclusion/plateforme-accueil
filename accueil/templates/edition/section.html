@@ -8,21 +8,21 @@
   <div class="plan__entete">
     <h1>{{ name }}</h1>
     <p class="plan__actions">
-      <a class="bouton bouton--secondaire" href="/#{{ row.kind }}" target="_blank" rel="noopener">Prévisualiser</a>
+      <a class="btn btn-outline-primary white-space-nowrap" href="/#{{ anchor }}" target="_blank" rel="noopener">Voir sur la page</a>
     </p>
   </div>
 
   {% if form.non_field_errors %}
-    <div class="alerte">{{ form.non_field_errors }}</div>
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
   {% endif %}
 
-  <form class="editeur" method="post">
+  <form class="editeur c-box" method="post">
     {% csrf_token %}
     {% for field in form %}
       <div class="champ{% if field.errors %} champ--erreur{% endif %}">
         <label for="{{ field.id_for_label }}">
           {{ field.label }}
-          {% if field.name in overridden %}<span class="etiquette">modifié</span>{% endif %}
+          {% if field.name in overridden %}<span class="tag">modifié</span>{% endif %}
         </label>
         {{ field }}
         {% if field.help_text %}<p class="champ__aide">{{ field.help_text }}</p>{% endif %}
@@ -30,13 +30,13 @@
       </div>
     {% endfor %}
     <div class="editeur__actions">
-      <button class="bouton bouton--primaire" type="submit">Enregistrer</button>
-      <a class="bouton" href="{% url 'edition:plan' %}">Annuler</a>
+      <button class="btn btn-primary" type="submit">Enregistrer</button>
+      <a class="btn btn-outline-primary" href="{% url 'edition:plan' %}">Annuler</a>
     </div>
   </form>
 
   {% if overridden %}
-    <section class="revenir">
+    <section class="revenir c-box">
       <h2>Revenir au texte du code</h2>
       <p>
         Ces champs ont été modifiés ici. Tant qu'ils le sont, une reformulation
@@ -48,7 +48,7 @@
             <code>{{ name }}</code>
             <form method="post" action="{% url 'edition:reset-field' row.pk name %}">
               {% csrf_token %}
-              <button type="submit">Revenir au texte du code</button>
+              <button class="btn btn-sm btn-outline-primary white-space-nowrap" type="submit">Revenir au texte du code</button>
             </form>
           </li>
         {% endfor %}

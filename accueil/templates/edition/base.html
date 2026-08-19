@@ -5,6 +5,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block titre %}Édition{% endblock %} — La plateforme de l'inclusion</title>
+    {# House style, vendored: see static/vendor/theme-inclusion/PROVENANCE.md.
+       Loaded here only — the public page never sees it. #}
+    <link rel="stylesheet" href="{% static 'vendor/theme-inclusion/stylesheets/app.css' %}">
     <link rel="stylesheet" href="{% static 'edition/edition.css' %}">
   </head>
   <body class="edition">
@@ -17,9 +20,11 @@
     </header>
     <main class="edition__contenu">
       {% if messages %}
-        <ul class="messages">
-          {% for message in messages %}<li class="message message--{{ message.tags }}">{{ message }}</li>{% endfor %}
-        </ul>
+        {% for message in messages %}
+          <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %}" role="status">
+            <p class="mb-0">{{ message }}</p>
+          </div>
+        {% endfor %}
       {% endif %}
       {% block contenu %}{% endblock %}
     </main>

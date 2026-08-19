@@ -252,3 +252,17 @@ def test_a_string_groups_claim_grants_nothing(db):
     backend = _backend()
     user = backend.create_user({"email": "bob@example.test", "groups": "accueil-redaction"})
     assert not user.is_staff
+
+
+def test_the_public_page_never_loads_the_editing_theme(client):
+    # Two CSS worlds: the house theme dresses /edition/, the public page keeps
+    # its own hand-written stylesheet and must not pull in a Bootstrap build.
+    body = client.get("/").content.decode()
+    assert "theme-inclusion" not in body
+    assert "accueil/css/main.css" in body
+
+
+def test_the_editing_ui_uses_the_house_theme(client, editor):
+    client.force_login(editor)
+    body = client.get("/edition/").content.decode()
+    assert "vendor/theme-inclusion/stylesheets/app.css" in body

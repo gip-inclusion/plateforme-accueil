@@ -162,6 +162,7 @@ def section(request, pk):
         {
             "row": row,
             "name": declared.label,
+            "anchor": declared.anchor,
             "form": form,
             # Which fields an editor has moved away from the code, so that a
             # wording changed in a pull request cannot go unnoticed.
