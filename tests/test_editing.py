@@ -5,6 +5,7 @@ import json
 import pytest
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.test import override_settings
 from django.urls import reverse
 
 
@@ -162,3 +163,92 @@ def test_the_editor_refuses_an_unknown_section(client, editor):
     orphan = Section.objects.create(page=Page.objects.get(slug="accueil"), kind="disparue", position=999)
     response = client.get(reverse("edition:section", args=[orphan.pk]), follow=True)
     assert "n&#x27;existe plus dans le code" in response.content.decode()
+
+
+@override_settings(ROOT_URLCONF="tests.urls_without_admin", LOGIN_URL="/oidc/authenticate/")
+def test_the_plan_redirects_even_when_the_admin_is_not_mounted(client, page):
+    # The default production config mounts neither the admin nor OIDC. A login
+    # decorator hard-wired to `admin:login` would 500 here instead of redirect.
+    response = client.get("/edition/")
+    assert response.status_code == 302
+    assert response["Location"].startswith("/oidc/authenticate/")
+
+
+def test_a_405_still_denies_framing(client, editor):
+    from accueil.models import Section
+
+    # The 405 must not escape the header decorators and fall back to the
+    # public, embeddable policy.
+    client.force_login(editor)
+    section = Section.objects.get(kind="testimonials")
+    response = client.get(reverse("edition:toggle", args=[section.pk]))
+    assert response.status_code == 405
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_an_anonymous_get_reveals_nothing(client, page):
+    from accueil.models import Section
+
+    # Authentication is checked before the method, so an anonymous probe cannot
+    # tell an existing endpoint from a missing one.
+    section = Section.objects.get(kind="testimonials")
+    assert client.get(reverse("edition:toggle", args=[section.pk])).status_code == 302
+
+
+def test_an_unknown_section_is_a_404_not_a_500(client, editor):
+    client.force_login(editor)
+    assert client.post(reverse("edition:toggle", args=[999999])).status_code == 404
+
+
+# The backend refuses to instantiate without a full OIDC configuration; these
+# are the endpoints it checks for, pointing nowhere since nothing is fetched.
+oidc_configured = override_settings(
+    OIDC_RP_CLIENT_ID="test",
+    OIDC_RP_CLIENT_SECRET="test",
+    OIDC_RP_SIGN_ALGO="RS256",
+    OIDC_OP_TOKEN_ENDPOINT="https://exemple.test/token/",
+    OIDC_OP_USER_ENDPOINT="https://exemple.test/userinfo/",
+    OIDC_OP_JWKS_ENDPOINT="https://exemple.test/jwks/",
+)
+
+
+def _backend():
+    from accueil.auth import AuthentikBackend
+
+    return AuthentikBackend()
+
+
+@oidc_configured
+def test_losing_the_group_downgrades_the_account(db):
+    from django.contrib.auth.models import User
+
+    backend = _backend()
+    claims = {"email": "nadia@example.test", "groups": ["accueil-redaction", "accueil-publication"]}
+    user = backend.create_user(claims)
+    assert user.is_staff and user.groups.count() == 2
+
+    # Same person, next login, removed from the group upstream.
+    user = backend.update_user(user, {"email": "nadia@example.test", "groups": []})
+    assert not user.is_staff
+    assert user.groups.count() == 0
+    assert not User.objects.get(pk=user.pk).is_staff
+
+
+@oidc_configured
+def test_sso_never_grants_superuser(db):
+    from django.contrib.auth.models import User
+
+    # An account matched on email must not inherit local superuser rights.
+    local = User.objects.create_superuser("chef", "chef@example.test", "x")
+    backend = _backend()
+    user = backend.update_user(local, {"email": "chef@example.test", "groups": ["accueil-redaction"]})
+    assert not user.is_superuser
+    assert user.is_staff
+
+
+@oidc_configured
+def test_a_string_groups_claim_grants_nothing(db):
+    backend = _backend()
+    user = backend.create_user({"email": "bob@example.test", "groups": "accueil-redaction"})
+    assert not user.is_staff

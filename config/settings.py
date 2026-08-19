@@ -38,6 +38,11 @@ if OIDC_ENABLED:
     OIDC_OP_TOKEN_ENDPOINT = f"{OIDC_PROVIDER_URL}/token/"
     OIDC_OP_USER_ENDPOINT = f"{OIDC_PROVIDER_URL}/userinfo/"
     OIDC_OP_JWKS_ENDPOINT = f"{OIDC_PROVIDER_URL}/jwks/"
+    OIDC_USE_PKCE = True
+    # Re-checks the session against Authentik rather than trusting a cookie for
+    # the full two weeks: without it, revoking an editor upstream would not bite
+    # until their session expired.
+    OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 15 * 60
     LOGIN_URL = "oidc_authentication_init"
     LOGIN_REDIRECT_URL = "/edition/"
     LOGOUT_REDIRECT_URL = "/edition/"
@@ -68,6 +73,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
 ]
+if OIDC_ENABLED:
+    MIDDLEWARE += ["mozilla_django_oidc.middleware.SessionRefresh"]
 
 ROOT_URLCONF = "config.urls"
 

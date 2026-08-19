@@ -10,29 +10,51 @@ requires an account that Authentik put in the editing group.
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.clickjacking import xframe_options_deny
 from django.views.decorators.csp import csp_override
 from django.views.decorators.http import require_POST
 
-from accueil.auth import may_publish
 from accueil.forms import section_form_class
 from accueil.models import Page, Section
 from accueil.sections import registry
 
 
-# The public page is meant to be framed; this one must not be. Both are set
-# explicitly so that no future change to the site-wide CSP can open it up.
-def editor_view(view):
-    for decorator in (
-        staff_member_required,
-        xframe_options_deny,
-        csp_override({"frame-ancestors": ["'none'"]}),
-    ):
-        view = decorator(view)
-    return view
+def may_publish(user):
+    return user.is_superuser or user.groups.filter(name=settings.OIDC_PUBLISHER_GROUP).exists()
+
+
+# `staff_member_required` would do, but it hard-codes a redirect to the admin
+# login, which is not always mounted and is the wrong door once Authentik is on.
+# `user_passes_test` honours settings.LOGIN_URL.
+editor_required = user_passes_test(lambda user: user.is_active and user.is_staff)
+
+
+def editor_view(*, post_only=False):
+    """Everything the editing UI needs, in the order that keeps it closed.
+
+    The public page is meant to be framed; this one must not be, so framing is
+    denied explicitly rather than inherited. `require_POST` goes *inside* the
+    header decorators: outside, its 405 would escape them and fall back to the
+    public, embeddable policy.
+    """
+
+    def decorate(view):
+        if post_only:
+            view = require_POST(view)
+        for decorator in (
+            editor_required,
+            xframe_options_deny,
+            # Replaces the site-wide policy rather than merging with it: any
+            # directive added to SECURE_CSP must be repeated here.
+            csp_override({"frame-ancestors": ["'none'"]}),
+        ):
+            view = decorator(view)
+        return view
+
+    return decorate
 
 
 def _plan(page):
@@ -64,7 +86,7 @@ def _summary(section_type, section):
     return " · ".join(parts)
 
 
-@editor_view
+@editor_view()
 def plan(request):
     page = Page.objects.filter(slug="accueil").first()
     return render(
@@ -79,11 +101,10 @@ def plan(request):
     )
 
 
-@require_POST
-@editor_view
+@editor_view(post_only=True)
 def move(request, pk):
     """Swap a section with its neighbour. A form post, so it works without JS."""
-    section = Section.objects.get(pk=pk)
+    section = get_object_or_404(Section, pk=pk, page__slug="accueil")
     direction = request.POST.get("direction")
     neighbours = Section.objects.filter(page=section.page)
     neighbour = (
@@ -99,10 +120,9 @@ def move(request, pk):
     return redirect("edition:plan")
 
 
-@require_POST
-@editor_view
+@editor_view(post_only=True)
 def toggle(request, pk):
-    section = Section.objects.get(pk=pk)
+    section = get_object_or_404(Section, pk=pk, page__slug="accueil")
     section.active = not section.active
     section.save(update_fields=["active"])
     return redirect("edition:plan")
@@ -112,14 +132,14 @@ def _declared(kind):
     return {section_type.key: section_type for section_type in registry.types()}.get(kind)
 
 
-@editor_view
+@editor_view()
 def section(request, pk):
     """Edit one section through the fields it declares.
 
     No per-section code: the form comes from the declaration, and only the
     values that differ from the code are stored.
     """
-    row = get_object_or_404(Section, pk=pk)
+    row = get_object_or_404(Section, pk=pk, page__slug="accueil")
     declared = _declared(row.kind)
     if declared is None:
         messages.error(request, f"La section « {row.kind} » n'existe plus dans le code.")
@@ -150,11 +170,10 @@ def section(request, pk):
     )
 
 
-@require_POST
-@editor_view
+@editor_view(post_only=True)
 def reset_field(request, pk, name):
     """Drop one override, so the field follows the code again."""
-    row = get_object_or_404(Section, pk=pk)
+    row = get_object_or_404(Section, pk=pk, page__slug="accueil")
     if row.content.pop(name, None) is not None:
         row.save(update_fields=["content"])
         messages.success(request, f"« {name} » suit de nouveau le texte du code.")

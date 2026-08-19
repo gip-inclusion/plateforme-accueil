@@ -1,8 +1,10 @@
 """Editors come from Authentik; their groups decide what they may do.
 
 No local passwords: the account is created on first login from the claims, and
-its Django groups mirror the Authentik ones on every login, so revoking access
-upstream takes effect immediately.
+its rights are recomputed from the claims on every login. Losing the group
+upstream therefore *downgrades* the account rather than refusing the login —
+refusing it would leave `is_staff` untouched from the previous session, which is
+the opposite of what revocation should do.
 """
 
 from django.conf import settings
@@ -11,11 +13,6 @@ from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 
 class AuthentikBackend(OIDCAuthenticationBackend):
-    def verify_claims(self, claims):
-        """Membership of the editing group is the gate; everyone else is refused
-        before an account is even created."""
-        return settings.OIDC_EDITOR_GROUP in self._groups(claims)
-
     def create_user(self, claims):
         return self._sync(super().create_user(claims), claims)
 
@@ -24,12 +21,17 @@ class AuthentikBackend(OIDCAuthenticationBackend):
 
     def _sync(self, user, claims):
         groups = self._groups(claims)
+        editor = settings.OIDC_EDITOR_GROUP in groups
+
         user.first_name = claims.get("given_name", "")[:150]
         user.last_name = claims.get("family_name", "")[:150]
         user.email = claims.get("email", "")
-        # `is_staff` opens the admin and /edition/; it follows the group, so
-        # losing it upstream closes the door at the next login.
-        user.is_staff = settings.OIDC_EDITOR_GROUP in groups
+        # Follows the group, both ways: someone removed from it upstream loses
+        # the admin and /edition/ at their next login.
+        user.is_staff = editor
+        # Never inherited. Accounts are matched on email, so without this an
+        # Authentik user could land on a pre-existing local superuser row.
+        user.is_superuser = False
         user.set_unusable_password()
         user.save()
 
@@ -45,7 +47,3 @@ class AuthentikBackend(OIDCAuthenticationBackend):
     def _groups(claims):
         groups = claims.get("groups") or []
         return groups if isinstance(groups, list) else []
-
-
-def may_publish(user):
-    return user.is_superuser or user.groups.filter(name=settings.OIDC_PUBLISHER_GROUP).exists()
