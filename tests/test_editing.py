@@ -3,8 +3,10 @@
 import json
 
 import pytest
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.shortcuts import resolve_url
 from django.test import override_settings
 from django.urls import reverse
 
@@ -167,13 +169,37 @@ def test_the_editor_refuses_an_unknown_section(client, editor):
     assert "n&#x27;existe plus dans le code" in response.content.decode()
 
 
-@override_settings(ROOT_URLCONF="tests.urls_without_admin", LOGIN_URL="/oidc/authenticate/")
-def test_the_plan_redirects_even_when_the_admin_is_not_mounted(client, page):
-    # The default production config mounts neither the admin nor OIDC. A login
-    # decorator hard-wired to `admin:login` would 500 here instead of redirect.
+def test_the_editing_ui_is_not_mounted_when_nobody_can_sign_in():
+    """The default production config has neither the admin nor OIDC.
+
+    /edition/ used to be mounted anyway, and any hit on it 500'd: the login
+    redirect had nowhere to point. Not routable is the honest answer.
+    """
+    import importlib
+
+    from django.urls import Resolver404, clear_url_caches, resolve
+
+    import config.urls
+
+    try:
+        with override_settings(ADMIN_ENABLED=False, OIDC_ENABLED=False):
+            importlib.reload(config.urls)
+            clear_url_caches()
+            with pytest.raises(Resolver404):
+                resolve("/edition/")
+            # The public page is untouched by any of this.
+            assert resolve("/").view_name == "index"
+    finally:
+        # Restored only once the real settings are back, or every later test
+        # inherits a URLconf without /edition/.
+        importlib.reload(config.urls)
+        clear_url_caches()
+
+
+def test_the_plan_redirects_to_the_configured_login(client, page):
     response = client.get("/edition/")
     assert response.status_code == 302
-    assert response["Location"].startswith("/oidc/authenticate/")
+    assert response["Location"].startswith(resolve_url(settings.LOGIN_URL))
 
 
 def test_a_405_still_denies_framing(client, editor):

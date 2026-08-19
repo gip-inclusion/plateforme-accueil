@@ -46,8 +46,12 @@ if OIDC_ENABLED:
     LOGIN_URL = "oidc_authentication_init"
     LOGIN_REDIRECT_URL = "/edition/"
     LOGOUT_REDIRECT_URL = "/edition/"
-else:
+elif ADMIN_ENABLED:
     LOGIN_URL = "admin:login"
+else:
+    # Nothing to log into, so nothing to redirect to. /edition/ is not mounted
+    # in this case — see config/urls.py.
+    LOGIN_URL = None
 
 INSTALLED_APPS = [
     "django.contrib.admin",
