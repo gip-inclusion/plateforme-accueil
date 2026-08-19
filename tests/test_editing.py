@@ -8,6 +8,8 @@ from django.core.management import call_command
 from django.test import override_settings
 from django.urls import reverse
 
+from accueil.models import Section
+
 
 pytestmark = pytest.mark.django_db
 
@@ -266,3 +268,14 @@ def test_the_editing_ui_uses_the_house_theme(client, editor):
     client.force_login(editor)
     body = client.get("/edition/").content.decode()
     assert "vendor/theme-inclusion/stylesheets/app.css" in body
+
+
+def test_no_template_comment_leaks_into_the_page(client, editor):
+    # `{# … #}` is single-line only in Django: spread it over two and the text
+    # is rendered to the reader.
+    client.force_login(editor)
+    for url in ("/edition/", reverse("edition:section", args=[Section.objects.first().pk])):
+        body = client.get(url).content.decode()
+        assert "{#" not in body
+        assert "PROVENANCE" not in body
+        assert "{% comment" not in body

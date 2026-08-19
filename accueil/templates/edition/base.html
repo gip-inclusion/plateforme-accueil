@@ -5,8 +5,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block titre %}Édition{% endblock %} — La plateforme de l'inclusion</title>
-    {# House style, vendored: see static/vendor/theme-inclusion/PROVENANCE.md.
-       Loaded here only — the public page never sees it. #}
+    {% comment %}
+      House style, vendored: see static/vendor/theme-inclusion/PROVENANCE.md.
+      Loaded here only — the public page never sees it.
+    {% endcomment %}
     <link rel="stylesheet" href="{% static 'vendor/theme-inclusion/stylesheets/app.css' %}">
     <link rel="stylesheet" href="{% static 'edition/edition.css' %}">
   </head>
