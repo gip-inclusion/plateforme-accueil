@@ -1,0 +1,44 @@
+{% extends "edition/base.html" %}
+
+{% block titre %}Plan de la page{% endblock %}
+
+{% block contenu %}
+  <div class="plan__entete">
+    <h1>Plan de la page</h1>
+    <p class="plan__actions">
+      <a class="bouton bouton--secondaire" href="/" target="_blank" rel="noopener">Prévisualiser</a>
+    </p>
+  </div>
+
+  {% if not page %}
+    <p class="plan__vide">Aucune page en base. Lancez <code>manage.py sync_sections</code>.</p>
+  {% endif %}
+
+  <ol class="plan">
+    {% for entry in plan %}
+      <li class="plan__section{% if not entry.row.active %} plan__section--masquee{% endif %}">
+        <span class="plan__rang">{{ forloop.counter }}</span>
+        <div class="plan__identite">
+          <b class="plan__nom">{{ entry.name }}{% if not entry.known %} ⚠{% endif %}</b>
+          <span class="plan__resume">{{ entry.summary }}</span>
+        </div>
+        <span class="plan__etats">
+          {% if entry.customised %}<span class="etiquette">textes personnalisés</span>{% endif %}
+          {% if not entry.row.active %}<span class="etiquette etiquette--masquee">masquée</span>{% endif %}
+        </span>
+        <div class="plan__commandes">
+          <form method="post" action="{% url 'edition:move' entry.row.pk %}">
+            {% csrf_token %}
+            <button name="direction" value="up" title="Monter" {% if forloop.first %}disabled{% endif %}>↑</button>
+            <button name="direction" value="down" title="Descendre" {% if forloop.last %}disabled{% endif %}>↓</button>
+          </form>
+          <form method="post" action="{% url 'edition:toggle' entry.row.pk %}">
+            {% csrf_token %}
+            <button type="submit">{% if entry.row.active %}Masquer{% else %}Afficher{% endif %}</button>
+          </form>
+          <a class="bouton" href="{{ entry.url }}">Modifier ›</a>
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+{% endblock %}

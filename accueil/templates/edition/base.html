@@ -1,0 +1,20 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block titre %}Édition{% endblock %} — La plateforme de l'inclusion</title>
+    <link rel="stylesheet" href="{% static 'edition/edition.css' %}">
+  </head>
+  <body class="edition">
+    <header class="edition__entete">
+      <a class="edition__marque" href="{% url 'edition:plan' %}">Édition de la page d'accueil</a>
+      <p class="edition__compte">
+        {{ user.get_full_name|default:user.username }}
+        {% if oidc_enabled %}<a href="{% url 'oidc_logout' %}">Se déconnecter</a>{% endif %}
+      </p>
+    </header>
+    <main class="edition__contenu">{% block contenu %}{% endblock %}</main>
+  </body>
+</html>

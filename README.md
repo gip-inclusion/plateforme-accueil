@@ -85,6 +85,30 @@ ses écarts de texte — une ligne vierge rend exactement le code. Sans base, ou
 elle est injoignable, la page rend les textes du code. Les réglages sont relus
 au plus toutes les 30 secondes.
 
+## Édition
+
+L'interface d'édition est sur `/edition/` : le plan de la page, pour réordonner,
+masquer et ouvrir chaque section. Elle n'est jamais embarquable et demande un
+compte du groupe rédaction.
+
+En production, l'authentification passe par Authentik (OpenID Connect). Elle
+s'active dès que ces trois variables sont présentes, sinon tout le bloc est
+inerte :
+
+```
+OIDC_RP_CLIENT_ID       identifiant du client
+OIDC_RP_CLIENT_SECRET   secret du client
+OIDC_PROVIDER_URL       URL du fournisseur, sans barre finale
+```
+
+Deux groupes Authentik pilotent les droits, réappliqués à chaque connexion :
+`accueil-redaction` ouvre l'édition, `accueil-publication` ouvrira la
+publication. Il n'y a pas de mot de passe local : le compte est créé à la
+première connexion depuis les claims.
+
+En local, sans ces variables, `DEBUG=1` suffit : `createsuperuser` puis
+`/edition/`.
+
 ## Embarquer la page en iframe
 
 Le tag recommandé côté site hôte :

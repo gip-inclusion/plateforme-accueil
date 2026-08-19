@@ -18,6 +18,32 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 # environment, which is a good way to lose a table.
 ADMIN_ENABLED = os.environ.get("ADMIN_ENABLED", "1" if DEBUG else "") == "1"
 
+# Authentik (OpenID Connect). Off until a client is configured: no endpoint is
+# hard-coded here, the whole configuration comes from the environment.
+OIDC_RP_CLIENT_ID = os.environ.get("OIDC_RP_CLIENT_ID", "")
+OIDC_RP_CLIENT_SECRET = os.environ.get("OIDC_RP_CLIENT_SECRET", "")
+OIDC_PROVIDER_URL = os.environ.get("OIDC_PROVIDER_URL", "").rstrip("/")
+OIDC_ENABLED = bool(OIDC_RP_CLIENT_ID and OIDC_RP_CLIENT_SECRET and OIDC_PROVIDER_URL)
+
+# Authentik group names. Membership of the first opens the editing UI, of the
+# second the Publier button.
+OIDC_EDITOR_GROUP = os.environ.get("OIDC_EDITOR_GROUP", "accueil-redaction")
+OIDC_PUBLISHER_GROUP = os.environ.get("OIDC_PUBLISHER_GROUP", "accueil-publication")
+
+if OIDC_ENABLED:
+    AUTHENTICATION_BACKENDS = ["accueil.auth.AuthentikBackend"]
+    OIDC_RP_SIGN_ALGO = "RS256"
+    OIDC_RP_SCOPES = "openid email profile"
+    OIDC_OP_AUTHORIZATION_ENDPOINT = f"{OIDC_PROVIDER_URL}/authorize/"
+    OIDC_OP_TOKEN_ENDPOINT = f"{OIDC_PROVIDER_URL}/token/"
+    OIDC_OP_USER_ENDPOINT = f"{OIDC_PROVIDER_URL}/userinfo/"
+    OIDC_OP_JWKS_ENDPOINT = f"{OIDC_PROVIDER_URL}/jwks/"
+    LOGIN_URL = "oidc_authentication_init"
+    LOGIN_REDIRECT_URL = "/edition/"
+    LOGOUT_REDIRECT_URL = "/edition/"
+else:
+    LOGIN_URL = "admin:login"
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -27,6 +53,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "accueil",
 ]
+if OIDC_ENABLED:
+    INSTALLED_APPS += ["mozilla_django_oidc"]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
