@@ -305,3 +305,18 @@ def test_no_template_comment_leaks_into_the_page(client, editor):
         assert "{#" not in body
         assert "PROVENANCE" not in body
         assert "{% comment" not in body
+
+
+def test_the_admin_is_never_framable(client, editor):
+    # The public CSP lets *.cleverapps.io and *.scalingo.io embed the showcase
+    # page; anyone can host there, so the admin must not inherit that policy.
+    client.force_login(editor)
+    response = client.get("/admin/")
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_the_admin_login_page_is_never_framable(client):
+    response = client.get("/admin/login/")
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]

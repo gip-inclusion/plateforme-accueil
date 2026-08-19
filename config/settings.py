@@ -76,6 +76,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    # Last, so its response phase runs before the CSP middleware's.
+    "accueil.middleware.BackOfficeIsNeverFramed",
 ]
 if OIDC_ENABLED:
     MIDDLEWARE += ["mozilla_django_oidc.middleware.SessionRefresh"]
@@ -142,6 +144,14 @@ if _url := os.environ.get("DATABASE_URL", ""):
 # Django swaps an empty DATABASES for a dummy backend as soon as the ORM is
 # touched, so the question has to be answered while it still means something.
 DATABASE_CONFIGURED = bool(DATABASES)
+
+# The back-office puts a session cookie on a public host, so it only travels
+# over HTTPS. TLS is terminated by the platform, hence the forwarded header:
+# without it Django believes the request is plain HTTP and refuses the login.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+CSRF_TRUSTED_ORIGINS = [origin for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if origin]
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
