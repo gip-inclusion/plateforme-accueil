@@ -32,12 +32,12 @@ class Testimonials(SectionType):
                 {
                     "quote": "Un seul compte pour tout mon quotidien : orienter, suivre, échanger. Je gagne un temps précieux à chaque accompagnement.",
                     "name": "Nadia B.",
-                    "role": "Conseillère en insertion, Mission locale — Lille",
+                    "role": "Conseillère en insertion, Mission locale, Lille",
                 },
                 {
                     "quote": "Nous délivrons les PASS IAE en ligne et suivons nos indicateurs au même endroit. L'outil s'est effacé derrière le métier.",
                     "name": "Marc D.",
-                    "role": "Directeur de SIAE — Nantes",
+                    "role": "Directeur de SIAE, Nantes",
                 },
             ],
         )
