@@ -46,19 +46,19 @@ class Figures(SectionType):
             initial=[
                 {
                     "key": "offres_ouvertes",
-                    "label": "offres d'emploi inclusif",
+                    "label": "offres d'emploi ouvertes",
                     "image": "accueil/img/stat-emploi.webp",
                     "fallback": 11553,
                 },
                 {
                     "key": "services_di",
-                    "label": "services d'insertion",
+                    "label": "services d'insertion référencés",
                     "image": "accueil/img/stat-insertion.webp",
                     "fallback": 198430,
                 },
                 {
                     "key": "prescripteurs_actifs",
-                    "label": "prescripteurs habilités",
+                    "label": "structures d'accompagnement actives",
                     "image": "accueil/img/stat-prescripteurs.webp",
                     "fallback": 5310,
                 },
