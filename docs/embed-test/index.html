@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Banc d'essai — embarquement iframe</title>
+  <link rel="stylesheet" href="host.css">
+</head>
+<body>
+  <header class="faux-site__entete">
+    <p class="faux-site__marque">Faux site hôte</p>
+    <p class="faux-site__note">
+      Sert à observer la vitrine embarquée depuis une autre origine
+      (<code>:8001</code> → <code>:8000</code>), comme en production.
+    </p>
+  </header>
+
+  <main class="faux-site__contenu">
+    <section class="remplissage" data-remplissage="avant">
+      <h2>Contenu au-dessus</h2>
+      <p>De quoi scroller pour que l'iframe entre dans le champ par le bas.</p>
+    </section>
+
+    <div class="cadre" data-cadre>
+      <iframe
+        src="http://localhost:8000/"
+        title="La plateforme de l'inclusion"
+        data-plateforme-accueil
+        referrerpolicy="no-referrer"
+        width="100%"
+        height="600"
+      ></iframe>
+    </div>
+
+    <section class="remplissage" data-remplissage="apres">
+      <h2>Contenu en-dessous</h2>
+      <p>De quoi scroller pour que l'iframe sorte du champ par le haut.</p>
+    </section>
+  </main>
+
+  <aside class="sonde" data-sonde>
+    <p class="sonde__titre">Sonde</p>
+    <dl class="sonde__mesures">
+      <dt>Hauteur publiée</dt><dd data-sonde-hauteur>—</dd>
+      <dt>Bande visible</dt><dd data-sonde-bande>—</dd>
+      <dt>Scroll hôte</dt><dd data-sonde-scroll>—</dd>
+    </dl>
+    <p class="sonde__titre">Largeur de l'iframe</p>
+    <div class="sonde__largeurs">
+      <button type="button" data-largeur="100%">pleine</button>
+      <button type="button" data-largeur="960px">960</button>
+      <button type="button" data-largeur="700px">700</button>
+      <button type="button" data-largeur="375px">375</button>
+    </div>
+    <p class="sonde__titre">Journal</p>
+    <ul class="sonde__journal" data-sonde-journal></ul>
+  </aside>
+
+  <!-- Le script hôte réel, servi par la vitrine elle-même. -->
+  <script src="http://localhost:8000/static/accueil/js/iframe-embed.js" defer></script>
+  <!-- Instrumentation du banc d'essai, qui n'existe pas chez un vrai hôte. -->
+  <script src="host.js" defer></script>
+</body>
+</html>

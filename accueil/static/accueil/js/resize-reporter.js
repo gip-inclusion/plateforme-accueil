@@ -35,6 +35,11 @@ if (window.parent !== window) {
       if (style.position === "fixed") {
         continue; // out of flow, tracks the viewport rather than the content
       }
+      // Top layer: never part of the content. An open <dialog> positioned
+      // against the visible band would otherwise ratchet the height up.
+      if (element.matches("dialog[open]")) {
+        continue;
+      }
       const bottomMargin = parseFloat(style.marginBottom) || 0;
       bottom = Math.max(bottom, element.getBoundingClientRect().bottom + bottomMargin);
     }
@@ -57,6 +62,48 @@ if (window.parent !== window) {
       scheduledMeasure = window.requestAnimationFrame(publishHeight);
     }
   };
+
+  /* The host's half of the protocol: it publishes the band of the iframe that
+     is actually on screen, expressed in our own coordinate space. We expose it
+     as CSS custom properties — enough for the city modal to sit in the visible
+     band instead of the middle of a page taller than the window.
+
+     Held while a dialog is open: a modal must not chase the scroll, which would
+     lag a frame behind it across the process boundary. Being absolutely
+     positioned, it simply scrolls away with the page, like any other content.
+     The band is remembered rather than dropped, and applied on close: the host
+     does not repeat a value it has already sent, so a message discarded here
+     would leave the page stale until the next scroll — and place the next
+     modal where the visitor was looking a while ago.
+
+     Nothing here is required: a host that does not publish `viewport` leaves
+     the custom properties unset, and the modal keeps its default centering. */
+  let band = null;
+
+  const applyBand = () => {
+    if (band === null || document.querySelector("dialog[open]")) {
+      return;
+    }
+    const root = document.documentElement;
+    root.style.setProperty("--viewport-top", `${band.top}px`);
+    root.style.setProperty("--viewport-height", `${band.height}px`);
+    root.dataset.viewport = "";
+  };
+
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (event.source !== window.parent || !data || data.source !== "plateforme-accueil") {
+      return;
+    }
+    if (data.type !== "viewport" || !(data.height > 0)) {
+      return;
+    }
+    band = { top: data.top, height: data.height };
+    applyBand();
+  });
+
+  // `close` does not bubble, hence the capture phase.
+  document.addEventListener("close", applyBand, true);
 
   attachObserver();
   window.addEventListener("load", scheduleMeasure);

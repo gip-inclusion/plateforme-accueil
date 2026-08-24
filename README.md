@@ -149,13 +149,33 @@ Ne mettez jamais `scrolling="no"` sur l'iframe : sans JavaScript (ou si un
 message se perd), l'ascenseur reste le seul moyen d'accéder au contenu qui
 dépasse la hauteur de repli.
 
-Protocole, si vous préférez l'implémenter vous-même — la page émet vers son
-parent (`targetOrigin: "*"`, la hauteur n'est pas une donnée sensible), au
-chargement puis à chaque changement de mise en page :
+Le script publie aussi, en sens inverse, la portion de l'iframe réellement
+visible à l'écran. L'iframe faisant la hauteur de son contenu, son propre
+viewport couvre toute la page : sans cette information, une fenêtre modale se
+centrerait au milieu du document plutôt que devant le visiteur. C'est un
+confort, pas une dépendance — un hôte qui ne publie rien obtient le
+centrage par défaut.
+
+Protocole, si vous préférez l'implémenter vous-même.
+
+La page émet vers son parent (`targetOrigin: "*"`, la hauteur n'est pas une
+donnée sensible), au chargement puis à chaque changement de mise en page :
 
 ```json
 { "source": "plateforme-accueil", "type": "resize", "height": 842 }
 ```
+
+L'hôte émet vers l'iframe, au scroll et au redimensionnement (au plus une fois
+par frame, et seulement si la valeur a changé) :
+
+```json
+{ "source": "plateforme-accueil", "type": "viewport", "top": 320, "height": 700 }
+```
+
+`top` et `height` décrivent la bande visible **dans le repère du document
+embarqué**, c'est-à-dire `max(0, -rect.top)` et la hauteur restant dans la
+fenêtre, où `rect` est le `getBoundingClientRect()` de l'iframe. Le document
+embarqué ne scrollant pas, il n'y a pas d'autre décalage à réconcilier.
 
 ## Licence
 

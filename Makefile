@@ -1,6 +1,6 @@
 CONTAINER_NAME = plateforme-accueil
 
-.PHONY: help db dev test lint fmt deploy
+.PHONY: help db dev embed-test test lint fmt deploy
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
@@ -10,6 +10,9 @@ db: ## Start the local PostgreSQL container
 
 dev: ## Run the dev server on :8000
 	DEBUG=1 uv run python manage.py runserver
+
+embed-test: ## Serve the fake host page on :8001 (needs `make dev` on :8000)
+	uv run python -m http.server 8001 --directory docs/embed-test
 
 test: ## Run the test suite
 	uv run pytest
