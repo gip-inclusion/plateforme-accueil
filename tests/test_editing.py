@@ -375,35 +375,66 @@ def test_an_illustration_error_is_associated_with_its_field(client, editor, tmp_
     assert 'id="id_illustration_error"' in body
 
 
-def test_saving_a_section_keeps_overrides_the_form_does_not_carry(client, editor, monkeypatch):
+def test_saving_a_section_keeps_overrides_the_form_does_not_carry(page):
+    from accueil.forms import section_form_class
     from accueil.sections.testimonials import Testimonials
 
-    client.force_login(editor)
     row = Section.objects.get(kind="testimonials")
     row.content = {"quotes": [{"quote": "Épatant.", "name": "Ana", "role": ""}]}
     row.save()
 
-    # Simule la disparition prochaine de `quotes` du formulaire (une tâche à
-    # venir déplace les listes vers leur propre écran d'édition). Sans ça, le
-    # formulaire soumettrait encore les témoignages tels quels et le test
-    # passerait pour de mauvaises raisons.
-    trimmed = {name: field for name, field in Testimonials.Form.base_fields.items() if name != "quotes"}
-    monkeypatch.setattr(Testimonials.Form, "base_fields", trimmed)
-    # Validation du modèle : `Section.clean` rejette un contenu dont une clé
-    # n'existe plus dans `Form.base_fields`, exactement ce que fait le
-    # monkeypatch ci-dessus. Le futur écran dédié aux listes réconciliera ça ;
-    # ce n'est pas ce que ce test vérifie, donc on le neutralise ici.
-    monkeypatch.setattr(Section, "clean", lambda self: None)
+    defaults = Testimonials.defaults()
+    data = {
+        "position": row.position,
+        "active": "on",
+        "kicker": defaults["kicker"],
+        "title": "Un autre titre.",
+        "illustration_current": defaults["illustration"],
+        "illustration_credit": "",
+    }
+    form = section_form_class(Testimonials)(data, instance=row)
+    # Simule la disparition prochaine de `quotes` du formulaire généré (une
+    # tâche à venir déplace les listes vers leur propre écran d'édition, sans
+    # toucher `Testimonials.Form.base_fields` — la déclaration du champ, donc
+    # la validation du modèle par `Section.clean`, reste inchangée). On retire
+    # le champ après construction, sur cette seule instance : le retirer plus
+    # tôt ferait planter la boucle de `SectionForm.__init__`, qui suppose
+    # encore aujourd'hui que chaque champ déclaré a un pendant dans le
+    # formulaire — une hypothèse que la tâche à venir devra revoir, hors
+    # périmètre ici. `quotes` restant déclaré, ce test exerce bien le garde
+    # `name in self.fields` de la seconde compréhension de `clean()` : un
+    # champ toujours déclaré mais absent de *ce* formulaire.
+    del form.fields["quotes"]
+
+    assert form.is_valid(), form.errors
+    form.save()
+
+    row.refresh_from_db()
+    assert row.content["title"] == "Un autre titre."
+    assert row.content["quotes"][0]["name"] == "Ana"
+
+
+def test_a_stale_key_still_saves_and_is_dropped(client, editor):
+    # Contrairement à `quotes` dans le test ci-dessus (déplacée, mais toujours
+    # déclarée dans `Testimonials.Form.base_fields`), une clé que le code ne
+    # déclare plus du tout doit continuer à être écartée à chaque
+    # enregistrement — comme avant cette tâche. `Section.clean` (modèle) la
+    # rejette de toute façon à chaque sauvegarde ; la garder ferait planter
+    # l'écran d'édition (500), pas juste échouer la validation.
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    row.content = {"vestige": "un champ disparu du code"}
+    row.save()
 
     url = reverse("edition:section", args=[row.pk])
     form = client.get(url).context["form"]
-    assert "quotes" not in form.fields
     data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
     data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
+    data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
     data["title"] = "Un autre titre."
 
     assert client.post(url, data).status_code == 302
 
     row.refresh_from_db()
     assert row.content["title"] == "Un autre titre."
-    assert row.content["quotes"][0]["name"] == "Ana"
+    assert "vestige" not in row.content

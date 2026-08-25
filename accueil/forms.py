@@ -229,10 +229,18 @@ class SectionForm(forms.ModelForm):
         if self.section_type is None:
             return cleaned
         defaults = self.section_type.defaults()
-        # What the form does not show, it does not decide: overrides on fields
-        # absent from the form — the lists, edited elsewhere — are kept as they
-        # are.
-        content = {name: value for name, value in self.instance.content.items() if name not in self.fields}
+        # What the form does not show, it does not decide — but only if the
+        # code still declares it. A field the code still declares but this
+        # form does not carry (the lists, edited elsewhere) keeps its override
+        # untouched. A key the code no longer declares at all is dropped, as
+        # it always was: `Section.clean` (accueil/models.py) rejects an
+        # undeclared key at every save, so keeping it here would 500 the
+        # editing screen for any section still carrying one.
+        content = {
+            name: value
+            for name, value in self.instance.content.items()
+            if name not in self.fields and name in self.section_type.Form.base_fields
+        }
         # For the rest, store only the differences. Comparing against the
         # default is what keeps `content` empty on an untouched section, and so
         # what lets a wording changed in a pull request reach the page.
