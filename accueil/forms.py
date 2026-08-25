@@ -249,11 +249,23 @@ class SectionForm(forms.ModelForm):
         }
         # For the rest, store only the differences. Comparing against the
         # default is what keeps `content` empty on an untouched section, and so
-        # what lets a wording changed in a pull request reach the page.
+        # what lets a wording changed in a pull request reach the page. The
+        # default is cleaned through the same declared field before the
+        # comparison, not compared raw: cleaning a `ListField` can change its
+        # shape (e.g. `figures.indicators` gains an `image_credit: ""` on
+        # every item), so comparing `cleaned[name]` — already shaped that way
+        # — against the raw, un-shaped default would never match, and saving
+        # a section with nothing actually changed would record a spurious
+        # override that then stops following the code.
+        cleaned_defaults = {
+            name: self.section_type.Form.base_fields[name].clean(copy.deepcopy(defaults[name]))
+            for name in self.section_type.Form.base_fields
+            if name in cleaned
+        }
         content |= {
             name: cleaned[name]
             for name in self.section_type.Form.base_fields
-            if name in cleaned and cleaned[name] != defaults[name]
+            if name in cleaned and cleaned[name] != cleaned_defaults[name]
         }
         self.instance.content = content
         return cleaned

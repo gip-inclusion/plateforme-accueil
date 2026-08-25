@@ -5,7 +5,11 @@ column position ». So the entry point is the page in miniature: reorder, show
 or hide, then drill into a section.
 
 Never embeddable, and never public: every view here denies framing outright and
-requires an account that Authentik put in the editing group.
+requires an account that Authentik put in the editing group. Alongside the
+views, this module also holds `list_values`/`save_list`, the request-free
+storage helpers a list's own editing screen (Tasks 9–11) reads and writes
+through — they know nothing about HTTP and raise `Http404` rather than
+redirect, so a view wraps them, not the other way round.
 """
 
 import copy
@@ -13,6 +17,7 @@ import copy
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.clickjacking import xframe_options_deny
@@ -21,7 +26,7 @@ from django.views.decorators.http import require_POST
 
 from accueil.forms import section_form_class
 from accueil.models import Page, Section
-from accueil.sections import registry
+from accueil.sections import ListField, registry
 
 
 def may_publish(user):
@@ -134,19 +139,64 @@ def _declared(kind):
     return {section_type.key: section_type for section_type in registry.types()}.get(kind)
 
 
+def _list_field(section_type, name):
+    """The declared `ListField` for `name`, or a 404.
+
+    A missing or mistyped `name` only ever reaches here from a URL segment
+    (Tasks 9–11), so it is the caller's routing that is wrong, not the data —
+    the same lens `get_object_or_404` applies to a bad primary key. Without
+    this, a name that exists but names some other kind of field (`"title"`)
+    would still reach `Field.clean`, which happily stringifies a list into
+    `"['a', 'b']"` and lets it through: nothing downstream would catch that
+    before it lands in the database.
+    """
+    field = section_type.Form.base_fields.get(name)
+    if not isinstance(field, ListField):
+        raise Http404(f"« {name} » n'est pas une liste déclarée sur « {section_type.key} ».")
+    return field
+
+
 def list_values(row, section_type, name):
-    """The list as it renders: the override if there is one, else the code."""
-    return copy.deepcopy(section_type(row.content).content[name])
+    """The list as it renders: the override if there is one, else the code.
+
+    Known limitation, deliberately left unaddressed here: `SectionType.__init__`
+    swallows a per-field `ValidationError` and falls back to the code default
+    when an override no longer validates (a rule tightened after the override
+    was written, say). That is the right behaviour for the public page, but on
+    an editing screen it means an editor is shown the code's content in place
+    of their own unreadable override, with nothing to say so — and their next,
+    otherwise unrelated save silently discards it for good. Tasks 9–11 need to
+    surface this, not this helper.
+    """
+    _list_field(section_type, name)  # 404 on a bad name, before touching row.content
+    row_content = row.content if isinstance(row.content, dict) else {}
+    return copy.deepcopy(section_type(row_content).content[name])
 
 
 def save_list(row, section_type, name, values):
-    """Write a list back after validating it whole.
+    """Validate a list whole, then write it back. Returns the cleaned list.
 
-    Validating the whole list on every write — not just the touched item —
-    is what makes `min_num`, `max_num` and `unique` hold: removing the last
+    Validating the whole list on every write — not just the touched item — is
+    what makes `min_num`, `max_num` and `unique` hold: removing the last
     indicator must be refused, not accepted.
+
+    Returns `cleaned`, not `values`: cleaning can change the shape (an
+    injected `..._credit` key, a coerced integer), so a caller that chains a
+    second operation must carry on from what was actually stored, not from
+    what it originally passed in.
+
+    Last-write-wins: this writes the whole `content` column, so a concurrent
+    edit — of this list or of any other field on the same section — made
+    between this row being loaded and this save is silently overwritten. That
+    was already true of the section form this replaces; the repeater turns
+    every add, duplicate, move and delete into its own full-column write,
+    which multiplies the exposure but does not change its nature. Acceptable
+    for a small editorial team working one section at a time; revisit if that
+    stops being true.
     """
-    field = section_type.Form.base_fields[name]
+    field = _list_field(section_type, name)
+    if not isinstance(row.content, dict):
+        row.content = {}
     cleaned = field.clean(values)
     if cleaned == field.clean(copy.deepcopy(field.initial)):
         # Back to the code's own values: the override no longer has a reason
@@ -155,6 +205,7 @@ def save_list(row, section_type, name, values):
     else:
         row.content[name] = cleaned
     row.save(update_fields=["content"])
+    return cleaned
 
 
 @editor_view()

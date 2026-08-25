@@ -473,3 +473,23 @@ def test_posting_the_default_value_clears_the_override(client, editor):
     assert client.post(reverse("edition:section", args=[section.pk]), data).status_code == 302
     section.refresh_from_db()
     assert section.content == {}
+
+
+def test_saving_an_unchanged_list_with_an_illustration_adds_no_override(client, editor):
+    # Regression: `SectionForm.clean` used to compare the cleaned list against
+    # the *raw* default. Cleaning `figures.indicators` injects an
+    # `image_credit: ""` on every item (each `Indicator.image` is an
+    # `Illustration`), so the cleaned list and the raw default never matched —
+    # saving the section with nothing changed wrote a spurious `indicators`
+    # override, which then stopped following pull requests.
+    from accueil.sections.figures import Figures
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="figures")
+    data = {"position": section.position, "active": "on"}
+    for name, value in Figures.defaults().items():
+        data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
+
+    assert client.post(reverse("edition:section", args=[section.pk]), data).status_code == 302
+    section.refresh_from_db()
+    assert section.content == {}
