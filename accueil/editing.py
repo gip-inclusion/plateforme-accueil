@@ -17,6 +17,7 @@ import copy
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -139,6 +140,21 @@ def _declared(kind):
     return {section_type.key: section_type for section_type in registry.types()}.get(kind)
 
 
+def _list_context(pk, name):
+    """The section, its declared type and the declared `ListField` for `name`.
+
+    404s on a missing section, a section whose kind is no longer in the code,
+    or a name that is not a declared list — the same three ways a POST to a
+    list operation can be misrouted.
+    """
+    row = get_object_or_404(Section, pk=pk, page__slug="accueil")
+    section_type = _declared(row.kind)
+    if section_type is None:
+        raise Http404(f"« {row.kind} » n'existe plus dans le code.")
+    field = _list_field(section_type, name)
+    return row, section_type, field
+
+
 def _list_field(section_type, name):
     """The declared `ListField` for `name`, or a 404.
 
@@ -206,6 +222,52 @@ def save_list(row, section_type, name, values):
         row.content[name] = cleaned
     row.save(update_fields=["content"])
     return cleaned
+
+
+def _apply(request, pk, name, change):
+    """Apply one operation to a list, and say so if it is refused."""
+    row, section_type, _field = _list_context(pk, name)
+    values = list_values(row, section_type, name)
+    try:
+        change(values)
+        save_list(row, section_type, name, values)
+    except ValidationError as error:
+        messages.error(request, error.messages[0])
+    return redirect("edition:section", pk=pk)
+
+
+@editor_view(post_only=True)
+def item_duplicate(request, pk, name, index):
+    def change(values):
+        _check_index(values, index)
+        values.insert(index + 1, copy.deepcopy(values[index]))
+
+    return _apply(request, pk, name, change)
+
+
+@editor_view(post_only=True)
+def item_delete(request, pk, name, index):
+    def change(values):
+        _check_index(values, index)
+        values.pop(index)
+
+    return _apply(request, pk, name, change)
+
+
+@editor_view(post_only=True)
+def item_move(request, pk, name, index):
+    def change(values):
+        _check_index(values, index)
+        other = index - 1 if request.POST.get("direction") == "up" else index + 1
+        if 0 <= other < len(values):
+            values[index], values[other] = values[other], values[index]
+
+    return _apply(request, pk, name, change)
+
+
+def _check_index(values, index):
+    if not 0 <= index < len(values):
+        raise Http404("Cet élément n'existe pas.")
 
 
 @editor_view()

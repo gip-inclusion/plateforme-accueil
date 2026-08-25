@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.http import Http404
+from django.urls import reverse
 
 from accueil import editing
 from accueil.models import Section
@@ -116,3 +117,67 @@ def test_a_malformed_content_column_does_not_crash_the_helpers(testimonials):
     editing.save_list(testimonials, section_type, "quotes", values)
     testimonials.refresh_from_db()
     assert "quotes" not in (testimonials.content or {})
+
+
+def post(client, name, row, field, index=None):
+    args = [row.pk, field] if index is None else [row.pk, field, index]
+    return client.post(reverse(f"edition:{name}", args=args))
+
+
+def quotes(row):
+    row.refresh_from_db()
+    return editing.list_values(row, declared("testimonials"), "quotes")
+
+
+def test_duplicating_an_item_copies_it_right_after(client, editor, testimonials):
+    client.force_login(editor)
+    first = quotes(testimonials)[0]
+    post(client, "item-duplicate", testimonials, "quotes", 0)
+    after = quotes(testimonials)
+    assert after[1]["quote"] == first["quote"]
+
+
+def test_moving_an_item_swaps_it_with_its_neighbour(client, editor, testimonials):
+    client.force_login(editor)
+    names = [item["name"] for item in quotes(testimonials)]
+    client.post(reverse("edition:item-move", args=[testimonials.pk, "quotes", 0]), {"direction": "down"})
+    assert [item["name"] for item in quotes(testimonials)] == [names[1], names[0]]
+
+
+def test_deleting_an_item_removes_it(client, editor, testimonials):
+    client.force_login(editor)
+    names = [item["name"] for item in quotes(testimonials)]
+    post(client, "item-delete", testimonials, "quotes", 0)
+    assert [item["name"] for item in quotes(testimonials)] == names[1:]
+
+
+def test_deleting_the_last_item_is_refused_with_a_message(client, editor, testimonials):
+    client.force_login(editor)
+    for _ in range(len(quotes(testimonials)) - 1):
+        post(client, "item-delete", testimonials, "quotes", 0)
+    assert len(quotes(testimonials)) == 1
+
+    response = post(client, "item-delete", testimonials, "quotes", 0)
+    assert len(quotes(testimonials)) == 1
+    assert any("au moins" in str(message) for message in response.wsgi_request._messages)
+
+
+def test_the_list_operations_need_an_account(client, testimonials):
+    assert post(client, "item-delete", testimonials, "quotes", 0).status_code == 302
+    assert "quotes" not in Section.objects.get(pk=testimonials.pk).content
+
+
+def test_an_unknown_field_is_a_404(client, editor, testimonials):
+    client.force_login(editor)
+    assert post(client, "item-delete", testimonials, "inexistant", 0).status_code == 404
+
+
+def test_duplicating_past_max_num_is_refused_with_a_message(client, editor, testimonials):
+    client.force_login(editor)
+    while len(quotes(testimonials)) < 4:
+        post(client, "item-duplicate", testimonials, "quotes", 0)
+    assert len(quotes(testimonials)) == 4
+
+    response = post(client, "item-duplicate", testimonials, "quotes", 0)
+    assert len(quotes(testimonials)) == 4
+    assert any("au plus" in str(message) for message in response.wsgi_request._messages)
