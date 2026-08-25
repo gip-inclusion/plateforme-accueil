@@ -13,6 +13,8 @@ redirect, so a view wraps them, not the other way round.
 """
 
 import copy
+import hashlib
+import json
 
 from django.conf import settings
 from django.contrib import messages
@@ -172,25 +174,33 @@ def _list_field(section_type, name):
     return field
 
 
-def list_values(row, section_type, name):
+def list_values(row, section_type, name, field=None):
     """The list as it renders: the override if there is one, else the code.
+
+    `field` lets a caller that already resolved it through `_list_context`
+    pass it straight in, rather than have `_list_field` look it up again.
 
     Known limitation, deliberately left unaddressed here: `SectionType.__init__`
     swallows a per-field `ValidationError` and falls back to the code default
     when an override no longer validates (a rule tightened after the override
     was written, say). That is the right behaviour for the public page, but on
     an editing screen it means an editor is shown the code's content in place
-    of their own unreadable override, with nothing to say so — and their next,
-    otherwise unrelated save silently discards it for good. Tasks 9–11 need to
-    surface this, not this helper.
+    of their own unreadable override, with nothing to say so. `_apply` guards
+    against this with `_override_is_unreadable` before it ever calls this
+    function to mutate anything; a bare read through this helper (the section
+    screen's own display, say) still shows the code's content silently, which
+    remains a Task 10/11 concern, not this one.
     """
-    _list_field(section_type, name)  # 404 on a bad name, before touching row.content
+    field = field or _list_field(section_type, name)  # 404 on a bad name, before touching row.content
     row_content = row.content if isinstance(row.content, dict) else {}
     return copy.deepcopy(section_type(row_content).content[name])
 
 
-def save_list(row, section_type, name, values):
+def save_list(row, section_type, name, values, field=None):
     """Validate a list whole, then write it back. Returns the cleaned list.
+
+    `field` lets a caller that already resolved it through `_list_context`
+    pass it straight in, rather than have `_list_field` look it up again.
 
     Validating the whole list on every write — not just the touched item — is
     what makes `min_num`, `max_num` and `unique` hold: removing the last
@@ -210,7 +220,7 @@ def save_list(row, section_type, name, values):
     for a small editorial team working one section at a time; revisit if that
     stops being true.
     """
-    field = _list_field(section_type, name)
+    field = field or _list_field(section_type, name)
     if not isinstance(row.content, dict):
         row.content = {}
     cleaned = field.clean(values)
@@ -224,20 +234,91 @@ def save_list(row, section_type, name, values):
     return cleaned
 
 
+def _override_is_unreadable(row, section_type, name):
+    """True when `row.content` holds an override for `name` that no longer
+    validates, and `SectionType.__init__` has silently fallen back to the
+    code default for it (see the limitation documented on `list_values`).
+
+    Acting on such a list would be destructive: `list_values` would hand
+    back the code's own items, an item operation would mutate those, and
+    `save_list` would write them back as if they were the editor's, erasing
+    whatever they had actually written with no message and nothing left to
+    recover. `_apply` calls this first and refuses the operation instead.
+    """
+    row_content = row.content if isinstance(row.content, dict) else {}
+    if name not in row_content:
+        return False
+    try:
+        section_type.clean_value(name, row_content[name])
+    except ValidationError:
+        return True
+    return False
+
+
+def _digest(values):
+    """A short fingerprint of a list's cleaned content.
+
+    Carried on the POST as an optimistic-concurrency token: the screen that
+    renders the list (Task 10/11) embeds the digest of the list as it was
+    read, and `_apply` refuses the operation rather than apply it if the
+    list has changed underneath since — the only signal available for a
+    list whose items were deliberately left without a stored identity.
+    """
+    payload = json.dumps(values, sort_keys=True, default=str).encode()
+    return hashlib.sha256(payload).hexdigest()[:16]
+
+
 def _apply(request, pk, name, change):
-    """Apply one operation to a list, and say so if it is refused."""
-    row, section_type, _field = _list_context(pk, name)
-    values = list_values(row, section_type, name)
+    """Apply one operation to a list, and say so — success or refusal alike.
+
+    Two guards run before `change` ever sees the list, in addition to the
+    whole-list validation `save_list` already does:
+
+    - an override that no longer validates is left untouched rather than
+      silently replaced by the code defaults, see `_override_is_unreadable`;
+    - the POST must carry a `token` matching `_digest` of the list as read
+      here, or the operation is refused as stale. The token is required, not
+      optional: were it optional, a template that forgot to send it (Task 10,
+      11) would simply never trigger the guard, rather than fail loudly with
+      buttons that do not work. This is deliberately the same guard for a
+      missing token and a mismatched one — both mean this POST cannot be
+      trusted to describe the list as it now stands.
+    """
+    row, section_type, field = _list_context(pk, name)
+    if _override_is_unreadable(row, section_type, name):
+        messages.error(
+            request,
+            "Cette liste contient une modification qui n'est plus reconnue par le code : "
+            "impossible d'agir dessus depuis cet écran. Rien n'a été modifié.",
+        )
+        return redirect("edition:section", pk=pk)
+
+    values = list_values(row, section_type, name, field)
+    if request.POST.get("token") != _digest(values):
+        messages.error(
+            request,
+            "Cette liste a changé depuis l'affichage de la page. Rien n'a été modifié : rechargez et réessayez.",
+        )
+        return redirect("edition:section", pk=pk)
+
     try:
         change(values)
-        save_list(row, section_type, name, values)
+        save_list(row, section_type, name, values, field)
     except ValidationError as error:
         messages.error(request, error.messages[0])
+        return redirect("edition:section", pk=pk)
+
+    messages.success(request, "Élément mis à jour.")
     return redirect("edition:section", pk=pk)
 
 
 @editor_view(post_only=True)
 def item_duplicate(request, pk, name, index):
+    # Structurally unusable on a list declaring `unique` (`profiles`, on
+    # `slug`): every duplicate collides with the item it copies and is
+    # refused by `save_list`'s whole-list validation, cleanly and with
+    # nothing written. That list has no way to grow until Task 10 adds a
+    # creation form — a known state, not a bug to fix here.
     def change(values):
         _check_index(values, index)
         values.insert(index + 1, copy.deepcopy(values[index]))
@@ -256,13 +337,26 @@ def item_delete(request, pk, name, index):
 
 @editor_view(post_only=True)
 def item_move(request, pk, name, index):
+    return _apply(request, pk, name, _swap(index, request.POST.get("direction")))
+
+
+def _swap(index, direction):
+    """Build a move, as a plain list mutation — no `request` in here.
+
+    An unrecognised or absent `direction` is a no-op, not a downward move:
+    only "up" and "down" carry meaning. Landing past either end of the list
+    is a no-op too, and that is only correct for a screen that withholds the
+    button there in the first place — the contract Task 10/11's template
+    must honour.
+    """
+    other = {"up": index - 1, "down": index + 1}.get(direction)
+
     def change(values):
         _check_index(values, index)
-        other = index - 1 if request.POST.get("direction") == "up" else index + 1
-        if 0 <= other < len(values):
+        if other is not None and 0 <= other < len(values):
             values[index], values[other] = values[other], values[index]
 
-    return _apply(request, pk, name, change)
+    return change
 
 
 def _check_index(values, index):

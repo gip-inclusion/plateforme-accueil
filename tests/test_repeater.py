@@ -1,10 +1,13 @@
 """L'édition des listes répétables, élément par élément."""
 
 import pytest
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.http import Http404
+from django.shortcuts import resolve_url
 from django.urls import reverse
 
 from accueil import editing
@@ -119,9 +122,9 @@ def test_a_malformed_content_column_does_not_crash_the_helpers(testimonials):
     assert "quotes" not in (testimonials.content or {})
 
 
-def post(client, name, row, field, index=None):
+def post(client, name, row, field, index=None, data=None):
     args = [row.pk, field] if index is None else [row.pk, field, index]
-    return client.post(reverse(f"edition:{name}", args=args))
+    return client.post(reverse(f"edition:{name}", args=args), data or {})
 
 
 def quotes(row):
@@ -129,10 +132,22 @@ def quotes(row):
     return editing.list_values(row, declared("testimonials"), "quotes")
 
 
+def token(row):
+    """The digest a legitimate POST must carry: over the list as it now reads."""
+    return editing._digest(quotes(row))
+
+
+def messages_of(response):
+    # Not the private `_messages` on the request: iterating that consumes the
+    # storage, so a second read on the same response would silently see
+    # nothing. `get_messages` is the public, repeatable way to read it.
+    return [str(message) for message in get_messages(response.wsgi_request)]
+
+
 def test_duplicating_an_item_copies_it_right_after(client, editor, testimonials):
     client.force_login(editor)
     first = quotes(testimonials)[0]
-    post(client, "item-duplicate", testimonials, "quotes", 0)
+    post(client, "item-duplicate", testimonials, "quotes", 0, {"token": token(testimonials)})
     after = quotes(testimonials)
     assert after[1]["quote"] == first["quote"]
 
@@ -140,31 +155,58 @@ def test_duplicating_an_item_copies_it_right_after(client, editor, testimonials)
 def test_moving_an_item_swaps_it_with_its_neighbour(client, editor, testimonials):
     client.force_login(editor)
     names = [item["name"] for item in quotes(testimonials)]
-    client.post(reverse("edition:item-move", args=[testimonials.pk, "quotes", 0]), {"direction": "down"})
+    post(client, "item-move", testimonials, "quotes", 0, {"token": token(testimonials), "direction": "down"})
     assert [item["name"] for item in quotes(testimonials)] == [names[1], names[0]]
 
 
 def test_deleting_an_item_removes_it(client, editor, testimonials):
     client.force_login(editor)
     names = [item["name"] for item in quotes(testimonials)]
-    post(client, "item-delete", testimonials, "quotes", 0)
+    post(client, "item-delete", testimonials, "quotes", 0, {"token": token(testimonials)})
     assert [item["name"] for item in quotes(testimonials)] == names[1:]
+
+
+def test_a_successful_operation_flashes_a_message(client, editor, testimonials):
+    # Without JavaScript a successful move is otherwise a silent full page
+    # reload — and, combined with the digest guard, an operation that hit the
+    # wrong item would look exactly like one that hit the right one.
+    client.force_login(editor)
+    response = post(client, "item-delete", testimonials, "quotes", 0, {"token": token(testimonials)})
+    assert any("mis à jour" in message for message in messages_of(response))
 
 
 def test_deleting_the_last_item_is_refused_with_a_message(client, editor, testimonials):
     client.force_login(editor)
     for _ in range(len(quotes(testimonials)) - 1):
-        post(client, "item-delete", testimonials, "quotes", 0)
+        post(client, "item-delete", testimonials, "quotes", 0, {"token": token(testimonials)})
     assert len(quotes(testimonials)) == 1
 
-    response = post(client, "item-delete", testimonials, "quotes", 0)
+    response = post(client, "item-delete", testimonials, "quotes", 0, {"token": token(testimonials)})
     assert len(quotes(testimonials)) == 1
-    assert any("au moins" in str(message) for message in response.wsgi_request._messages)
+    assert any("au moins" in message for message in messages_of(response))
 
 
-def test_the_list_operations_need_an_account(client, testimonials):
-    assert post(client, "item-delete", testimonials, "quotes", 0).status_code == 302
+@pytest.mark.parametrize("name", ["item-duplicate", "item-delete", "item-move"])
+def test_an_anonymous_post_is_redirected_and_still_denies_framing(client, testimonials, name):
+    # `editor_view` carries more than a login check: it also applies
+    # `xframe_options_deny` and the `frame-ancestors 'none'` override, so a
+    # regression here would make a destructive endpoint public *and*
+    # framable — assert both, on all three views, not just one.
+    response = post(client, name, testimonials, "quotes", 0)
+    assert response.status_code == 302
+    assert response["Location"].startswith(resolve_url(settings.LOGIN_URL))
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
     assert "quotes" not in Section.objects.get(pk=testimonials.pk).content
+
+
+@pytest.mark.parametrize("name", ["item-duplicate", "item-delete", "item-move"])
+def test_a_get_is_refused_and_still_denies_framing(client, editor, testimonials, name):
+    client.force_login(editor)
+    response = client.get(reverse(f"edition:{name}", args=[testimonials.pk, "quotes", 0]))
+    assert response.status_code == 405
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
 
 
 def test_an_unknown_field_is_a_404(client, editor, testimonials):
@@ -172,12 +214,82 @@ def test_an_unknown_field_is_a_404(client, editor, testimonials):
     assert post(client, "item-delete", testimonials, "inexistant", 0).status_code == 404
 
 
+@pytest.mark.parametrize("name", ["item-duplicate", "item-delete", "item-move"])
+def test_an_out_of_range_index_is_a_404(client, editor, testimonials, name):
+    client.force_login(editor)
+    out_of_range = len(quotes(testimonials))
+    response = post(client, name, testimonials, "quotes", out_of_range, {"token": token(testimonials)})
+    assert response.status_code == 404
+
+
 def test_duplicating_past_max_num_is_refused_with_a_message(client, editor, testimonials):
     client.force_login(editor)
     while len(quotes(testimonials)) < 4:
-        post(client, "item-duplicate", testimonials, "quotes", 0)
+        post(client, "item-duplicate", testimonials, "quotes", 0, {"token": token(testimonials)})
     assert len(quotes(testimonials)) == 4
 
-    response = post(client, "item-duplicate", testimonials, "quotes", 0)
+    response = post(client, "item-duplicate", testimonials, "quotes", 0, {"token": token(testimonials)})
     assert len(quotes(testimonials)) == 4
-    assert any("au plus" in str(message) for message in response.wsgi_request._messages)
+    assert any("au plus" in message for message in messages_of(response))
+
+
+def test_an_unreadable_override_is_left_untouched_by_a_list_operation(client, editor, testimonials):
+    # An override that no longer validates (`min_num` tightened after the
+    # fact, say) must not be silently replaced by the code's own content: the
+    # first click on any operation would otherwise erase the editor's work
+    # for good, with a success-shaped redirect and nothing recoverable.
+    client.force_login(editor)
+    testimonials.content = {"quotes": []}  # violates min_num=1: no longer validates
+    testimonials.save(update_fields=["content"])
+    stored_before = Section.objects.get(pk=testimonials.pk).content
+
+    response = post(client, "item-delete", testimonials, "quotes", 0, {"token": "peu importe"})
+
+    assert Section.objects.get(pk=testimonials.pk).content == stored_before
+    assert any("n'est plus reconnue" in message for message in messages_of(response))
+
+
+def test_a_missing_token_refuses_the_operation(client, editor, testimonials):
+    client.force_login(editor)
+    before = quotes(testimonials)
+
+    response = post(client, "item-delete", testimonials, "quotes", 0)  # no token at all
+
+    assert quotes(testimonials) == before
+    assert any("a changé" in message for message in messages_of(response))
+
+
+def test_a_stale_token_refuses_the_operation(client, editor, testimonials):
+    # Reproduces the race: [A, B, C] is rendered and its digest captured: a
+    # concurrent change lands first (someone else's delete), and the click on
+    # the button for index 1 — meant for B — must not be let through against
+    # a list that has since moved on, or it would silently hit C instead.
+    client.force_login(editor)
+    stale = token(testimonials)
+    post(client, "item-delete", testimonials, "quotes", 0, {"token": stale})
+    before = quotes(testimonials)
+
+    response = post(client, "item-delete", testimonials, "quotes", 1, {"token": stale})
+
+    assert quotes(testimonials) == before
+    assert any("a changé" in message for message in messages_of(response))
+
+
+def test_a_missing_direction_does_not_move_anything(client, editor, testimonials):
+    client.force_login(editor)
+    before = quotes(testimonials)
+
+    post(client, "item-move", testimonials, "quotes", 0, {"token": token(testimonials)})
+
+    assert quotes(testimonials) == before
+
+
+def test_moving_the_first_item_up_is_a_no_op(client, editor, testimonials):
+    # Correct only if the template withholds the "up" button on the first
+    # item and the "down" button on the last — Task 10/11's contract to keep.
+    client.force_login(editor)
+    before = quotes(testimonials)
+
+    post(client, "item-move", testimonials, "quotes", 0, {"token": token(testimonials), "direction": "up"})
+
+    assert quotes(testimonials) == before
