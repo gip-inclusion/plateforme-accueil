@@ -3,8 +3,11 @@
 import copy
 
 from django import forms
+from django.template import Context, Template
+from django.test import override_settings
 
 from accueil.sections.base import Credit, Illustration, ListField, Registry, SectionType, add_credit_fields
+from accueil.templatetags.illustrations import illustration
 
 
 def test_an_illustration_is_text_shaped():
@@ -132,3 +135,27 @@ def test_illustration_name_survives_deepcopy_and_a_form_instance():
 
     bound_form = Form()
     assert bound_form.fields["visual_credit"].illustration_name == "visual"
+
+
+def test_a_code_path_resolves_through_staticfiles():
+    assert illustration("accueil/img/hero.webp").endswith("accueil/img/hero.webp")
+    assert illustration("accueil/img/hero.webp").startswith("/static/")
+
+
+@override_settings(MEDIA_URL="/media/")
+def test_an_upload_key_resolves_through_the_media_store():
+    assert illustration("uploads/abc123.webp") == "/media/uploads/abc123.webp"
+
+
+def test_an_empty_value_gives_an_empty_string():
+    # Un champ vide ne doit pas produire `/static/` tout court, qui ferait une
+    # requête inutile et une image cassée.
+    assert illustration("") == ""
+    assert illustration(None) == ""
+
+
+def test_the_filter_is_usable_from_a_template():
+    rendered = Template("{% load illustrations %}{{ path|illustration }}").render(
+        Context({"path": "accueil/img/hero.webp"})
+    )
+    assert rendered.startswith("/static/")
