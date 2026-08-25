@@ -3,10 +3,12 @@
 import copy
 import re
 from collections import Counter
+from unittest import mock
 
 import pytest
 from django import forms
 from django.conf import settings
+from django.core.management import call_command
 from django.template import Context, Template
 from django.template.loader import get_template
 from django.test import Client, override_settings
@@ -345,3 +347,61 @@ def test_search_cards_never_emits_an_empty_src():
     cards[0]["image"] = "../../../etc/passwd"
     section = Jobs({"cards": cards})
     assert 'src=""' not in _rendered(section)
+
+
+def test_the_public_page_renders_with_no_database_configured(client, settings):
+    """The cardinal rule this project refuses to lose: the page renders from
+    the code's defaults alone when no database is configured at all — this
+    branch touched the rendering path (this filter now sits on it) and must
+    not have grown a way around that.
+
+    Asserting on the response alone would be weak: under `make test` with
+    `DATABASE_URL` set, `pytest-django` already blocks unmarked DB access and
+    `accueil.content._overrides`'s blanket `except Exception` would turn that
+    block into the very same empty fallback, passing this test for the wrong
+    reason and leaving the actual `DATABASE_CONFIGURED` guard unexercised.
+    Patching `Section.objects` and asserting it is never touched pins down
+    the real guard: this fails if `_overrides` ever queries regardless of the
+    flag.
+    """
+    settings.DATABASE_CONFIGURED = False
+    with mock.patch("accueil.models.Section.objects") as manager:
+        response = client.get("/")
+    manager.filter.assert_not_called()
+    assert response.status_code == 200
+    assert "inclusion.gouv.fr" in response.headers["Content-Security-Policy"]
+    assert "<title>La plateforme de l'inclusion</title>" in response.content.decode()
+
+
+class StubUploadStorage:
+    """Un backend factice pour prouver que la page publique passe bien par
+    la storage pour une clé `uploads/…`, plutôt que par `{% static %}`."""
+
+    def url(self, name):
+        return f"https://cdn.example.test/{name}"
+
+
+@pytest.mark.django_db
+def test_an_uploaded_override_is_served_from_the_media_store_on_the_public_page(client):
+    from accueil.models import Section
+
+    call_command("sync_sections", verbosity=0)
+    section = Section.objects.get(kind="testimonials")
+    section.content = {"illustration": "uploads/abc123.webp"}
+    section.save(update_fields=["content"])
+
+    # Only "default" changes — "staticfiles" stays real, or whitenoise's own
+    # middleware (unrelated to this test) fails to resolve it while serving
+    # the response.
+    storages = {**settings.STORAGES, "default": {"BACKEND": f"{__name__}.StubUploadStorage"}}
+    with override_settings(STORAGES=storages):
+        response = client.get("/")
+    body = response.content.decode()
+
+    assert "https://cdn.example.test/uploads/abc123.webp" in body
+    assert f"{settings.STATIC_URL}accueil/img/temoignage" not in body
+    # Still framable, still Matomo-first: the upload path must not have
+    # changed the public page's own posture.
+    assert "X-Frame-Options" not in response.headers
+    (tag,) = [line for line in re.findall(r"<head>.*?</head>", body, re.DOTALL)[0].splitlines() if "matomo" in line]
+    assert "src=" in tag and "defer" not in tag and "async" not in tag

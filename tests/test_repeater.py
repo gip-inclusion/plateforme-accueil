@@ -968,3 +968,58 @@ def test_the_model_error_names_the_list_by_its_label_not_its_identifier(page, ki
     message = str(excinfo.value)
     assert label in message
     assert name not in message
+
+
+# Closure of every new screen this branch added: `item`, `item-add`,
+# `item-duplicate`, `item-move`, `item-delete`. The three destructive ones
+# already have their own anonymous-POST and GET-refuses-405 coverage above;
+# what is missing is systematic across *all five* — an anonymous GET, and a
+# signed-in but non-staff visitor — parametrised rather than five near-copies.
+
+ALL_ITEM_VIEWS = ["item", "item-add", "item-duplicate", "item-move", "item-delete"]
+
+
+def _item_view_url(name, row, field="quotes", index=0):
+    args = [row.pk, field] if name == "item-add" else [row.pk, field, index]
+    return reverse(f"edition:{name}", args=args)
+
+
+@pytest.fixture
+def visitor(page):
+    return User.objects.create_user("bob", "bob@example.test", "x")
+
+
+@pytest.mark.parametrize("name", ALL_ITEM_VIEWS)
+def test_an_anonymous_get_is_refused_and_still_denies_framing(client, testimonials, name):
+    # `editor_required` runs before `require_POST`, so an anonymous GET is
+    # refused the same way on all five screens, not just the three that are
+    # POST-only.
+    response = client.get(_item_view_url(name, testimonials))
+    assert response.status_code == 302
+    assert response["Location"].startswith(resolve_url(settings.LOGIN_URL))
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+@pytest.mark.parametrize("name", ["item", "item-add"])
+def test_an_anonymous_post_is_also_refused_on_the_get_capable_screens(client, testimonials, name):
+    # The three destructive views already have this above; `item` and
+    # `item-add` accept a POST too and are not covered by that parametrize.
+    response = client.post(_item_view_url(name, testimonials), {"token": "peu importe"})
+    assert response.status_code == 302
+    assert response["Location"].startswith(resolve_url(settings.LOGIN_URL))
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+@pytest.mark.parametrize("name", ALL_ITEM_VIEWS)
+def test_a_non_staff_visitor_is_refused_every_list_item_screen(client, visitor, testimonials, name):
+    # Not previously exercised at all for any of these five: only the plan
+    # view (`test_a_visitor_without_staff_is_refused`, in test_editing.py) was
+    # checked against a signed-in, non-staff account.
+    client.login(username="bob", password="x")
+    response = client.get(_item_view_url(name, testimonials))
+    assert response.status_code == 302
+    assert "/edition/" not in response["Location"].split("?")[0]
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
