@@ -40,6 +40,58 @@ class Reference(forms.SlugField):
     up in HTML ids, where a space would silently break `aria-controls`."""
 
 
+class Illustration(forms.CharField):
+    """Une image de la page.
+
+    La valeur est un chemin, et reste du texte : soit un fichier statique
+    déclaré dans le code, soit la clé d'un fichier téléversé (`uploads/…`).
+    Cette forme unique est ce qui permet de comparer au défaut, de ne stocker
+    que les écarts et de revenir au code sans cas particulier.
+
+    `max_width` est la largeur utile de l'image sur la page, en pixels ; un
+    téléversement plus large y est ramené, un plus petit n'est jamais agrandi.
+    `ratio`, quand il est déclaré, est le format `(largeur, hauteur)` auquel
+    un téléversement est recadré — sans lui, les attributs `width`/`height`
+    codés dans le gabarit mentiraient dès qu'un rédacteur envoie une image
+    d'un autre format.
+    """
+
+    def __init__(self, *, max_width, ratio=None, **kwargs):
+        self.max_width = max_width
+        self.ratio = ratio
+        super().__init__(**kwargs)
+
+
+class Credit(forms.CharField):
+    """Provenance ou licence d'une image téléversée.
+
+    Facultatif, jamais affiché sur la page : c'est une note pour l'équipe.
+    Ce type distinct existe pour que la planche d'aperçus puisse l'écarter du
+    contenu, et pour qu'il se repère d'un coup d'œil dans une déclaration.
+    """
+
+
+def add_credit_fields(form_class):
+    """Donne à chaque `Illustration` du formulaire son champ de provenance.
+
+    Injecté plutôt que déclaré : un champ de conformité qu'on peut oublier
+    d'écrire serait oublié. Appelé à l'enregistrement d'un type de section et
+    à la construction d'un `ListField`, donc les éléments répétés l'ont aussi.
+    """
+    for name, field in list(form_class.base_fields.items()):
+        if not isinstance(field, Illustration):
+            continue
+        if f"{name}_credit" in form_class.base_fields:
+            continue
+        form_class.base_fields[f"{name}_credit"] = Credit(
+            label=f"Provenance de « {field.label or name} »",
+            required=False,
+            initial="",
+            help_text="Origine ou licence de l'image. Pour l'équipe : jamais affiché sur la page.",
+        )
+    return form_class
+
+
 class ListField(forms.Field):
     """A repeatable block, stored as a list of dictionaries.
 
@@ -51,6 +103,7 @@ class ListField(forms.Field):
 
     def __init__(self, item_form, *, min_num=0, max_num=None, unique=None, **kwargs):
         self.item_form = item_form
+        add_credit_fields(item_form)
         self.min_num = min_num
         self.max_num = max_num
         self.unique = unique  # name of a key that must not repeat across items
@@ -157,6 +210,7 @@ class Registry:
             raise ValueError(f"{cls.__name__} doit définir `key` et `template`")
         if cls.key in self._types:
             raise ValueError(f"clé de section déjà enregistrée : {cls.key}")
+        add_credit_fields(cls.Form)
         self._types[cls.key] = cls
         return cls
 
