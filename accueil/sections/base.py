@@ -51,11 +51,14 @@ class Illustration(forms.CharField):
     `max_width` is the image's useful width on the page, in pixels: an upload
     wider than that is scaled down to it, a smaller one is never enlarged. The
     rule for choosing it: measure the widest width the image actually renders
-    at in the page's CSS — not the HTML `width` attribute, which CSS can
-    override, and not the source file's own size — then double that for dense
-    screens, and round to a tidy number. Name the CSS selector and the
-    measured width in a comment next to the declaration, so the number stays
-    checkable against the stylesheet rather than becoming folklore.
+    at in the page's CSS across every breakpoint, not just the widest viewport
+    — a narrower viewport can still render the image wider, if a column that
+    was split becomes single at that width. Never use the HTML `width`
+    attribute, which CSS can override, or the source file's own size. Double
+    that measured width for dense screens, and round *up* to a tidy number —
+    rounding down loses pixels. Name the CSS selector and the measured width
+    in a comment next to the declaration, so the number stays checkable
+    against the stylesheet rather than becoming folklore.
 
     `ratio`, when declared, is the `(width, height)` shape an upload is
     cropped to — without it, the `width`/`height` attributes hard-coded in
@@ -71,6 +74,8 @@ class Illustration(forms.CharField):
     def __init__(self, *, max_width, ratio=None, **kwargs):
         self.max_width = max_width
         self.ratio = ratio
+        # Provisional: right for a code-declared path, wrong once the upload
+        # widget lands and this can be an `uploads/…` key — revisit then.
         kwargs.setdefault("help_text", "Chemin sous accueil/static/")
         super().__init__(**kwargs)
 

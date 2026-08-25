@@ -25,15 +25,16 @@ class Hero(SectionType):
         # the copy around it.
         visual = Illustration(
             label="Visuel",
-            # .hero__visuel caps at max-width: 26rem (416px); twice, for dense
-            # screens.
-            max_width=800,
+            # .hero__visuel caps at max-width: 26rem (416px); twice is 832,
+            # rounded up.
+            max_width=840,
             ratio=(3, 2),
             initial="accueil/img/hero.webp",
         )
-        # Reference example of an opened text field: the literal moved from
-        # the template to `initial`, and the template now reads `content.note`.
-        # Every other string on the page is still literal, which is fine.
+        # Reference example of a field opened beyond the kicker/title/intro
+        # trio that CLAUDE.md opens everywhere by default: the literal moved
+        # from the template to `initial`, and the template now reads
+        # `content.note`.
         note = forms.CharField(
             label="Note sous la recherche",
             widget=forms.Textarea(attrs={"rows": 3}),

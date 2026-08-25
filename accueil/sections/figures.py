@@ -12,11 +12,11 @@ class Indicator(forms.Form):
     image = Illustration(
         label="Pictogramme",
         # .stat__illu is height-driven (height: 4rem = 64px at the >=48rem
-        # breakpoint), rendering ~91px wide at this ratio; twice, for dense
-        # screens. No `initial`: each of the three real indicators has its own
-        # pictogram, so guessing one for a fourth would be wrong more often
-        # than not — see Card.image, which makes the same call.
-        max_width=180,
+        # breakpoint), rendering ~91px wide at this ratio; twice is ~182,
+        # rounded up. No `initial`: each of the three real indicators has its
+        # own pictogram, so guessing one for a fourth would be wrong more
+        # often than not — see Card.image, which makes the same call.
+        max_width=190,
         ratio=(122, 86),
     )
     fallback = forms.IntegerField(

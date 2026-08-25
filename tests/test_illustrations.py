@@ -2,6 +2,7 @@
 
 import copy
 import re
+from collections import Counter
 
 import pytest
 from django import forms
@@ -240,40 +241,75 @@ def test_list_item_images_are_declared_as_illustrations():
     assert isinstance(card.base_fields["image"], Illustration)
 
 
+def _declared_image_paths():
+    """Every image path the code declares as a default, read from the
+    registry rather than duplicated here as literals — a changed editorial
+    photo (a card's picture, say) must not break this test."""
+    types = {t.key: t for t in registry.types()}
+    paths = [types["hero"].Form.base_fields["visual"].initial]
+    paths += [indicator["image"] for indicator in types["figures"].Form.base_fields["indicators"].initial]
+    paths.append(types["testimonials"].Form.base_fields["illustration"].initial)
+    for key in ("jobs", "services"):
+        paths += [card["image"] for card in types[key].Form.base_fields["cards"].initial]
+    return paths
+
+
 def test_the_public_page_still_serves_the_code_images():
-    # Une occurrence chacune : un décompte plus lâche laisserait passer un
-    # indicateur disparu, une URL cachée dans un commentaire, ou une balise qui
-    # aurait perdu ses attributs.
+    # Compte exact par chemin : un décompte plus lâche laisserait passer une
+    # image disparue ou dupliquée. Les chemins eux-mêmes viennent du code, pas
+    # d'une liste recopiée ici : changer une photo de carte ne doit pas casser
+    # ce test.
     body = Client().get("/").content.decode()
-    expected = {
-        "hero.webp": 1,
-        "stat-emploi.webp": 1,
-        "emploi-batiment.jpg": 1,
-        "temoignages-illustration.webp": 1,
-        "service-mobilite.jpg": 1,  # la moitié des cartes vient de services.py
-    }
-    for name, count in expected.items():
-        needle = f'src="{settings.STATIC_URL}accueil/img/{name}"'
-        assert body.count(needle) == count, name
+    for path, count in Counter(_declared_image_paths()).items():
+        needle = f'src="{settings.STATIC_URL}{path}"'
+        assert body.count(needle) == count, path
 
 
-def test_the_rendered_ratio_matches_the_declaring_fields_ratio():
+def _fields_with_ratio():
+    """Every declared `Illustration` whose `ratio` is set, as
+    `(section_type, field_name, field)` — discovered by walking the registry
+    rather than hand-listed, so a new illustrated field is covered
+    automatically instead of silently going unchecked."""
+    for section_type in registry.types():
+        for name, field in section_type.Form.base_fields.items():
+            if isinstance(field, ListField):
+                for sub_name, sub_field in field.item_form.base_fields.items():
+                    if isinstance(sub_field, Illustration) and sub_field.ratio is not None:
+                        yield section_type, sub_name, sub_field
+            elif isinstance(field, Illustration) and field.ratio is not None:
+                yield section_type, name, field
+
+
+# The search cards carry no `width`/`height`: their shape is enforced in CSS
+# by `.carte-media__media { aspect-ratio: 16 / 10 }`, not by HTML attributes —
+# there is nothing here for the test below to check, deliberately rather than
+# by omission.
+NO_RENDERED_DIMENSIONS = {("jobs", "image"), ("services", "image")}
+
+
+def test_every_ratio_declaring_field_has_matching_rendered_dimensions():
     # Personne ne relie à l'œil un `ratio` en Python aux attributs `width` et
     # `height` d'un gabarit : ce test les compare directement, dans les deux
-    # sens.
-    body = Client().get("/").content.decode()
-    types = {t.key: t for t in registry.types()}
-    checks = [
-        ("hero__visuel", types["hero"].Form.base_fields["visual"]),
-        ("stat__illu", types["figures"].Form.base_fields["indicators"].item_form.base_fields["image"]),
-        ("temoignages__illu", types["testimonials"].Form.base_fields["illustration"]),
-    ]
-    for css_class, field in checks:
-        match = re.search(rf'class="{css_class}"[^>]*width="(\d+)"[^>]*height="(\d+)"', body)
-        assert match, css_class
-        width, height = int(match.group(1)), int(match.group(2))
+    # sens, pour chaque champ qui déclare un `ratio` — la liste vient du
+    # registre, pas d'une énumération à la main.
+    fields = list(_fields_with_ratio())
+    checked = set()
+    for section_type, field_name, field in fields:
+        key = (section_type.key, field_name)
+        if key in NO_RENDERED_DIMENSIONS:
+            continue
+        section = section_type()
+        rendered = get_template(section_type.template).render({"content": section.content, "section": section})
+        matches = re.findall(r'<img[^>]*width="(\d+)"[^>]*height="(\d+)"', rendered)
+        assert matches, f"{section_type.key}.{field_name} a un ratio mais aucune balise <img> dimensionnée"
         ratio_width, ratio_height = field.ratio
-        assert width * ratio_height == height * ratio_width, css_class
+        for width, height in matches:
+            assert int(width) * ratio_height == int(height) * ratio_width, f"{section_type.key}.{field_name}"
+        checked.add(key)
+    # Chaque champ à ratio est soit vérifié ci-dessus, soit explicitement
+    # excusé : aucun ne doit passer entre les deux silencieusement.
+    all_keys = {(section_type.key, field_name) for section_type, field_name, _ in fields}
+    assert checked | NO_RENDERED_DIMENSIONS == all_keys
 
 
 def _rendered(section):
