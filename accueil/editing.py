@@ -147,7 +147,10 @@ def section(request, pk):
 
     form_class = section_form_class(declared)
     if request.method == "POST":
-        form = form_class(request.POST, instance=row)
+        # `request.FILES` matters as soon as a section declares an
+        # `Illustration`: without it the file input renders but the bytes never
+        # reach the form, and the upload fails silently.
+        form = form_class(request.POST, request.FILES, instance=row)
         if form.is_valid():
             form.save()
             messages.success(request, "Section enregistrée.")

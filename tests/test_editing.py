@@ -1,14 +1,17 @@
 """The editing UI: who gets in, and what the page must never become."""
 
+import io
 import json
 
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.shortcuts import resolve_url
 from django.test import override_settings
 from django.urls import reverse
+from PIL import Image
 
 from accueil.models import Section
 
@@ -320,3 +323,29 @@ def test_the_admin_login_page_is_never_framable(client):
     response = client.get("/admin/login/")
     assert response.headers["X-Frame-Options"] == "DENY"
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_a_section_upload_travels_through_the_editing_screen(client, editor, tmp_path, settings):
+    # Le champ image ne sert à rien si le gabarit n'est pas `multipart` ou si la
+    # vue ne lit pas `request.FILES` : le bouton s'affiche, et rien n'arrive.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    url = reverse("edition:section", args=[row.pk])
+
+    body = client.get(url).content.decode()
+    assert 'enctype="multipart/form-data"' in body
+
+    form = client.get(url).context["form"]
+    data = {name: bound.value() if bound.value() is not None else "" for name, bound in zip(form.fields, form)}
+    data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
+    data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (1200, 700), (10, 20, 30)).save(buffer, format="PNG")
+    data["illustration"] = SimpleUploadedFile("neuf.png", buffer.getvalue(), content_type="image/png")
+
+    assert client.post(url, data).status_code == 302
+    row.refresh_from_db()
+    assert row.content["illustration"].startswith("uploads/")

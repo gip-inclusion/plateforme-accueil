@@ -16,7 +16,7 @@
     <div class="alert alert-danger">{{ form.non_field_errors }}</div>
   {% endif %}
 
-  <form class="editeur c-box" method="post">
+  <form class="editeur c-box" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% for field in form %}
       <div class="champ{% if field.errors %} champ--erreur{% endif %}">
