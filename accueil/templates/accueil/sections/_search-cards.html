@@ -1,9 +1,11 @@
-{% load static %}
+{% load illustrations %}
 <div class="cartes-media">
   {% for card in content.cards %}
     <a class="carte-media" href="{{ card.href }}" target="_top">
       <div class="carte-media__media">
-        <img src="{% static card.image %}" alt="" loading="lazy">
+        {% with image=card.image|illustration %}
+          {% if image %}<img src="{{ image }}" alt="" loading="lazy">{% endif %}
+        {% endwith %}
         <span class="badge badge--{{ section.badge_kind }}">{{ section.badge_label }}</span>
       </div>
       <div class="carte-media__corps">

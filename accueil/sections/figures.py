@@ -3,13 +3,18 @@
 from django import forms
 
 from accueil import key_figures
-from accueil.sections.base import ListField, Reference, SectionType, registry
+from accueil.sections.base import Illustration, ListField, Reference, SectionType, registry
 
 
 class Indicator(forms.Form):
     key = Reference(label="Identifiant dans le flux")
     label = forms.CharField(label="Libellé")
-    image = forms.CharField(label="Image", help_text="Chemin sous accueil/static/")
+    image = Illustration(
+        label="Pictogramme",
+        max_width=366,  # displayed 122 wide: three times over, for dense screens
+        ratio=(122, 86),
+        initial="accueil/img/stat-emploi.webp",
+    )
     fallback = forms.IntegerField(
         label="Valeur de repli",
         help_text="Affichée si le flux est injoignable.",

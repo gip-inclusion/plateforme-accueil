@@ -1,4 +1,4 @@
-{% load static %}
+{% load illustrations %}
 <section class="section {{ section.modifiers }}" id="{{ section.anchor }}">
   <div class="section__contenu">
     <p class="section__surtitre">{{ content.kicker }}</p>
@@ -16,7 +16,9 @@
           </figure>
         {% endfor %}
       </div>
-      <img class="temoignages__illu" src="{% static content.illustration %}" alt="" width="560" height="340">
+      {% with visual=content.illustration|illustration %}
+        {% if visual %}<img class="temoignages__illu" src="{{ visual }}" alt="" width="560" height="340">{% endif %}
+      {% endwith %}
     </div>
   </div>
 </section>

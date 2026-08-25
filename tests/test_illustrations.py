@@ -2,13 +2,18 @@
 
 import copy
 
+import pytest
 from django import forms
 from django.conf import settings
 from django.template import Context, Template
-from django.test import override_settings
+from django.test import Client, override_settings
 
+from accueil.sections import registry
 from accueil.sections.base import Credit, Illustration, ListField, Registry, SectionType, add_credit_fields
 from accueil.templatetags.illustrations import illustration
+
+
+IllustrationField = Illustration
 
 
 def test_an_illustration_is_text_shaped():
@@ -217,3 +222,26 @@ def test_the_filter_is_usable_from_a_template():
         Context({"path": "accueil/img/hero.webp"})
     )
     assert rendered.startswith(settings.STATIC_URL)
+
+
+@pytest.mark.parametrize(("key", "name"), [("hero", "visual"), ("testimonials", "illustration")])
+def test_section_images_are_declared_as_illustrations(key, name):
+    section_type = {t.key: t for t in registry.types()}[key]
+    field = section_type.Form.base_fields[name]
+    assert isinstance(field, IllustrationField)
+    # Sans ratio, les attributs width/height du gabarit mentiraient.
+    assert field.ratio is not None
+
+
+def test_list_item_images_are_declared_as_illustrations():
+    types = {t.key: t for t in registry.types()}
+    indicator = types["figures"].Form.base_fields["indicators"].item_form
+    assert isinstance(indicator.base_fields["image"], IllustrationField)
+    card = types["jobs"].Form.base_fields["cards"].item_form
+    assert isinstance(card.base_fields["image"], IllustrationField)
+
+
+def test_the_public_page_still_serves_the_code_images():
+    body = Client().get("/").content.decode()
+    for name in ("hero", "stat-emploi", "emploi-batiment", "temoignages-illustration"):
+        assert f"/static/accueil/img/{name}" in body

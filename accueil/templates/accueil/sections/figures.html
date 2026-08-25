@@ -1,4 +1,4 @@
-{% load static %}
+{% load illustrations %}
 <section class="stats" aria-label="Chiffres clés">
   <div class="section__contenu">
     <p class="section__surtitre">{{ content.kicker }}</p>
@@ -6,7 +6,9 @@
     <div class="stats__grille">
       {% for indicator in section.values %}
         <div class="stat">
-          <img class="stat__illu" src="{% static indicator.image %}" alt="" width="122" height="86">
+          {% with image=indicator.image|illustration %}
+            {% if image %}<img class="stat__illu" src="{{ image }}" alt="" width="122" height="86">{% endif %}
+          {% endwith %}
           <b class="stat__nombre">{{ indicator.value }}</b>
           <span class="stat__label">{{ indicator.label }}</span>
         </div>

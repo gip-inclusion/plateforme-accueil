@@ -2,7 +2,7 @@
 
 from django import forms
 
-from accueil.sections.base import SectionType, registry
+from accueil.sections.base import Illustration, SectionType, registry
 
 
 @registry.register
@@ -19,6 +19,12 @@ class Hero(SectionType):
             label="Titre",
             widget=forms.Textarea,
             initial="Tous les emplois, les services inclusifs,\net les accompagnateurs autour de vous",
+        )
+        visual = Illustration(
+            label="Visuel",
+            max_width=1305,
+            ratio=(3, 2),
+            initial="accueil/img/hero.webp",
         )
         # Reference example of an opened field: the literal moved from the
         # template to `initial`, and the template now reads `content.note`.
