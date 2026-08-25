@@ -1,0 +1,65 @@
+{% load illustrations %}
+{# The board for one list: unrolled in full, at a coarse grain — never a #}
+{# one-line summary, never a carousel, so an editor can read every item at #}
+{# a glance. Expects `board` (see `accueil.previews.section_lists`) and #}
+{# `row`. Every control below carries `board.token`, the same digest #}
+{# `accueil.lists._digest` computes for this list: a board rendered before #}
+{# a change refuses afterwards rather than act on a shifted index. #}
+<section class="liste c-box">
+  <div class="liste__entete">
+    <h2>{{ board.label }}</h2>
+    {% if board.can_add %}
+      <a class="btn btn-sm btn-primary" href="{% url 'edition:item-add' row.pk board.name %}">Ajouter</a>
+    {% endif %}
+  </div>
+
+  {% for item in board.items %}
+    <article class="carte-liste">
+      {% with url=item.image|illustration %}
+        {% if url %}<img class="carte-liste__image" src="{{ url }}" alt="">{% endif %}
+      {% endwith %}
+
+      <div class="carte-liste__texte">
+        {% if item.title %}<h3 class="carte-liste__titre">{{ item.title }}</h3>{% endif %}
+        {% for paragraph in item.paragraphs %}
+          <p class="carte-liste__paragraphe">{{ paragraph }}</p>
+        {% endfor %}
+        {% if item.details %}
+          <dl class="carte-liste__details">
+            {% for label, value in item.details %}
+              <dt>{{ label }}</dt>
+              <dd>{{ value }}</dd>
+            {% endfor %}
+          </dl>
+        {% endif %}
+        {% if item.settings %}
+          <p class="carte-liste__reglages">
+            {% for label, value in item.settings %}{{ label }} : {{ value }}{% if not forloop.last %} · {% endif %}{% endfor %}
+          </p>
+        {% endif %}
+      </div>
+
+      <div class="carte-liste__commandes">
+        <form method="post" action="{% url 'edition:item-move' row.pk board.name item.index %}">
+          {% csrf_token %}
+          <input type="hidden" name="token" value="{{ board.token }}">
+          <button class="btn btn-sm btn-outline-primary" type="submit" name="direction" value="up"
+                  aria-label="Monter cet élément" {% if item.index == 0 %}disabled{% endif %}>↑</button>
+          <button class="btn btn-sm btn-outline-primary" type="submit" name="direction" value="down"
+                  aria-label="Descendre cet élément" {% if item.last %}disabled{% endif %}>↓</button>
+        </form>
+        <form method="post" action="{% url 'edition:item-duplicate' row.pk board.name item.index %}">
+          {% csrf_token %}
+          <input type="hidden" name="token" value="{{ board.token }}">
+          <button class="btn btn-sm btn-outline-primary white-space-nowrap" type="submit">Dupliquer</button>
+        </form>
+        <form method="post" action="{% url 'edition:item-delete' row.pk board.name item.index %}">
+          {% csrf_token %}
+          <input type="hidden" name="token" value="{{ board.token }}">
+          <button class="btn btn-sm btn-outline-danger" type="submit" {% if not board.can_delete %}disabled{% endif %}>Supprimer</button>
+        </form>
+        <a class="btn btn-sm btn-primary" href="{% url 'edition:item' row.pk board.name item.index %}">Modifier</a>
+      </div>
+    </article>
+  {% endfor %}
+</section>

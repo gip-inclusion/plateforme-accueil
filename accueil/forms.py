@@ -263,7 +263,13 @@ class SectionForm(forms.ModelForm):
         # or the override if there is one.
         merged = self.section_type(self.instance.content).content
         for name in self.section_type.Form.base_fields:
-            self.fields[name].initial = merged.get(name)
+            # A declared field this particular form does not carry — every
+            # `ListField`, once `section_form_class` is built with
+            # `with_lists=False` — is seeded by nothing here: its content
+            # stays whatever `SectionForm.clean` preserves from
+            # `self.instance.content` untouched.
+            if name in self.fields:
+                self.fields[name].initial = merged.get(name)
 
     def clean(self):
         cleaned = super().clean()
@@ -337,11 +343,19 @@ def item_form_class(list_field):
     return ItemForm
 
 
-def section_form_class(section_type):
+def section_form_class(section_type, with_lists=True):
     """A form for one section type, with its declared fields as real fields.
 
     Built as a class rather than added per instance: the admin reads
     `base_fields` off the class to decide what to render.
+
+    `with_lists=False` leaves every `ListField` out of the generated form —
+    `accueil.editing`'s section screen uses this, since its lists are edited
+    item by item on their own board (`accueil.previews.section_lists`), not
+    as a field on this form. The admin keeps the default: it has no board of
+    its own, and still edits a list as raw JSON through `ListEditor`.
     """
     fields = _map_editable_fields(section_type.Form.base_fields)
+    if not with_lists:
+        fields = {name: field for name, field in fields.items() if not isinstance(field, ListEditor)}
     return type("SectionForm", (SectionForm,), {**fields, "section_type": section_type})

@@ -31,7 +31,8 @@ from django.views.decorators.http import require_POST
 from accueil.forms import item_form_class, section_form_class
 from accueil.lists import _digest, _list_field, _override_is_unreadable, list_values, save_list
 from accueil.models import Page, Section
-from accueil.sections import Illustration, registry
+from accueil.previews import section_lists
+from accueil.sections import Illustration, ListField, registry
 
 
 def may_publish(user):
@@ -470,7 +471,7 @@ def section(request, pk):
         messages.error(request, f"La section « {row.kind} » n'existe plus dans le code.")
         return redirect("edition:plan")
 
-    form_class = section_form_class(declared)
+    form_class = section_form_class(declared, with_lists=False)
     if request.method == "POST":
         # `request.FILES` matters as soon as a section declares an
         # `Illustration`: without it the file input renders but the bytes never
@@ -484,6 +485,17 @@ def section(request, pk):
         form = form_class(instance=row)
 
     overridden = set(row.content)
+    # A list whose stored override no longer validates: `list_values` (and so
+    # `section_lists`, built from the same merged content) would silently
+    # show the code's own items in its place. Rather than let the board
+    # render that as if it were the editor's real content, its name is
+    # carried separately so the template can show a warning — with a way
+    # back to the code, through the same `reset-field` a stray scalar
+    # override already uses — instead of the items themselves.
+    list_names = [name for name, field in declared.Form.base_fields.items() if isinstance(field, ListField)]
+    unreadable_lists = {name for name in list_names if _override_is_unreadable(row, declared, name)}
+    content = declared(row.content).content
+    boards = [board for board in section_lists(declared, content) if board["name"] not in unreadable_lists]
     return render(
         request,
         "edition/section.html",
@@ -495,6 +507,8 @@ def section(request, pk):
             # Which fields an editor has moved away from the code, so that a
             # wording changed in a pull request cannot go unnoticed.
             "overridden": overridden,
+            "boards": boards,
+            "unreadable_lists": sorted(unreadable_lists),
         },
     )
 

@@ -105,8 +105,11 @@ def test_the_editor_shows_the_declared_fields(client, editor):
     client.force_login(editor)
     section = Section.objects.get(kind="features")
     body = client.get(reverse("edition:section", args=[section.pk])).content.decode()
-    for field in ('name="kicker"', 'name="title"', 'name="intro"', 'name="steps"'):
+    for field in ('name="kicker"', 'name="title"', 'name="intro"'):
         assert field in body
+    # `steps` is a `ListField`: it is edited item by item on the board below
+    # the form (Task 11), not as a field of the form itself.
+    assert 'name="steps"' not in body
 
 
 def test_saving_stores_only_the_change(client, editor):
@@ -128,21 +131,25 @@ def test_saving_stores_only_the_change(client, editor):
 
 
 def test_an_invalid_list_is_reported_not_saved(client, editor):
+    # `/edition/`'s own section screen no longer carries a list as a form
+    # field (Task 11: it is edited item by item on the board instead), so
+    # this can no longer be exercised through the real screen. `ListEditor`
+    # itself — the admin's JSON textarea, `section_form_class`'s default
+    # (`with_lists=True`) — still validates the same way; this is the one
+    # place left that checks it does.
+    from accueil.forms import section_form_class
     from accueil.models import Section
     from accueil.sections.features import Features
 
-    client.force_login(editor)
     section = Section.objects.get(kind="features")
     data = {"position": section.position, "active": "on"}
     for name, value in Features.defaults().items():
         data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
     data["steps"] = "{pas du json"
 
-    response = client.post(reverse("edition:section", args=[section.pk]), data)
-    assert response.status_code == 200  # redisplayed with the error
-    assert "JSON invalide" in response.content.decode()
-    section.refresh_from_db()
-    assert section.content == {}
+    form = section_form_class(Features)(data, instance=section)
+    assert not form.is_valid()
+    assert "JSON invalide" in str(form.errors["steps"])
 
 
 def test_an_overridden_field_is_flagged_and_can_be_reverted(client, editor):
@@ -340,7 +347,6 @@ def test_a_section_upload_travels_through_the_editing_screen(client, editor, tmp
     form = response.context["form"]
     data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
     data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
-    data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
 
     buffer = io.BytesIO()
     Image.new("RGB", (1200, 700), (10, 20, 30)).save(buffer, format="PNG")
@@ -365,7 +371,6 @@ def test_an_illustration_error_is_associated_with_its_field(client, editor, tmp_
     form = client.get(url).context["form"]
     data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
     data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
-    data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
     data["illustration"] = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
 
     response = client.post(url, data)
@@ -375,10 +380,17 @@ def test_an_illustration_error_is_associated_with_its_field(client, editor, tmp_
     assert 'id="id_illustration_error"' in body
 
 
-def test_saving_a_section_keeps_overrides_the_form_does_not_carry(page):
-    from accueil.forms import section_form_class
+def test_saving_a_section_keeps_overrides_the_form_does_not_carry(client, editor):
+    # `quotes` is still declared on `Testimonials.Form` — so `Section.clean`
+    # (the model) still validates it at every save — but Task 11 removes it
+    # from the *generated* form for good: it is edited item by item on the
+    # board below, not as a field here. Saving the section's other fields
+    # must leave this override untouched, exercising `SectionForm.clean`'s
+    # `name in self.fields` guard through the real screen, not a form built
+    # by hand.
     from accueil.sections.testimonials import Testimonials
 
+    client.force_login(editor)
     row = Section.objects.get(kind="testimonials")
     row.content = {"quotes": [{"quote": "Épatant.", "name": "Ana", "role": ""}]}
     row.save()
@@ -392,30 +404,8 @@ def test_saving_a_section_keeps_overrides_the_form_does_not_carry(page):
         "illustration_current": defaults["illustration"],
         "illustration_credit": "",
     }
-    form = section_form_class(Testimonials)(data, instance=row)
-    # Simule la disparition prochaine de `quotes` du formulaire généré (une
-    # tâche à venir déplacera les listes vers leur propre écran d'édition,
-    # sans toucher `Testimonials.Form.base_fields` — la déclaration du champ,
-    # donc la validation du modèle par `Section.clean`, restera inchangée). On
-    # retire le champ après construction, sur cette seule instance : le
-    # retirer plus tôt ferait planter la boucle de `SectionForm.__init__`, qui
-    # suppose encore aujourd'hui que chaque champ déclaré a un pendant dans le
-    # formulaire — une hypothèse que la tâche à venir devra aussi revoir, hors
-    # périmètre ici. `quotes` restant déclaré, ce test exerce bien le garde
-    # `name in self.section_type.Form.base_fields` de la *première*
-    # compréhension de `clean()` : un champ toujours déclaré mais absent de
-    # *ce* formulaire.
-    #
-    # Ce test construit le formulaire directement plutôt que de passer par
-    # l'écran réel : c'est la seule façon de l'atteindre aujourd'hui, puisque
-    # la branche est inaccessible à tout appelant réel tant que
-    # `SectionForm.__init__` n'a pas été corrigé. La tâche 11 (qui retire les
-    # listes du formulaire pour de bon) devra convertir ce test en test au
-    # niveau de l'écran, pas supposer qu'il en est déjà un.
-    del form.fields["quotes"]
-
-    assert form.is_valid(), form.errors
-    form.save()
+    response = client.post(reverse("edition:section", args=[row.pk]), data)
+    assert response.status_code == 302
 
     row.refresh_from_db()
     assert row.content["title"] == "Un autre titre."
@@ -443,7 +433,6 @@ def test_a_stale_key_still_saves_and_is_dropped(client, editor):
         value = bound.value()
         data[bound.name] = value if value is not None else ""
     data["illustration_current"] = Testimonials.defaults()["illustration"]
-    data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
     data["title"] = "Un autre titre."
 
     assert client.post(url, data).status_code == 302

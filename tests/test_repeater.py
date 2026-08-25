@@ -615,3 +615,119 @@ def test_a_colliding_slug_re_renders_the_form_instead_of_losing_it(client, edito
     assert response.context["form"].data["title"] == "Titre saisi à l'instant"
     unchanged = editing.list_values(profiles_row, section_type, "profiles")
     assert unchanged[0]["slug"] != other_slug
+
+
+def test_a_preview_splits_an_item_by_what_it_declares(figures):
+    # `figures.indicators` (`Indicator`, in accueil/sections/figures.py):
+    # `key` is a `Reference`, `label` a short text field, `image` an
+    # `Illustration`, `fallback` an `IntegerField`. `image_credit` is
+    # injected as a `Credit` by `add_credit_fields`.
+    from accueil.previews import item_parts
+
+    section_type = declared("figures")
+    field = section_type.Form.base_fields["indicators"]
+    values = editing.list_values(figures, section_type, "indicators")
+
+    parts = item_parts(field, values[0])
+
+    assert parts["image"] == values[0]["image"]
+    assert parts["title"] == values[0]["label"]
+    assert parts["paragraphs"] == []
+    assert ("Identifiant dans le flux", values[0]["key"]) in parts["settings"]
+    assert ("Valeur de repli", values[0]["fallback"]) in parts["settings"]
+
+
+def test_a_long_text_field_is_kept_whole_in_a_preview(testimonials):
+    # `testimonials.quotes` (`Quote`): `quote` is a `Textarea`, kept in full —
+    # never truncated, never summarised to a single line.
+    from accueil.previews import item_parts
+
+    section_type = declared("testimonials")
+    field = section_type.Form.base_fields["quotes"]
+    values = editing.list_values(testimonials, section_type, "quotes")
+
+    parts = item_parts(field, values[0])
+
+    assert parts["paragraphs"] == [values[0]["quote"]]
+
+
+def test_a_credit_never_appears_in_a_preview(testimonials):
+    # `illustration_credit` on `testimonials`' own fields is out of scope
+    # here (it is not a list item); `figures.indicators`' `image_credit` is
+    # the one injected onto every item by `add_credit_fields`, and it must
+    # never surface as a title, a paragraph, a detail or a setting.
+    from accueil.previews import item_parts
+
+    figures_row = Section.objects.get(kind="figures")
+    section_type = declared("figures")
+    field = section_type.Form.base_fields["indicators"]
+    values = editing.list_values(figures_row, section_type, "indicators")
+    values[0]["image_credit"] = "Une mention de provenance"
+
+    parts = item_parts(field, values[0])
+
+    rendered = repr(parts)
+    assert "image_credit" not in rendered
+    assert "Une mention de provenance" not in rendered
+
+
+def test_section_lists_reports_add_and_delete_eligibility(figures):
+    # `figures.indicators` déclare min_num=1, max_num=4 ; le fixture en pose
+    # trois : ajouter doit rester permis, supprimer aussi.
+    from accueil.previews import section_lists
+
+    section_type = declared("figures")
+    content = section_type(figures.content).content
+
+    boards = section_lists(section_type, content)
+    board = next(board for board in boards if board["name"] == "indicators")
+
+    assert board["can_add"] is True
+    assert board["can_delete"] is True
+    assert len(board["items"]) == 3
+    assert board["items"][0]["index"] == 0
+    assert board["items"][-1]["last"] is True
+
+
+def test_the_section_screen_shows_every_item_in_full(client, editor, testimonials):
+    # No summary, no truncation, no carousel: every declared bit of an item
+    # must be readable directly on the section screen.
+    from django.utils.html import escape
+
+    client.force_login(editor)
+    values = editing.list_values(testimonials, declared("testimonials"), "quotes")
+
+    body = client.get(reverse("edition:section", args=[testimonials.pk])).content.decode()
+
+    for item in values:
+        assert escape(item["quote"]) in body
+        assert escape(item["name"]) in body
+
+
+def test_the_section_form_no_longer_carries_the_lists(client, editor, testimonials):
+    # Task 11: the lists move to their own board; the section form keeps the
+    # section's other, simple fields.
+    client.force_login(editor)
+    response = client.get(reverse("edition:section", args=[testimonials.pk]))
+
+    assert "quotes" not in response.context["form"].fields
+    assert "kicker" in response.context["form"].fields
+    assert "title" in response.context["form"].fields
+
+
+def test_an_unreadable_list_is_not_shown_as_though_it_were_the_editors(client, editor, testimonials):
+    # `list_values` (and so `section_lists`, built from the same merged
+    # content) would silently fall back to the code's own items once an
+    # override no longer validates. The section screen must not display
+    # those as though they belonged to the editor: it shows a warning
+    # instead of the board, with a way back to the code.
+    client.force_login(editor)
+    testimonials.content = {"quotes": []}  # violates min_num=1: no longer validates
+    testimonials.save(update_fields=["content"])
+
+    response = client.get(reverse("edition:section", args=[testimonials.pk]))
+    body = response.content.decode()
+
+    assert "n'est plus reconnue" in body
+    assert "Nadia B." not in body  # the code's own content is not shown as a stand-in
+    assert not any(board["name"] == "quotes" for board in response.context["boards"])

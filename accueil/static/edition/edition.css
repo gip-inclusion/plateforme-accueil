@@ -205,3 +205,121 @@
 .revenir__liste form {
   margin: 0;
 }
+
+/* Repeater board -------------------------------------------------------- */
+
+/* Every item unrolled in full, at a coarse grain evoking the item's real
+   shape — no summary, no carousel: an editor must be able to read
+   everything at a glance. */
+
+.liste {
+  margin-top: 1.5rem;
+}
+
+.liste__entete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.liste__entete h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.carte-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-top: 1px solid #ddd;
+}
+
+.carte-liste__image {
+  width: 6rem;
+  height: auto;
+}
+
+.carte-liste__texte {
+  min-width: 0;
+}
+
+.carte-liste__titre {
+  margin: 0 0 0.375rem;
+  font-size: 1rem;
+}
+
+.carte-liste__paragraphe {
+  margin: 0 0 0.5rem;
+}
+
+.carte-liste__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.carte-liste__details dt {
+  font-weight: 700;
+}
+
+.carte-liste__details dt,
+.carte-liste__details dd {
+  display: inline;
+  margin: 0;
+}
+
+.carte-liste__details dt::after {
+  content: " : ";
+}
+
+.carte-liste__reglages {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #555;
+}
+
+.carte-liste__commandes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.carte-liste__commandes form {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.liste-illisible {
+  margin-top: 1.5rem;
+}
+
+.liste-illisible form {
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 40rem) {
+  .carte-liste {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .carte-liste__image {
+    flex: none;
+  }
+
+  .carte-liste__texte {
+    flex: 1 1 auto;
+  }
+
+  .carte-liste__commandes {
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+}
