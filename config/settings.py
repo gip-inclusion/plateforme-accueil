@@ -11,7 +11,7 @@ DEBUG = os.environ.get("DEBUG", "") == "1"
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
-# The admin is the stopgap editing UI, until /pilotage/ and Authentik land.
+# The admin is the stopgap editing UI, until /edition/ is complete.
 # Only its URLs are gated, so a deploy never exposes a login form backed by
 # local passwords. The apps stay installed in every environment: making
 # INSTALLED_APPS conditional would make the set of migrations depend on the

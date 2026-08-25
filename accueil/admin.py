@@ -1,9 +1,9 @@
 """Stopgap editing UI.
 
-The real one is `/pilotage/`, whose information architecture is the page rather
-than the schema: a plan of the page, drag-to-reorder, and a live preview. Until
-then the admin lets us reorder, hide and override sections. Its URLs are only
-mounted when ADMIN_ENABLED is set.
+The real one is `/edition/`, whose information architecture is the page rather
+than the schema: a plan of the page, then a section at a time. Until it is
+complete the admin still lets us reorder, hide and override sections. Its URLs
+are only mounted when ADMIN_ENABLED is set.
 """
 
 from django.contrib import admin

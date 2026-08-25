@@ -2,10 +2,11 @@
 
 A section type already describes its content as a Django form, so the editor is
 that form — no per-section code. Two things are added here: a readable widget
-for repeatable lists (JSON, until `/pilotage/` gives them a real one), and the
-rule that only *differences* from the code are stored.
+for repeatable lists (JSON, which only the admin still needs now that `/edition/`
+edits them item by item), and the rule that only *differences* from the code are
+stored.
 
-Used by the admin today, and by `/pilotage/` when it lands.
+Used by both the admin and `/edition/`.
 """
 
 import copy

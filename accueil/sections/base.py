@@ -69,7 +69,7 @@ class Credit(forms.CharField):
     """Provenance or licence of an uploaded image.
 
     Optional, and never shown on the public page: it is a note for the team.
-    A distinct type so the `/pilotage/` live preview can leave it out of
+    A distinct type so the item previews in `/edition/` can leave it out of
     displayed content, and so it stands out at a glance in a declaration.
     """
 
