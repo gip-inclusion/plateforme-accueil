@@ -48,6 +48,15 @@ MAX_PIXELS = 24_000_000
 # editor's file is unreadable" and must not be reported as such.
 UNREADABLE_IMAGE_ERRORS = (Image.UnidentifiedImageError, OSError, ValueError)
 
+# Pillow guards against decompression bombs itself, and raises past roughly
+# 178 megapixels — from `Image.open`, before our own `MAX_PIXELS` check gets a
+# say. It derives from `Exception` rather than `OSError`, so it needs naming
+# explicitly: without this it lands in the unexpected-error branch, telling an
+# editor their file is unreadable (it isn't, it is merely enormous) and logging
+# an expected refusal as if it were a bug. Anything tripping Pillow's threshold
+# is well past ours, so it gets the same answer as our own check.
+TOO_MANY_PIXELS = "Cette image compte trop de pixels pour être traitée."
+
 
 def store(uploaded, *, max_width, ratio=None):
     """Crop, shrink, convert to WebP, and return the stored file's key."""
@@ -62,6 +71,8 @@ def store(uploaded, *, max_width, ratio=None):
     with ExitStack() as stack:
         try:
             image = Image.open(uploaded)
+        except Image.DecompressionBombError as erreur:
+            raise ValidationError(TOO_MANY_PIXELS) from erreur
         except UNREADABLE_IMAGE_ERRORS as erreur:
             raise ValidationError("Ce fichier n'est pas une image lisible.") from erreur
         except Exception:
@@ -73,10 +84,12 @@ def store(uploaded, *, max_width, ratio=None):
         # without decoding any pixel data, so a bomb is refused before it is
         # inflated.
         if image.width * image.height > MAX_PIXELS:
-            raise ValidationError("Cette image compte trop de pixels pour être traitée.")
+            raise ValidationError(TOO_MANY_PIXELS)
 
         try:
             image.load()
+        except Image.DecompressionBombError as erreur:
+            raise ValidationError(TOO_MANY_PIXELS) from erreur
         except UNREADABLE_IMAGE_ERRORS as erreur:
             raise ValidationError("Ce fichier n'est pas une image lisible.") from erreur
         except Exception:

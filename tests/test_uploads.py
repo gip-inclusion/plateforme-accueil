@@ -2,6 +2,7 @@
 
 import importlib
 import io
+import logging
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -251,3 +252,21 @@ def test_an_extreme_ratio_is_clamped_both_ways(tmp_path, settings):
 def test_a_source_exactly_at_max_width_is_unchanged(tmp_path, settings):
     _, image = stored(tmp_path, settings, a_file(500, 300), max_width=500)
     assert image.size == (500, 300)
+
+
+def test_pillows_own_bomb_guard_is_an_expected_refusal(tmp_path, settings, caplog):
+    # Pillow lève `DecompressionBombError` au-delà de ~178 Mpx, depuis
+    # `Image.open` — donc avant notre propre contrôle. Cette exception dérive
+    # d'`Exception` et non d'`OSError` : sans mention explicite elle tombait
+    # dans la branche « erreur inattendue », annonçant à la rédactrice un
+    # fichier illisible (il ne l'est pas, il est énorme) et journalisant en
+    # ERROR un refus parfaitement attendu.
+    settings.MEDIA_ROOT = tmp_path
+    buffer = io.BytesIO()
+    Image.new("L", (20000, 20000)).save(buffer, format="PNG")
+    enormous = SimpleUploadedFile("bombe.png", buffer.getvalue(), content_type="image/png")
+
+    with caplog.at_level(logging.ERROR, logger="accueil.uploads"):
+        with pytest.raises(ValidationError, match="pixels"):
+            uploads.store(enormous, max_width=800)
+    assert caplog.records == []
