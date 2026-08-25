@@ -41,19 +41,19 @@ class Reference(forms.SlugField):
 
 
 class Illustration(forms.CharField):
-    """Une image de la page.
+    """An image on the page.
 
-    La valeur est un chemin, et reste du texte : soit un fichier statique
-    déclaré dans le code, soit la clé d'un fichier téléversé (`uploads/…`).
-    Cette forme unique est ce qui permet de comparer au défaut, de ne stocker
-    que les écarts et de revenir au code sans cas particulier.
+    The value is a path, and stays text: either a static file declared in the
+    code, or the key of an uploaded file (`uploads/…`). This single shape is
+    what lets a value be compared to its default, only the deviation stored,
+    and a fallback to the code happen without a special case.
 
-    `max_width` est la largeur utile de l'image sur la page, en pixels ; un
-    téléversement plus large y est ramené, un plus petit n'est jamais agrandi.
-    `ratio`, quand il est déclaré, est le format `(largeur, hauteur)` auquel
-    un téléversement est recadré — sans lui, les attributs `width`/`height`
-    codés dans le gabarit mentiraient dès qu'un rédacteur envoie une image
-    d'un autre format.
+    `max_width` is the image's useful width on the page, in pixels: an upload
+    wider than that is scaled down to it, a smaller one is never enlarged.
+    `ratio`, when declared, is the `(width, height)` shape an upload is
+    cropped to — without it, the `width`/`height` attributes hard-coded in
+    the template would lie the moment an editor uploads an image of another
+    shape.
     """
 
     def __init__(self, *, max_width, ratio=None, **kwargs):
@@ -62,34 +62,53 @@ class Illustration(forms.CharField):
         super().__init__(**kwargs)
 
 
-class Credit(forms.CharField):
-    """Provenance ou licence d'une image téléversée.
+CREDIT_SUFFIX = "_credit"  # appended to an illustration's name to name its credit field
 
-    Facultatif, jamais affiché sur la page : c'est une note pour l'équipe.
-    Ce type distinct existe pour que la planche d'aperçus puisse l'écarter du
-    contenu, et pour qu'il se repère d'un coup d'œil dans une déclaration.
+
+class Credit(forms.CharField):
+    """Provenance or licence of an uploaded image.
+
+    Optional, and never shown on the public page: it is a note for the team.
+    A distinct type so a preview builder can leave it out of displayed
+    content, and so it stands out at a glance in a declaration. `add_credit_fields`
+    names each instance it injects after `CREDIT_SUFFIX`, and records the
+    illustration it belongs to on `illustration_name` — so downstream code
+    asks the field for its pairing rather than parsing its name.
     """
 
 
 def add_credit_fields(form_class):
-    """Donne à chaque `Illustration` du formulaire son champ de provenance.
+    """Give each `Illustration` on the form its provenance field.
 
-    Injecté plutôt que déclaré : un champ de conformité qu'on peut oublier
-    d'écrire serait oublié. Appelé à l'enregistrement d'un type de section et
-    à la construction d'un `ListField`, donc les éléments répétés l'ont aussi.
+    Injected rather than declared: a compliance field a section could forget
+    to write would be forgotten. Called when a section type registers and
+    when a `ListField` is built, so repeated items get one too.
+
+    Rebuilds `base_fields` rather than appending, so each credit field sits
+    right after the illustration it describes. Idempotent, and a no-op for a
+    field a form already declares by hand: both re-registering a form and a
+    hand-declared override are legitimate, and neither should duplicate or
+    displace a field.
     """
-    for name, field in list(form_class.base_fields.items()):
+    fields = form_class.base_fields
+    rebuilt = {}
+    for name, field in fields.items():
+        rebuilt[name] = field
         if not isinstance(field, Illustration):
             continue
-        if f"{name}_credit" in form_class.base_fields:
+        credit_name = f"{name}{CREDIT_SUFFIX}"
+        if credit_name in fields:
+            rebuilt[credit_name] = fields[credit_name]
             continue
-        form_class.base_fields[f"{name}_credit"] = Credit(
-            label=f"Provenance de « {field.label or name} »",
+        credit = Credit(
+            label=f"Provenance de « {field.label} »" if field.label else "Provenance de l'image",
             required=False,
             initial="",
             help_text="Origine ou licence de l'image. Pour l'équipe : jamais affiché sur la page.",
         )
-    return form_class
+        credit.illustration_name = name
+        rebuilt[credit_name] = credit
+    form_class.base_fields = rebuilt
 
 
 class ListField(forms.Field):
@@ -99,6 +118,9 @@ class ListField(forms.Field):
     declares its fields exactly like a section does. The editing UI for these
     is still to come; until then they are edited as JSON, and the validation
     here is what keeps that honest.
+
+    Construction is not side-effect free: it permanently adds credit fields to
+    `item_form`, the class the caller passed in.
     """
 
     def __init__(self, item_form, *, min_num=0, max_num=None, unique=None, **kwargs):
