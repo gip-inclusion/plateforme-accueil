@@ -154,6 +154,11 @@
   font-size: 0.8125rem;
 }
 
+.champ__erreurs {
+  padding: 0;
+  list-style: none;
+}
+
 /* Illustration field --------------------------------------------------- */
 
 .champ-image {

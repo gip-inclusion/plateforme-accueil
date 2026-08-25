@@ -25,8 +25,12 @@
           {% if field.name in overridden %}<span class="tag">modifié</span>{% endif %}
         </label>
         {{ field }}
-        {% if field.help_text %}<p class="champ__aide">{{ field.help_text }}</p>{% endif %}
-        {% for error in field.errors %}<p class="champ__erreur">{{ error }}</p>{% endfor %}
+        {% if field.help_text %}<p class="champ__aide" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}
+          <ul class="champ__erreurs" id="{{ field.auto_id }}_error">
+            {% for error in field.errors %}<li class="champ__erreur">{{ error }}</li>{% endfor %}
+          </ul>
+        {% endif %}
       </div>
     {% endfor %}
     <div class="editeur__actions">

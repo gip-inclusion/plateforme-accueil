@@ -349,3 +349,27 @@ def test_a_section_upload_travels_through_the_editing_screen(client, editor, tmp
     assert client.post(url, data).status_code == 302
     row.refresh_from_db()
     assert row.content["illustration"].startswith("uploads/")
+
+
+def test_an_illustration_error_is_associated_with_its_field(client, editor, tmp_path, settings):
+    # `aria-describedby` sur le champ fichier ne sert à rien si rien sur la
+    # page ne porte réellement cet id : `edition/section.html` doit rendre le
+    # paragraphe d'erreur avec l'id que Django attend, pas seulement à côté du
+    # champ visuellement.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    url = reverse("edition:section", args=[row.pk])
+
+    form = client.get(url).context["form"]
+    data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
+    data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
+    data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
+    data["illustration"] = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
+
+    response = client.post(url, data)
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert 'aria-describedby="id_illustration_helptext id_illustration_error"' in body
+    assert 'id="id_illustration_error"' in body

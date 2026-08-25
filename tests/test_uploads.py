@@ -15,8 +15,9 @@ from PIL import Image
 import config.settings
 import config.urls
 from accueil import uploads
-from accueil.forms import IllustrationEditor
+from accueil.forms import IllustrationEditor, section_form_class
 from accueil.sections.base import Illustration
+from accueil.sections.hero import Hero
 from accueil.templatetags.illustrations import illustration
 
 
@@ -320,44 +321,63 @@ def test_without_durable_storage_the_field_offers_no_upload():
 
 @override_settings(UPLOADS_ENABLED=False)
 def test_without_durable_storage_the_label_points_at_nothing():
-    # `edition/section.html` renders `<label for="{{ field.id_for_label }}">`:
-    # with no `<input type="file">` on the page, a non-empty id would dangle.
+    # `edition/section.html` affiche `<label for="{{ field.id_for_label }}">` :
+    # sans `<input type="file">` sur la page, un id non vide pointerait dans le
+    # vide.
     form = Upload()
     assert form["visual"].id_for_label == ""
 
 
 def test_a_hand_crafted_upload_is_refused_when_uploads_are_disabled(tmp_path, settings):
-    # `UPLOADS_ENABLED` (config/settings.py) means durable storage is actually
-    # configured. The UI only offers the file input when it is true, but
-    # nothing stops a direct POST — `clean` must enforce it itself rather than
-    # trust the widget to have hidden the option.
+    # `UPLOADS_ENABLED` (config/settings.py) signifie qu'un stockage durable
+    # est réellement configuré. L'interface n'affiche le champ fichier que si
+    # c'est vrai, mais rien n'empêche un POST forgé à la main : `clean` doit
+    # imposer la règle lui-même plutôt que de faire confiance au widget qui a
+    # caché l'option.
     settings.MEDIA_ROOT = tmp_path
     settings.UPLOADS_ENABLED = False
     form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": a_file(400, 300)})
     assert not form.is_valid()
     assert "visual" in form.errors
+    # Le cœur de la règle : rien n'a atteint un stockage qui disparaît au
+    # prochain déploiement — pas seulement une erreur de champ obtenue par
+    # chance parce que le fichier posté était une image valide.
+    uploads_dir = tmp_path / uploads.UPLOAD_PREFIX
+    assert not uploads_dir.exists() or list(uploads_dir.iterdir()) == []
 
 
 def test_a_mangled_current_value_is_refused():
-    # The hidden `_current` input is client-supplied; a `..` segment must be
-    # rejected at save time, the same shape check the display filter applies.
+    # Le champ caché `_current` est fourni par le client ; un segment `..`
+    # doit être refusé à l'enregistrement, comme le fait le filtre
+    # d'affichage.
     form = Upload(data={"visual_current": "uploads/../../etc/passwd.webp"}, files={})
     assert not form.is_valid()
     assert "visual" in form.errors
 
 
 def test_the_field_requires_a_multipart_form():
-    # Without `needs_multipart_form = True` on the widget, Django does not
-    # know the surrounding form must be `multipart`, and a real browser would
-    # never actually send the file.
+    # Sans `needs_multipart_form = True` sur le widget, Django ignore que le
+    # formulaire englobant doit être `multipart`, et un vrai navigateur
+    # n'enverrait jamais le fichier.
     assert Upload().is_multipart()
 
 
+def test_the_file_input_is_never_required_by_the_browser():
+    # La valeur voyage par le champ caché `_current`, jamais par le champ
+    # fichier lui-même : un champ fichier vide à l'enregistrement signifie
+    # « garder l'image actuelle », pas « valeur manquante ». Sans
+    # `use_required_attribute` renvoyant `False`, un navigateur bloquerait
+    # tout enregistrement qui ne change pas l'image (hero, testimonials).
+    with override_settings(UPLOADS_ENABLED=True):
+        rendered = str(Upload()["visual"])
+    assert "required" not in rendered
+
+
 def test_a_successful_upload_survives_a_sibling_fields_failure(tmp_path, settings):
-    # The delicate case `bound_data` exists for: another field on the same
-    # form rejects the submission, and this field's own upload — already
-    # durably stored — must still be what gets shown on re-render, not lost
-    # back to the raw file object or the field's static default.
+    # Le cas délicat que `bound_data` existe pour couvrir : un autre champ du
+    # même formulaire rejette la soumission, et l'upload de celui-ci — déjà
+    # stocké durablement — doit rester ce qui est réaffiché, pas perdu au
+    # profit du fichier brut ou de la valeur par défaut du code.
     settings.MEDIA_ROOT = tmp_path
     settings.UPLOADS_ENABLED = True
 
@@ -377,9 +397,9 @@ def test_a_successful_upload_survives_a_sibling_fields_failure(tmp_path, setting
 
 
 def test_this_fields_own_bad_file_falls_back_to_the_posted_current_value(tmp_path, settings):
-    # Here it is *this* field's own file that is refused: the re-render must
-    # show what was actually posted as the current value (a previously stored
-    # override), not the field's hard-coded code default.
+    # Ici c'est le fichier de ce champ qui est refusé : le réaffichage doit
+    # montrer ce qui a réellement été posté comme valeur actuelle (une
+    # surcharge déjà stockée), pas la valeur par défaut du code.
     settings.MEDIA_ROOT = tmp_path
     settings.UPLOADS_ENABLED = True
     bad = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
@@ -389,12 +409,53 @@ def test_this_fields_own_bad_file_falls_back_to_the_posted_current_value(tmp_pat
     assert form["visual"].value() == "uploads/previously-stored.webp"
 
 
+@override_settings(UPLOADS_ENABLED=True)
 def test_the_rendered_input_carries_the_widgets_full_attrs():
-    # The template used to hand-pick `name`, `id` and `accept`, dropping
-    # everything else Django or `SectionForm` puts in `widget.attrs` — notably
-    # the theme's `class`, and `aria-describedby`/`aria-invalid`.
-    with override_settings(UPLOADS_ENABLED=True):
-        form = Upload()
-        form.fields["visual"].widget.attrs["class"] = "form-control"
-        rendered = str(form["visual"])
-        assert 'class="form-control"' in rendered
+    # Le gabarit ne choisissait auparavant que `name`, `id` et `accept`,
+    # perdant tout ce que `SectionForm` place dans `widget.attrs` — notamment
+    # la classe du thème. Construit via `section_form_class`, la vraie voie
+    # (`SectionForm.__init__` pose la classe), plutôt qu'en l'affectant à la
+    # main sur le widget — sans quoi le test ne couvre pas l'écriture morte
+    # qu'il est censé garder fermée. Un formulaire sans `instance` en a une
+    # vierge, sans pk : `SectionForm.__init__` pose déjà la classe avant de
+    # s'arrêter là, donc aucune base de données n'est nécessaire ici.
+    form = section_form_class(Hero)()
+    rendered = str(form["visual"])
+    assert 'class="form-control"' in rendered
+    assert "required" not in rendered
+
+
+def test_the_error_message_is_associated_with_the_field(tmp_path, settings):
+    # `edition/section.html` doit donner à l'aide et à l'erreur des ids que
+    # `aria-describedby` référence réellement, sans quoi le message reste
+    # visuellement à côté du champ mais jamais associé pour un lecteur
+    # d'écran.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    bad = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
+    form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": bad})
+    form.is_valid()
+    bound = form["visual"]
+    described_by = str(bound).split('aria-describedby="')[1].split('"')[0].split(" ")
+    assert f"{bound.auto_id}_error" in described_by
+
+
+def test_widgets_do_not_share_state_across_form_instances(tmp_path, settings):
+    # `IllustrationWidget` garde de l'état par requête (`posted_current`,
+    # `uploaded_key`). Que cet état ne fuie pas d'une instance de formulaire à
+    # l'autre repose sur le deepcopy de `base_fields` par Django — ce test
+    # l'épingle directement plutôt que de le tenir pour acquis, en construisant
+    # deux formulaires à partir d'un même `section_form_class`.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    HeroForm = section_form_class(Hero)
+
+    first = HeroForm(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": a_file(1600, 1000)})
+    first.is_valid()
+    assert first.fields["visual"].widget.uploaded_key is not None
+
+    second = HeroForm(data={"visual_current": "accueil/img/hero.webp"}, files={})
+    second.is_valid()
+
+    assert first.fields["visual"].widget is not second.fields["visual"].widget
+    assert second.fields["visual"].widget.uploaded_key is None

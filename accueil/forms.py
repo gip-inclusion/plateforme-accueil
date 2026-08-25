@@ -104,10 +104,21 @@ class IllustrationWidget(forms.Widget):
         # With uploads disabled there is no `<input type="file">` to carry
         # this id (see the widget template): a `<label for="…">` pointing at
         # nothing is a dangling reference, so give the label nothing to point
-        # at. `edition/section.html` renders an empty `for` correctly.
+        # at. `edition/section.html` then renders `for=""` — a non-conforming
+        # but harmless empty ID reference, not an omitted attribute.
         if not settings.UPLOADS_ENABLED:
             return ""
         return super().id_for_label(id_)
+
+    def use_required_attribute(self, initial):
+        # The value lives in the hidden `_current` input, never in the file
+        # input itself: an empty file input on save means "keep the current
+        # image", not "missing". `forms.Widget`'s default
+        # (`not self.is_hidden`) does not know that — unlike `FileInput`,
+        # whose own override exists for exactly this reason — so without this
+        # a browser's constraint validation would block every save that does
+        # not change the image, on `hero` and `testimonials` alike.
+        return False
 
 
 class IllustrationEditor(forms.CharField):
@@ -140,10 +151,13 @@ class IllustrationEditor(forms.CharField):
             value = uploads.store(value, max_width=self.illustration.max_width, ratio=self.illustration.ratio)
             # Kept on the widget (not returned here) so a re-render after some
             # *other* field on the same form fails validation still shows this
-            # upload — see `bound_data`. The file this produced is not
-            # written again on a retry with the same bytes: `uploads.store`
-            # names by content hash and checks `exists()` first, so this is
-            # an accepted, harmless orphan on storage, never a duplicate.
+            # upload — see `bound_data`. If the form is never resubmitted
+            # successfully, the file stays on storage with nothing pointing
+            # at it: an accepted orphan, not addressed by content-hash naming
+            # (that only prevents *duplicates*). Deferring the write instead
+            # would defeat the point of `bound_data`, the key is unguessable,
+            # and the never-delete policy on uploads is deliberate — so this
+            # trade-off is kept, not fixed.
             self.widget.uploaded_key = value
         value = super().clean(value)
         # The hidden `<name>_current` input is client-supplied, and its value
