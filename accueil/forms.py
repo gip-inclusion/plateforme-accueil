@@ -13,10 +13,12 @@ import copy
 import json
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
+from accueil import uploads
 from accueil.models import Section
-from accueil.sections import ListField
+from accueil.sections import Illustration, ListField
 
 
 class JsonWidget(forms.Textarea):
@@ -53,6 +55,95 @@ class ListEditor(forms.CharField):
             except json.JSONDecodeError as erreur:
                 raise ValidationError(f"JSON invalide : {erreur.msg} (ligne {erreur.lineno}).") from erreur
         return self.list_field.clean(value)
+
+
+class IllustrationWidget(forms.Widget):
+    """The current image, and a way to replace it.
+
+    The current path travels in a hidden input: an `<input type="file">` cannot
+    carry the existing value, and without it a save that does not change the
+    image would erase it.
+
+    Written on `forms.Widget` rather than `ClearableFileInput`: the latter
+    brings a clearing protocol and a data-reading behaviour this widget
+    replaces entirely, and which would only hide surprises.
+    """
+
+    template_name = "edition/widgets/illustration.html"
+    # Without this Django does not know the form carrying this field must be
+    # `multipart`, and the file never arrives.
+    needs_multipart_form = True
+
+    def value_from_datadict(self, data, files, name):
+        uploaded = files.get(name)
+        # Remembered so `IllustrationEditor.bound_data` can fall back to it: a
+        # widget instance is deep-copied per form instance (Django copies
+        # `base_fields`, widget included, on every `Form()` call), so stashing
+        # per-request state here is safe.
+        self.posted_current = data.get(f"{name}_current", "")
+        if uploaded is not None:
+            return uploaded
+        return self.posted_current
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["may_upload"] = settings.UPLOADS_ENABLED
+        return context
+
+
+class IllustrationEditor(forms.CharField):
+    """Edits an `Illustration`: a posted file becomes a storage key, otherwise
+    the current value is kept as it is.
+
+    A stored key is remembered on the field (`_uploaded_key`) so it survives a
+    re-render after some *other* field on the same form fails validation — see
+    `bound_data`. Safe to keep on `self`: a field instance is deep-copied per
+    form instance, never shared across requests.
+    """
+
+    widget = IllustrationWidget
+
+    def __init__(self, illustration, **kwargs):
+        self.illustration = illustration
+        super().__init__(
+            required=illustration.required,
+            label=illustration.label,
+            help_text=illustration.help_text,
+            initial=illustration.initial,
+            **kwargs,
+        )
+
+    def clean(self, value):
+        if hasattr(value, "read"):
+            value = uploads.store(value, max_width=self.illustration.max_width, ratio=self.illustration.ratio)
+            self._uploaded_key = value
+        value = super().clean(value)
+        # The hidden `<name>_current` input is client-supplied, and its value
+        # ends up in a public `src`. The editing UI is staff-only, so this is
+        # not a public attack surface, but the same shape check the display
+        # filter applies (`accueil/templatetags/illustrations.py`) is cheap
+        # enough to also apply here, so a mangled value is refused at save
+        # time rather than silently rendering nothing later.
+        if value and ".." in value:
+            raise ValidationError("Chemin d'image invalide.")
+        return value
+
+    def bound_data(self, data, initial):
+        # `BoundField.value()` calls this to decide what the widget re-renders
+        # after a failed submission. `data` here is the *raw* widget value
+        # (`value_from_datadict` runs again against the same `request.FILES`),
+        # so a freshly uploaded file reappears here as the same file object,
+        # not as the key `clean` already computed for it.
+        if hasattr(data, "read"):
+            # `_uploaded_key` is set when *this* field's own upload succeeded:
+            # show the new image, even though some other field on the form
+            # rejected the submission — the upload is not lost.
+            # Otherwise (this field's own file was rejected, e.g. not an
+            # image): fall back to what was actually posted as the current
+            # value, so the editor still sees the image they had before this
+            # attempt, not the field's own hard-coded default.
+            return getattr(self, "_uploaded_key", None) or getattr(self.widget, "posted_current", initial)
+        return data
 
 
 class SectionForm(forms.ModelForm):
@@ -112,8 +203,12 @@ def section_form_class(section_type):
     Built as a class rather than added per instance: the admin reads
     `base_fields` off the class to decide what to render.
     """
-    fields = {
-        name: (ListEditor(declared) if isinstance(declared, ListField) else copy.deepcopy(declared))
-        for name, declared in section_type.Form.base_fields.items()
-    }
+    fields = {}
+    for name, declared in section_type.Form.base_fields.items():
+        if isinstance(declared, Illustration):
+            fields[name] = IllustrationEditor(declared)
+        elif isinstance(declared, ListField):
+            fields[name] = ListEditor(declared)
+        else:
+            fields[name] = copy.deepcopy(declared)
     return type("SectionForm", (SectionForm,), {**fields, "section_type": section_type})

@@ -5,6 +5,7 @@ import io
 import logging
 
 import pytest
+from django import forms as django_forms
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, override_settings
@@ -14,6 +15,8 @@ from PIL import Image
 import config.settings
 import config.urls
 from accueil import uploads
+from accueil.forms import IllustrationEditor
+from accueil.sections.base import Illustration
 from accueil.templatetags.illustrations import illustration
 
 
@@ -270,3 +273,44 @@ def test_pillows_own_bomb_guard_is_an_expected_refusal(tmp_path, settings, caplo
         with pytest.raises(ValidationError, match="pixels"):
             uploads.store(enormous, max_width=800)
     assert caplog.records == []
+
+
+def an_editor(**kwargs):
+    return IllustrationEditor(
+        Illustration(label="Visuel", max_width=800, ratio=(16, 10), initial="accueil/img/hero.webp"),
+        **kwargs,
+    )
+
+
+class Upload(django_forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["visual"] = an_editor()
+
+
+def test_posting_no_file_keeps_the_current_value():
+    form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={})
+    assert form.is_valid(), form.errors
+    assert form.cleaned_data["visual"] == "accueil/img/hero.webp"
+
+
+def test_posting_a_file_stores_it_and_yields_a_key(tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path
+    form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": a_file(1600, 1000)})
+    assert form.is_valid(), form.errors
+    assert form.cleaned_data["visual"].startswith("uploads/")
+
+
+def test_a_bad_file_is_reported_on_the_field(tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path
+    bad = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
+    form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": bad})
+    assert not form.is_valid()
+    assert "visual" in form.errors
+
+
+@override_settings(UPLOADS_ENABLED=False)
+def test_without_durable_storage_the_field_offers_no_upload():
+    rendered = Upload(initial={"visual": "accueil/img/hero.webp"}).as_p()
+    assert 'type="file"' not in rendered
+    assert "accueil/img/hero.webp" in rendered
