@@ -43,7 +43,9 @@ class Testimonials(SectionType):
         )
         illustration = Illustration(
             label="Illustration",
-            max_width=1120,  # displayed 560 wide
+            # .temoignages__illu caps at max-width: 20rem (320px); twice, for
+            # dense screens.
+            max_width=640,
             ratio=(56, 34),
             initial="accueil/img/temoignages-illustration.webp",
         )

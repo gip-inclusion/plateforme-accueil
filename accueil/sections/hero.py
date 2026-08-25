@@ -20,14 +20,19 @@ class Hero(SectionType):
             widget=forms.Textarea,
             initial="Tous les emplois, les services inclusifs,\net les accompagnateurs autour de vous",
         )
+        # Opened because this is the field the upload feature exists for: an
+        # editor needs to replace the hero photo without a code change, unlike
+        # the copy around it.
         visual = Illustration(
             label="Visuel",
-            max_width=1305,
+            # .hero__visuel caps at max-width: 26rem (416px); twice, for dense
+            # screens.
+            max_width=800,
             ratio=(3, 2),
             initial="accueil/img/hero.webp",
         )
-        # Reference example of an opened field: the literal moved from the
-        # template to `initial`, and the template now reads `content.note`.
+        # Reference example of an opened text field: the literal moved from
+        # the template to `initial`, and the template now reads `content.note`.
         # Every other string on the page is still literal, which is fine.
         note = forms.CharField(
             label="Note sous la recherche",

@@ -11,9 +11,13 @@ class Indicator(forms.Form):
     label = forms.CharField(label="Libellé")
     image = Illustration(
         label="Pictogramme",
-        max_width=366,  # displayed 122 wide: three times over, for dense screens
+        # .stat__illu is height-driven (height: 4rem = 64px at the >=48rem
+        # breakpoint), rendering ~91px wide at this ratio; twice, for dense
+        # screens. No `initial`: each of the three real indicators has its own
+        # pictogram, so guessing one for a fourth would be wrong more often
+        # than not — see Card.image, which makes the same call.
+        max_width=180,
         ratio=(122, 86),
-        initial="accueil/img/stat-emploi.webp",
     )
     fallback = forms.IntegerField(
         label="Valeur de repli",

@@ -17,7 +17,11 @@ class Card(forms.Form):
     icon = forms.CharField(label="Icône")
     image = Illustration(
         label="Image",
-        max_width=800,
+        # .carte-media__media renders ~360px wide at its widest: the 1.5fr
+        # column of .bloc-recherche__grille (>=64rem) split two-up by
+        # .cartes-media (>=30rem), itself capped by .section__contenu's 80rem;
+        # twice, for dense screens.
+        max_width=720,
         ratio=(16, 10),  # the card's frame, see .carte-media__media
     )
     href = forms.URLField(label="Lien")

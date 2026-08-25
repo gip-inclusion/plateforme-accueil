@@ -49,7 +49,14 @@ class Illustration(forms.CharField):
     and a fallback to the code happen without a special case.
 
     `max_width` is the image's useful width on the page, in pixels: an upload
-    wider than that is scaled down to it, a smaller one is never enlarged.
+    wider than that is scaled down to it, a smaller one is never enlarged. The
+    rule for choosing it: measure the widest width the image actually renders
+    at in the page's CSS — not the HTML `width` attribute, which CSS can
+    override, and not the source file's own size — then double that for dense
+    screens, and round to a tidy number. Name the CSS selector and the
+    measured width in a comment next to the declaration, so the number stays
+    checkable against the stylesheet rather than becoming folklore.
+
     `ratio`, when declared, is the `(width, height)` shape an upload is
     cropped to — without it, the `width`/`height` attributes hard-coded in
     the template would lie the moment an editor uploads an image of another
@@ -64,6 +71,7 @@ class Illustration(forms.CharField):
     def __init__(self, *, max_width, ratio=None, **kwargs):
         self.max_width = max_width
         self.ratio = ratio
+        kwargs.setdefault("help_text", "Chemin sous accueil/static/")
         super().__init__(**kwargs)
 
 

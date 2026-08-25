@@ -1,19 +1,18 @@
 """Le champ image : déclaration, provenance, résolution en URL."""
 
 import copy
+import re
 
 import pytest
 from django import forms
 from django.conf import settings
 from django.template import Context, Template
+from django.template.loader import get_template
 from django.test import Client, override_settings
 
 from accueil.sections import registry
 from accueil.sections.base import Credit, Illustration, ListField, Registry, SectionType, add_credit_fields
 from accueil.templatetags.illustrations import illustration
-
-
-IllustrationField = Illustration
 
 
 def test_an_illustration_is_text_shaped():
@@ -228,7 +227,7 @@ def test_the_filter_is_usable_from_a_template():
 def test_section_images_are_declared_as_illustrations(key, name):
     section_type = {t.key: t for t in registry.types()}[key]
     field = section_type.Form.base_fields[name]
-    assert isinstance(field, IllustrationField)
+    assert isinstance(field, Illustration)
     # Sans ratio, les attributs width/height du gabarit mentiraient.
     assert field.ratio is not None
 
@@ -236,12 +235,77 @@ def test_section_images_are_declared_as_illustrations(key, name):
 def test_list_item_images_are_declared_as_illustrations():
     types = {t.key: t for t in registry.types()}
     indicator = types["figures"].Form.base_fields["indicators"].item_form
-    assert isinstance(indicator.base_fields["image"], IllustrationField)
+    assert isinstance(indicator.base_fields["image"], Illustration)
     card = types["jobs"].Form.base_fields["cards"].item_form
-    assert isinstance(card.base_fields["image"], IllustrationField)
+    assert isinstance(card.base_fields["image"], Illustration)
 
 
 def test_the_public_page_still_serves_the_code_images():
+    # Une occurrence chacune : un décompte plus lâche laisserait passer un
+    # indicateur disparu, une URL cachée dans un commentaire, ou une balise qui
+    # aurait perdu ses attributs.
     body = Client().get("/").content.decode()
-    for name in ("hero", "stat-emploi", "emploi-batiment", "temoignages-illustration"):
-        assert f"/static/accueil/img/{name}" in body
+    expected = {
+        "hero.webp": 1,
+        "stat-emploi.webp": 1,
+        "emploi-batiment.jpg": 1,
+        "temoignages-illustration.webp": 1,
+        "service-mobilite.jpg": 1,  # la moitié des cartes vient de services.py
+    }
+    for name, count in expected.items():
+        needle = f'src="{settings.STATIC_URL}accueil/img/{name}"'
+        assert body.count(needle) == count, name
+
+
+def test_the_rendered_ratio_matches_the_declaring_fields_ratio():
+    # Personne ne relie à l'œil un `ratio` en Python aux attributs `width` et
+    # `height` d'un gabarit : ce test les compare directement, dans les deux
+    # sens.
+    body = Client().get("/").content.decode()
+    types = {t.key: t for t in registry.types()}
+    checks = [
+        ("hero__visuel", types["hero"].Form.base_fields["visual"]),
+        ("stat__illu", types["figures"].Form.base_fields["indicators"].item_form.base_fields["image"]),
+        ("temoignages__illu", types["testimonials"].Form.base_fields["illustration"]),
+    ]
+    for css_class, field in checks:
+        match = re.search(rf'class="{css_class}"[^>]*width="(\d+)"[^>]*height="(\d+)"', body)
+        assert match, css_class
+        width, height = int(match.group(1)), int(match.group(2))
+        ratio_width, ratio_height = field.ratio
+        assert width * ratio_height == height * ratio_width, css_class
+
+
+def _rendered(section):
+    """Rend le gabarit d'une section, comme `index.html` le fait pour de vrai."""
+    return get_template(section.template).render({"content": section.content, "section": section})
+
+
+def test_hero_never_emits_an_empty_src():
+    types = {t.key: t for t in registry.types()}
+    section = types["hero"]({"visual": "../../../etc/passwd"})
+    assert 'src=""' not in _rendered(section)
+
+
+def test_figures_never_emits_an_empty_src():
+    types = {t.key: t for t in registry.types()}
+    Figures = types["figures"]
+    indicators = Figures.defaults()["indicators"]
+    indicators[0]["image"] = "../../../etc/passwd"
+    section = Figures({"indicators": indicators})
+    assert 'src=""' not in _rendered(section)
+
+
+def test_testimonials_never_emits_an_empty_src():
+    types = {t.key: t for t in registry.types()}
+    section = types["testimonials"]({"illustration": "../../../etc/passwd"})
+    assert 'src=""' not in _rendered(section)
+
+
+def test_search_cards_never_emits_an_empty_src():
+    types = {t.key: t for t in registry.types()}
+    Jobs = types["jobs"]
+    cards = Jobs.defaults()["cards"]
+    cards[0]["image"] = "../../../etc/passwd"
+    section = Jobs({"cards": cards})
+    assert 'src=""' not in _rendered(section)

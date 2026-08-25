@@ -16,8 +16,8 @@
           </figure>
         {% endfor %}
       </div>
-      {% with visual=content.illustration|illustration %}
-        {% if visual %}<img class="temoignages__illu" src="{{ visual }}" alt="" width="560" height="340">{% endif %}
+      {% with image=content.illustration|illustration %}
+        {% if image %}<img class="temoignages__illu" src="{{ image }}" alt="" width="560" height="340">{% endif %}
       {% endwith %}
     </div>
   </div>

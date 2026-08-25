@@ -1,8 +1,8 @@
 {% load illustrations %}
 <section class="hero">
   <div class="hero__contenu">
-    {% with visual=content.visual|illustration %}
-      {% if visual %}<img class="hero__visuel" src="{{ visual }}" alt="" width="1305" height="870">{% endif %}
+    {% with image=content.visual|illustration %}
+      {% if image %}<img class="hero__visuel" src="{{ image }}" alt="" width="1305" height="870">{% endif %}
     {% endwith %}
 
     <h1 class="hero__titre">{{ content.title|linebreaksbr }}</h1>
