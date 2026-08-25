@@ -41,6 +41,23 @@ uv run python manage.py createsuperuser
 make dev     # puis http://localhost:8000/admin/
 ```
 
+Les images téléversées par les rédacteurs (`Illustration`) sont stockées sur un
+bucket S3, configuré par les variables d'environnement `AWS_STORAGE_BUCKET_NAME`,
+`AWS_S3_ENDPOINT_URL`, `AWS_S3_REGION_NAME`, `AWS_ACCESS_KEY_ID` et
+`AWS_SECRET_ACCESS_KEY` ; il faut les cinq pour que le bucket soit utilisé, sinon
+la page se contente des illustrations du code et l'interface refuse le
+téléversement. Pour tester le téléversement en local sans bucket, sans jamais le
+faire dépendre de `DEBUG` :
+
+```bash
+export LOCAL_UPLOADS_ENABLED=1   # stocke sur disque, sert /media/ en dev
+```
+
+`LOCAL_UPLOADS_ENABLED` ne doit **jamais** être positionnée sur un conteneur
+déployé : elle sert les fichiers via `django.views.static.serve`, que Django
+documente comme impropre à la production, et le disque du conteneur est
+éphémère — tout fichier stocké ainsi disparaît au prochain déploiement.
+
 Le déploiement est automatique à chaque push sur `main` ; il applique les
 migrations avant de basculer la nouvelle révision, et ne fait rien de ce côté
 si aucune base n'est configurée.

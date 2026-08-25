@@ -186,6 +186,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 _s3_settings = {
     "bucket_name": os.environ.get("AWS_STORAGE_BUCKET_NAME", ""),
     "endpoint_url": os.environ.get("AWS_S3_ENDPOINT_URL", ""),
+    "region_name": os.environ.get("AWS_S3_REGION_NAME", ""),
     "access_key": os.environ.get("AWS_ACCESS_KEY_ID", ""),
     "secret_key": os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
 }
@@ -207,7 +208,7 @@ if S3_CONFIGURED:
         "OPTIONS": {
             "bucket_name": _s3_settings["bucket_name"],
             "endpoint_url": _s3_settings["endpoint_url"],
-            "region_name": os.environ.get("AWS_S3_REGION_NAME", "fr-par"),
+            "region_name": _s3_settings["region_name"],
             "access_key": _s3_settings["access_key"],
             "secret_key": _s3_settings["secret_key"],
             # Files are named by a hash of their content: they never change,
@@ -232,7 +233,7 @@ if S3_CONFIGURED:
 # deploy. A developer sets this once in their shell instead.
 LOCAL_UPLOADS_ENABLED = os.environ.get("LOCAL_UPLOADS_ENABLED", "") == "1"
 
-# Consumed by the upload UI to decide whether to accept a file at all.
+# Will be consumed by the upload UI to decide whether to accept a file at all.
 UPLOADS_ENABLED = S3_CONFIGURED or LOCAL_UPLOADS_ENABLED
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

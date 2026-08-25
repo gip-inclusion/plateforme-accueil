@@ -14,14 +14,17 @@ from accueil.templatetags.illustrations import illustration
 ENV_KEYS = [
     "AWS_STORAGE_BUCKET_NAME",
     "AWS_S3_ENDPOINT_URL",
+    "AWS_S3_REGION_NAME",
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
     "LOCAL_UPLOADS_ENABLED",
+    "DEBUG",
 ]
 
 COMPLETE_BUCKET = {
     "AWS_STORAGE_BUCKET_NAME": "some-bucket",
-    "AWS_S3_ENDPOINT_URL": "https://s3.fr-par.scw.cloud",
+    "AWS_S3_ENDPOINT_URL": "https://s3.example.invalid",
+    "AWS_S3_REGION_NAME": "some-region",
     "AWS_ACCESS_KEY_ID": "key",
     "AWS_SECRET_ACCESS_KEY": "secret",
 }
@@ -93,18 +96,21 @@ def test_illustration_composes_a_url_without_reaching_the_network():
 
 
 @pytest.mark.parametrize(
-    ("bucket_complete", "local_opt_in", "expected"),
+    ("bucket_complete", "local_opt_in", "debug", "expected"),
     [
-        (True, False, True),  # bucket seul suffit
-        (True, True, True),  # les deux : toujours activé
-        (False, True, True),  # opt-in local seul, sans bucket
-        (False, False, False),  # ni bucket complet, ni opt-in : pas d'upload
+        (True, False, False, True),  # bucket seul suffit
+        (True, True, False, True),  # les deux : toujours activé
+        (False, True, False, True),  # opt-in local seul, sans bucket
+        (False, False, False, False),  # ni bucket complet, ni opt-in : pas d'upload
+        (False, False, True, False),  # DEBUG seul ne doit JAMAIS suffire (régression du "or DEBUG")
     ],
 )
-def test_uploads_enabled_truth_table(reload_settings, bucket_complete, local_opt_in, expected):
+def test_uploads_enabled_truth_table(reload_settings, bucket_complete, local_opt_in, debug, expected):
     env = dict(COMPLETE_BUCKET) if bucket_complete else {}
     if local_opt_in:
         env["LOCAL_UPLOADS_ENABLED"] = "1"
+    if debug:
+        env["DEBUG"] = "1"
     reloaded = reload_settings(**env)
     assert reloaded.UPLOADS_ENABLED is expected
 
