@@ -231,11 +231,17 @@ class SectionForm(forms.ModelForm):
         defaults = self.section_type.defaults()
         # What the form does not show, it does not decide — but only if the
         # code still declares it. A field the code still declares but this
-        # form does not carry (the lists, edited elsewhere) keeps its override
-        # untouched. A key the code no longer declares at all is dropped, as
-        # it always was: `Section.clean` (accueil/models.py) rejects an
-        # undeclared key at every save, so keeping it here would 500 the
-        # editing screen for any section still carrying one.
+        # form does not carry keeps its override untouched: once a later task
+        # moves the lists to their own editing screen, this is what stops
+        # saving a section's other fields from wiping its list overrides.
+        # Unreachable today — `section_form_class` still builds one field per
+        # declared name, and `SectionForm.__init__` assumes as much (it would
+        # raise `KeyError` first) — so this branch only becomes live once that
+        # assumption is lifted alongside the lists' removal. A key the code no
+        # longer declares at all is dropped, as it always was: `Section.clean`
+        # (accueil/models.py) rejects an undeclared key at every save, so
+        # keeping it here would 500 the editing screen for any section still
+        # carrying one.
         content = {
             name: value
             for name, value in self.instance.content.items()
@@ -247,7 +253,7 @@ class SectionForm(forms.ModelForm):
         content |= {
             name: cleaned[name]
             for name in self.section_type.Form.base_fields
-            if name in cleaned and name in self.fields and cleaned[name] != defaults[name]
+            if name in cleaned and cleaned[name] != defaults[name]
         }
         self.instance.content = content
         return cleaned

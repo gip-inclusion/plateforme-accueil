@@ -394,16 +394,24 @@ def test_saving_a_section_keeps_overrides_the_form_does_not_carry(page):
     }
     form = section_form_class(Testimonials)(data, instance=row)
     # Simule la disparition prochaine de `quotes` du formulaire généré (une
-    # tâche à venir déplace les listes vers leur propre écran d'édition, sans
-    # toucher `Testimonials.Form.base_fields` — la déclaration du champ, donc
-    # la validation du modèle par `Section.clean`, reste inchangée). On retire
-    # le champ après construction, sur cette seule instance : le retirer plus
-    # tôt ferait planter la boucle de `SectionForm.__init__`, qui suppose
-    # encore aujourd'hui que chaque champ déclaré a un pendant dans le
-    # formulaire — une hypothèse que la tâche à venir devra revoir, hors
+    # tâche à venir déplacera les listes vers leur propre écran d'édition,
+    # sans toucher `Testimonials.Form.base_fields` — la déclaration du champ,
+    # donc la validation du modèle par `Section.clean`, restera inchangée). On
+    # retire le champ après construction, sur cette seule instance : le
+    # retirer plus tôt ferait planter la boucle de `SectionForm.__init__`, qui
+    # suppose encore aujourd'hui que chaque champ déclaré a un pendant dans le
+    # formulaire — une hypothèse que la tâche à venir devra aussi revoir, hors
     # périmètre ici. `quotes` restant déclaré, ce test exerce bien le garde
-    # `name in self.fields` de la seconde compréhension de `clean()` : un
-    # champ toujours déclaré mais absent de *ce* formulaire.
+    # `name in self.section_type.Form.base_fields` de la *première*
+    # compréhension de `clean()` : un champ toujours déclaré mais absent de
+    # *ce* formulaire.
+    #
+    # Ce test construit le formulaire directement plutôt que de passer par
+    # l'écran réel : c'est la seule façon de l'atteindre aujourd'hui, puisque
+    # la branche est inaccessible à tout appelant réel tant que
+    # `SectionForm.__init__` n'a pas été corrigé. La tâche 11 (qui retire les
+    # listes du formulaire pour de bon) devra convertir ce test en test au
+    # niveau de l'écran, pas supposer qu'il en est déjà un.
     del form.fields["quotes"]
 
     assert form.is_valid(), form.errors
@@ -415,6 +423,8 @@ def test_saving_a_section_keeps_overrides_the_form_does_not_carry(page):
 
 
 def test_a_stale_key_still_saves_and_is_dropped(client, editor):
+    from accueil.sections.testimonials import Testimonials
+
     # Contrairement à `quotes` dans le test ci-dessus (déplacée, mais toujours
     # déclarée dans `Testimonials.Form.base_fields`), une clé que le code ne
     # déclare plus du tout doit continuer à être écartée à chaque
@@ -428,8 +438,11 @@ def test_a_stale_key_still_saves_and_is_dropped(client, editor):
 
     url = reverse("edition:section", args=[row.pk])
     form = client.get(url).context["form"]
-    data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
-    data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
+    data = {}
+    for bound in form:
+        value = bound.value()
+        data[bound.name] = value if value is not None else ""
+    data["illustration_current"] = Testimonials.defaults()["illustration"]
     data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
     data["title"] = "Un autre titre."
 
@@ -438,3 +451,25 @@ def test_a_stale_key_still_saves_and_is_dropped(client, editor):
     row.refresh_from_db()
     assert row.content["title"] == "Un autre titre."
     assert "vestige" not in row.content
+
+
+def test_posting_the_default_value_clears_the_override(client, editor):
+    # Le garde de `SectionForm.clean` (ce qui a remplacé la reconstruction
+    # totale de `content`) doit continuer à effacer un override quand
+    # l'autrice retape le texte du code dans un champ que le formulaire porte
+    # bien : sans lui, `content` garderait la valeur périmée pour toujours et
+    # ce champ cesserait de suivre les changements du code.
+    from accueil.sections.features import Features
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="features")
+    section.content = {"title": "Ancien titre personnalisé."}
+    section.save()
+
+    data = {"position": section.position, "active": "on"}
+    for name, value in Features.defaults().items():
+        data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
+
+    assert client.post(reverse("edition:section", args=[section.pk]), data).status_code == 302
+    section.refresh_from_db()
+    assert section.content == {}
