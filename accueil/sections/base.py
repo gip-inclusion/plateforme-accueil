@@ -54,6 +54,11 @@ class Illustration(forms.CharField):
     cropped to — without it, the `width`/`height` attributes hard-coded in
     the template would lie the moment an editor uploads an image of another
     shape.
+
+    The `illustration` template filter (`accueil/templatetags/illustrations.py`)
+    resolves this value to a URL, and returns an empty string when there is
+    nothing to show. A template must treat that as *render no image* — guard
+    it, never emit `<img src="">` (see CLAUDE.md, section « Iframe »).
     """
 
     def __init__(self, *, max_width, ratio=None, **kwargs):

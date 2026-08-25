@@ -152,11 +152,21 @@ class StubStorage:
 
 
 class RaisingStorage:
-    """Simule un bucket mal configuré : `url()` explose comme le ferait
-    `storages["default"]` instancié en retard face à un réglage S3 invalide."""
+    """Simule une storage qui construit sans erreur mais échoue à l'usage :
+    `url()` explose, par exemple un bucket S3 injoignable au moment de l'appel."""
 
     def url(self, name):
         raise Exception("boom")
+
+
+class BrokenAtConstructionStorage:
+    """Simule un réglage `STORAGES` invalide dès l'instanciation — le cas qui
+    ne serait PAS couvert si le garde-fou se contentait de protéger `url()` :
+    `storages["default"]` construit paresseusement le backend au premier accès,
+    en plein rendu du template."""
+
+    def __init__(self, *args, **kwargs):
+        raise Exception("boom at construction")
 
 
 @override_settings(STORAGES={"default": {"BACKEND": f"{__name__}.StubStorage"}})
@@ -190,6 +200,15 @@ def test_a_broken_storage_gives_an_empty_string_instead_of_a_500():
     # La page publique importe plus que l'image : une storage mal configurée
     # (bucket S3 absent, credentials invalides) ne doit jamais faire tomber le
     # rendu du template.
+    assert illustration("uploads/abc123.webp") == ""
+
+
+@override_settings(STORAGES={"default": {"BACKEND": f"{__name__}.BrokenAtConstructionStorage"}})
+def test_a_storage_failing_at_construction_gives_an_empty_string_instead_of_a_500():
+    # C'est le cas qui compte vraiment : `storages["default"]` instancie le
+    # backend paresseusement, ici, en plein rendu. Un simple `try` autour de
+    # `url()` ne le couvrirait pas si quelqu'un remontait la storage en dehors
+    # du bloc protégé.
     assert illustration("uploads/abc123.webp") == ""
 
 

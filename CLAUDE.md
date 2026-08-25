@@ -128,6 +128,11 @@ La page est embarquée en iframe par des sites tiers autorisés (CSP
   (`resize-reporter.js`) et doit continuer à le faire quand la mise en page
   change. Le protocole est documenté dans le README.
 - La page doit rester agréable à lire quelle que soit la largeur de l'iframe.
+- Un `<img src="">` est à proscrire : un `src` vide se résout par rapport à
+  l'URL du document, donc le navigateur recharge la page entière — dans une
+  iframe embarquée sur un site public, c'est un chargement de page dupliqué à
+  chaque image manquante. Le filtre `illustration` renvoie une chaîne vide
+  exprès dans ce cas ; c'est au gabarit de la garder hors du `src`.
 
 ### Secrets
 
