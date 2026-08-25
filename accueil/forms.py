@@ -271,6 +271,45 @@ class SectionForm(forms.ModelForm):
         return cleaned
 
 
+def item_form_class(list_field):
+    """A form for one item of a `ListField`.
+
+    Built from `list_field.item_form.base_fields`, the same rule
+    `section_form_class` applies: an `Illustration` becomes a real file
+    picker (`IllustrationEditor`), everything else is copied from the
+    declared field untouched.
+    """
+    fields = {}
+    for name, declared in list_field.item_form.base_fields.items():
+        if isinstance(declared, Illustration):
+            fields[name] = IllustrationEditor(declared)
+        else:
+            fields[name] = copy.deepcopy(declared)
+
+    class ItemForm(forms.Form):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            # Same house-theme classes as `SectionForm.__init__`, except on
+            # `IllustrationWidget`: its own template already carries its
+            # styling, and these classes would otherwise land on its file
+            # input, which is not the point of contact a form-control class
+            # is meant for here.
+            for field in self.fields.values():
+                widget = field.widget
+                if isinstance(widget, IllustrationWidget):
+                    continue
+                if isinstance(widget, forms.CheckboxInput):
+                    widget.attrs.setdefault("class", "form-check-input")
+                elif isinstance(widget, forms.Select):
+                    widget.attrs.setdefault("class", "form-select")
+                else:
+                    widget.attrs["class"] = f"form-control {widget.attrs.get('class', '')}".strip()
+
+    ItemForm.base_fields = fields
+    ItemForm.declared_fields = fields
+    return ItemForm
+
+
 def section_form_class(section_type):
     """A form for one section type, with its declared fields as real fields.
 

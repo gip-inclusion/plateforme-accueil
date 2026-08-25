@@ -27,7 +27,7 @@ from django.views.decorators.clickjacking import xframe_options_deny
 from django.views.decorators.csp import csp_override
 from django.views.decorators.http import require_POST
 
-from accueil.forms import section_form_class
+from accueil.forms import item_form_class, section_form_class
 from accueil.models import Page, Section
 from accueil.sections import ListField, registry
 
@@ -268,6 +268,24 @@ def _digest(values):
     return hashlib.sha256(payload).hexdigest()[:16]
 
 
+def _refuse_if_unreadable(request, pk, row, section_type, name):
+    """Redirect to the section, with a flash message, if `name`'s stored
+    override no longer validates — the same refusal `_apply` applies before
+    a duplicate, move or delete, and needed here for the same reason: acting
+    on `list_values`' silent fallback to the code default would replace an
+    editor's unreadable-but-real override with content built from the code,
+    with nothing to say so.
+    """
+    if not _override_is_unreadable(row, section_type, name):
+        return None
+    messages.error(
+        request,
+        "Cette liste contient une modification qui n'est plus reconnue par le code : "
+        "impossible d'agir dessus depuis cet écran. Rien n'a été modifié.",
+    )
+    return redirect("edition:section", pk=pk)
+
+
 def _apply(request, pk, name, change):
     """Apply one operation to a list, and say so — success or refusal alike.
 
@@ -285,13 +303,9 @@ def _apply(request, pk, name, change):
       trusted to describe the list as it now stands.
     """
     row, section_type, field = _list_context(pk, name)
-    if _override_is_unreadable(row, section_type, name):
-        messages.error(
-            request,
-            "Cette liste contient une modification qui n'est plus reconnue par le code : "
-            "impossible d'agir dessus depuis cet écran. Rien n'a été modifié.",
-        )
-        return redirect("edition:section", pk=pk)
+    refusal = _refuse_if_unreadable(request, pk, row, section_type, name)
+    if refusal is not None:
+        return refusal
 
     values = list_values(row, section_type, name, field)
     if request.POST.get("token") != _digest(values):
@@ -362,6 +376,100 @@ def _swap(index, direction):
 def _check_index(values, index):
     if not 0 <= index < len(values):
         raise Http404("Cet élément n'existe pas.")
+
+
+@editor_view()
+def item(request, pk, name, index):
+    """Edit one item of a list through the fields its item form declares.
+
+    No concurrency token, unlike `_apply`'s operations: those act blindly on
+    a bare index, so a stale click can silently land on the wrong item. Here
+    the editor reviews and resubmits the item's own fields, and a concurrent
+    change to the rest of the list — an item removed elsewhere, say — is the
+    same last-write-wins exposure `save_list` already documents and accepts
+    for the section form this replaces; adding a token would only guard the
+    read of `values[index]` used to seed the GET form, not the write, so it
+    was left out rather than added as a guard against a race it cannot
+    actually close.
+    """
+    row, section_type, field = _list_context(pk, name)
+    refusal = _refuse_if_unreadable(request, pk, row, section_type, name)
+    if refusal is not None:
+        return refusal
+
+    values = list_values(row, section_type, name, field)
+    _check_index(values, index)
+
+    form_class = item_form_class(field)
+    if request.method == "POST":
+        form = form_class(request.POST, request.FILES)
+        if form.is_valid():
+            values[index] = form.cleaned_data
+            try:
+                save_list(row, section_type, name, values, field)
+            except ValidationError as error:
+                messages.error(request, error.messages[0])
+                return redirect("edition:section", pk=pk)
+            messages.success(request, "Élément mis à jour.")
+            return redirect("edition:section", pk=pk)
+    else:
+        form = form_class(initial=values[index])
+
+    return render(
+        request,
+        "edition/item.html",
+        {
+            "row": row,
+            "section_type": section_type,
+            "field": field,
+            "index": index,
+            "form": form,
+            "creating": False,
+        },
+    )
+
+
+@editor_view()
+def item_add(request, pk, name):
+    """Append a new item, built and validated through its own form.
+
+    Never inserted directly as an empty dict: a list whose item fields are
+    required (`search.Card`, most of them) would then hold an invalid item
+    until someone opens it and fills it in — this is the only way such a
+    list grows without ever containing one.
+    """
+    row, section_type, field = _list_context(pk, name)
+    refusal = _refuse_if_unreadable(request, pk, row, section_type, name)
+    if refusal is not None:
+        return refusal
+
+    form_class = item_form_class(field)
+    if request.method == "POST":
+        form = form_class(request.POST, request.FILES)
+        if form.is_valid():
+            values = list_values(row, section_type, name, field)
+            values.append(form.cleaned_data)
+            try:
+                save_list(row, section_type, name, values, field)
+            except ValidationError as error:
+                messages.error(request, error.messages[0])
+                return redirect("edition:section", pk=pk)
+            messages.success(request, "Élément ajouté.")
+            return redirect("edition:section", pk=pk)
+    else:
+        form = form_class(initial=field.item_defaults())
+
+    return render(
+        request,
+        "edition/item.html",
+        {
+            "row": row,
+            "section_type": section_type,
+            "field": field,
+            "form": form,
+            "creating": True,
+        },
+    )
 
 
 @editor_view()

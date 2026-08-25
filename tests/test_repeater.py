@@ -293,3 +293,66 @@ def test_moving_the_first_item_up_is_a_no_op(client, editor, testimonials):
     post(client, "item-move", testimonials, "quotes", 0, {"token": token(testimonials), "direction": "up"})
 
     assert quotes(testimonials) == before
+
+
+def test_an_item_is_edited_in_its_own_form(client, editor, testimonials):
+    client.force_login(editor)
+    url = reverse("edition:item", args=[testimonials.pk, "quotes", 0])
+    body = client.get(url).content.decode()
+    assert "Nadia B." in body
+
+    response = client.post(url, {"quote": "Épatant.", "name": "Ana P.", "role": "Conseillère"})
+    assert response.status_code == 302
+    assert quotes(testimonials)[0] == {"quote": "Épatant.", "name": "Ana P.", "role": "Conseillère"}
+
+
+def test_an_invalid_item_is_shown_again_with_its_error(client, editor, testimonials):
+    client.force_login(editor)
+    url = reverse("edition:item", args=[testimonials.pk, "quotes", 0])
+    response = client.post(url, {"quote": "", "name": "Ana P.", "role": ""})
+    assert response.status_code == 200
+    assert "quote" in response.context["form"].errors
+    assert quotes(testimonials)[0]["name"] == "Nadia B."
+
+
+def test_an_item_form_accepts_a_file(client, editor, page):
+    # Les indicateurs portent un pictogramme : le formulaire doit être
+    # multipart, sinon le fichier n'arrive jamais.
+    client.force_login(editor)
+    figures = Section.objects.get(kind="figures")
+    body = client.get(reverse("edition:item", args=[figures.pk, "indicators", 0])).content.decode()
+    assert 'enctype="multipart/form-data"' in body
+
+
+def test_an_out_of_range_item_is_a_404(client, editor, testimonials):
+    client.force_login(editor)
+    assert client.get(reverse("edition:item", args=[testimonials.pk, "quotes", 99])).status_code == 404
+
+
+def test_adding_an_item_goes_through_a_form(client, editor, testimonials):
+    # Insérer un élément vide échouerait sur une liste dont les champs sont
+    # obligatoires : on passe par un formulaire, et la liste ne contient jamais
+    # d'élément invalide.
+    client.force_login(editor)
+    url = reverse("edition:item-add", args=[testimonials.pk, "quotes"])
+    assert client.get(url).status_code == 200
+
+    before = len(quotes(testimonials))
+    response = client.post(url, {"quote": "Rien à redire.", "name": "Ana P.", "role": ""})
+    assert response.status_code == 302
+    after = quotes(testimonials)
+    assert len(after) == before + 1
+    assert after[-1]["name"] == "Ana P."
+
+
+def test_a_full_list_refuses_a_new_item(client, editor, testimonials):
+    # `quotes` déclare max_num=4.
+    client.force_login(editor)
+    url = reverse("edition:item-add", args=[testimonials.pk, "quotes"])
+    for rank in range(4):
+        client.post(url, {"quote": f"Avis {rank}.", "name": f"Personne {rank}", "role": ""})
+    assert len(quotes(testimonials)) == 4
+
+    response = client.post(url, {"quote": "De trop.", "name": "Zoé", "role": ""})
+    assert len(quotes(testimonials)) == 4
+    assert any("au plus" in str(message) for message in get_messages(response.wsgi_request))

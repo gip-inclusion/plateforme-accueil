@@ -76,13 +76,11 @@ class Illustration(forms.CharField):
         self.ratio = ratio
         # Shown to an editor who sees a file picker, not a path field: name
         # what actually happens on save, not the storage detail underneath.
-        # True for a top-level field (`hero.visual`, `testimonials.illustration`),
-        # rendered through `IllustrationEditor`. An `Illustration` declared
-        # inside a `ListField` item (`figures.Indicator.image`,
-        # `search.Card.image`) is still edited as raw JSON — no file picker
-        # there yet — so this text is unrendered, not wrong, for those. It
-        # will need revisiting once the item-by-item editing UI (the
-        # repeater) lands.
+        # True whether this field sits at the top of a section
+        # (`hero.visual`, `testimonials.illustration`) or inside a
+        # `ListField` item (`figures.Indicator.image`, `search.Card.image`):
+        # both are rendered through `IllustrationEditor`, via
+        # `section_form_class` and `item_form_class` respectively.
         kwargs.setdefault(
             "help_text",
             "Remplacez l'image en choisissant un fichier. Sans nouveau fichier, l'image actuelle est conservée.",

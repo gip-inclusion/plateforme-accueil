@@ -1,0 +1,39 @@
+{% extends "edition/base.html" %}
+
+{% block titre %}{% if creating %}Ajouter — {{ field.label }}{% else %}Modifier — {{ field.label }}{% endif %}{% endblock %}
+
+{% block contenu %}
+  <p class="fil">
+    <a href="{% url 'edition:plan' %}">‹ Plan de la page</a>
+    ·
+    <a href="{% url 'edition:section' row.pk %}">‹ {{ section_type.label }}</a>
+  </p>
+
+  <div class="plan__entete">
+    <h1>{% if creating %}Ajouter : {{ field.label }}{% else %}Modifier : {{ field.label }}{% endif %}</h1>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <form class="editeur c-box" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% for champ in form %}
+      <div class="champ{% if champ.errors %} champ--erreur{% endif %}">
+        <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
+        {{ champ }}
+        {% if champ.help_text %}<p class="champ__aide" id="{{ champ.auto_id }}_helptext">{{ champ.help_text }}</p>{% endif %}
+        {% if champ.errors %}
+          <ul class="champ__erreurs" id="{{ champ.auto_id }}_error">
+            {% for error in champ.errors %}<li class="champ__erreur">{{ error }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <div class="editeur__actions">
+      <a class="btn btn-outline-primary" href="{% url 'edition:section' row.pk %}">Annuler</a>
+      <button class="btn btn-primary" type="submit">Enregistrer</button>
+    </div>
+  </form>
+{% endblock %}
