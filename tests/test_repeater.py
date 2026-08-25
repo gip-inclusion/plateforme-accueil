@@ -1,5 +1,7 @@
 """L'édition des listes répétables, élément par élément."""
 
+import json
+
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -301,7 +303,9 @@ def test_an_item_is_edited_in_its_own_form(client, editor, testimonials):
     body = client.get(url).content.decode()
     assert "Nadia B." in body
 
-    response = client.post(url, {"quote": "Épatant.", "name": "Ana P.", "role": "Conseillère"})
+    response = client.post(
+        url, {"token": token(testimonials), "quote": "Épatant.", "name": "Ana P.", "role": "Conseillère"}
+    )
     assert response.status_code == 302
     assert quotes(testimonials)[0] == {"quote": "Épatant.", "name": "Ana P.", "role": "Conseillère"}
 
@@ -309,10 +313,37 @@ def test_an_item_is_edited_in_its_own_form(client, editor, testimonials):
 def test_an_invalid_item_is_shown_again_with_its_error(client, editor, testimonials):
     client.force_login(editor)
     url = reverse("edition:item", args=[testimonials.pk, "quotes", 0])
-    response = client.post(url, {"quote": "", "name": "Ana P.", "role": ""})
+    response = client.post(url, {"token": token(testimonials), "quote": "", "name": "Ana P.", "role": ""})
     assert response.status_code == 200
     assert "quote" in response.context["form"].errors
     assert quotes(testimonials)[0]["name"] == "Nadia B."
+
+
+def test_editing_an_item_without_a_token_is_refused(client, editor, testimonials):
+    client.force_login(editor)
+    url = reverse("edition:item", args=[testimonials.pk, "quotes", 0])
+
+    response = client.post(url, {"quote": "Épatant.", "name": "Ana P.", "role": ""})  # no token at all
+
+    assert quotes(testimonials)[0]["name"] == "Nadia B."
+    assert any("a changé" in str(message) for message in get_messages(response.wsgi_request))
+
+
+def test_editing_an_item_with_a_stale_token_is_refused(client, editor, testimonials):
+    # Reproduces the same race `_apply`'s own stale-token test does: the
+    # editor opens item 1 ("B"), someone else deletes item 0 in the
+    # meantime, and B's form is submitted against a list that no longer has
+    # B at index 1 — without the token, this would silently overwrite C.
+    client.force_login(editor)
+    stale = token(testimonials)
+    post(client, "item-delete", testimonials, "quotes", 0, {"token": stale})
+    before = quotes(testimonials)
+
+    url = reverse("edition:item", args=[testimonials.pk, "quotes", 1])
+    response = client.post(url, {"token": stale, "quote": "Usurpé.", "name": "Intrus", "role": ""})
+
+    assert quotes(testimonials) == before
+    assert any("a changé" in str(message) for message in get_messages(response.wsgi_request))
 
 
 def test_an_item_form_accepts_a_file(client, editor, page):
@@ -356,3 +387,64 @@ def test_a_full_list_refuses_a_new_item(client, editor, testimonials):
     response = client.post(url, {"quote": "De trop.", "name": "Zoé", "role": ""})
     assert len(quotes(testimonials)) == 4
     assert any("au plus" in str(message) for message in get_messages(response.wsgi_request))
+
+
+def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, editor, page):
+    # `profiles.Profile.steps` is a *nested* `ListField`: `item_form_class`
+    # maps it to the same raw-JSON `ListEditor` the section form already uses
+    # for a top-level list — the floor that keeps `profiles` reachable at all
+    # once Task 11 removes lists from the section form, not a proper
+    # item-by-item editor for the nested repeater (out of scope here).
+    client.force_login(editor)
+    profiles = Section.objects.get(kind="profiles")
+    section_type = declared("profiles")
+
+    add_url = reverse("edition:item-add", args=[profiles.pk, "profiles"])
+    steps = json.dumps([{"title": "Étape unique", "detail": ""}])
+    response = client.post(
+        add_url,
+        {
+            "slug": "nouveau",
+            "tab_label": "Nouveau",
+            "icon": "ri-star-line",
+            "title": "Titre",
+            "chapo": "",
+            "cta_label": "Go",
+            "cta_href": "https://example.test",
+            "steps": steps,
+        },
+    )
+    assert response.status_code == 302
+    profiles.refresh_from_db()
+
+    values = editing.list_values(profiles, section_type, "profiles")
+    assert values[-1]["slug"] == "nouveau"
+    assert values[-1]["steps"] == [{"title": "Étape unique", "detail": ""}]
+
+    index = len(values) - 1
+    edit_url = reverse("edition:item", args=[profiles.pk, "profiles", index])
+    edit_token = editing._digest(values)
+    body = client.get(edit_url).content.decode()
+    assert "nouveau" in body
+
+    new_steps = json.dumps([{"title": "Étape modifiée", "detail": "Un détail"}])
+    response = client.post(
+        edit_url,
+        {
+            "token": edit_token,
+            "slug": "nouveau",
+            "tab_label": "Nouveau",
+            "icon": "ri-star-line",
+            "title": "Titre modifié",
+            "chapo": "",
+            "cta_label": "Go",
+            "cta_href": "https://example.test",
+            "steps": new_steps,
+        },
+    )
+    assert response.status_code == 302
+    profiles.refresh_from_db()
+
+    values = editing.list_values(profiles, section_type, "profiles")
+    assert values[index]["title"] == "Titre modifié"
+    assert values[index]["steps"] == [{"title": "Étape modifiée", "detail": "Un détail"}]

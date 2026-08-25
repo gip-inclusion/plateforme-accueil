@@ -268,20 +268,27 @@ def _digest(values):
     return hashlib.sha256(payload).hexdigest()[:16]
 
 
-def _refuse_if_unreadable(request, pk, row, section_type, name):
+def _refuse_if_unreadable(
+    request, pk, row, section_type, name, *, detail="impossible d'agir dessus depuis cet écran."
+):
     """Redirect to the section, with a flash message, if `name`'s stored
     override no longer validates — the same refusal `_apply` applies before
     a duplicate, move or delete, and needed here for the same reason: acting
     on `list_values`' silent fallback to the code default would replace an
     editor's unreadable-but-real override with content built from the code,
     with nothing to say so.
+
+    `detail` completes the sentence for the caller's own operation: `_apply`
+    refuses an operation on an item it never shows, while `item`/`item_add`
+    refuse opening or saving a whole form — the generic "agir dessus" reads
+    oddly for either of those, so each call site says what it was actually
+    trying to do.
     """
     if not _override_is_unreadable(row, section_type, name):
         return None
     messages.error(
         request,
-        "Cette liste contient une modification qui n'est plus reconnue par le code : "
-        "impossible d'agir dessus depuis cet écran. Rien n'a été modifié.",
+        f"Cette liste contient une modification qui n'est plus reconnue par le code : {detail} Rien n'a été modifié.",
     )
     return redirect("edition:section", pk=pk)
 
@@ -382,26 +389,46 @@ def _check_index(values, index):
 def item(request, pk, name, index):
     """Edit one item of a list through the fields its item form declares.
 
-    No concurrency token, unlike `_apply`'s operations: those act blindly on
-    a bare index, so a stale click can silently land on the wrong item. Here
-    the editor reviews and resubmits the item's own fields, and a concurrent
-    change to the rest of the list — an item removed elsewhere, say — is the
-    same last-write-wins exposure `save_list` already documents and accepts
-    for the section form this replaces; adding a token would only guard the
-    read of `values[index]` used to seed the GET form, not the write, so it
-    was left out rather than added as a guard against a race it cannot
-    actually close.
+    Carries the same concurrency token `_apply` requires, and for the same
+    reason: `values[index] = form.cleaned_data` is a positional write. If the
+    list shifted between the GET that rendered this form and the POST — an
+    item removed or reordered elsewhere — the editor who believes they are
+    saving item "B" silently overwrites whatever now sits at that index, with
+    a success redirect and nothing to say a *different* item was destroyed.
+    The token is embedded as a hidden input by the template, so it rides the
+    GET → POST round trip with no JavaScript, exactly as `_apply`'s buttons
+    already do.
+
+    `item_add` deliberately carries no such token: appending targets no
+    position to go stale, and `save_list`'s whole-list revalidation already
+    catches what a concurrent add could break (`max_num`, `unique`).
     """
     row, section_type, field = _list_context(pk, name)
-    refusal = _refuse_if_unreadable(request, pk, row, section_type, name)
+    refusal = _refuse_if_unreadable(
+        request, pk, row, section_type, name, detail="impossible d'ouvrir cet élément depuis cet écran."
+    )
     if refusal is not None:
         return refusal
 
     values = list_values(row, section_type, name, field)
-    _check_index(values, index)
-
     form_class = item_form_class(field)
+
     if request.method == "POST":
+        # Checked before `_check_index`, deliberately: a stale token already
+        # means this POST cannot be trusted to describe the list as it now
+        # stands, the same lens `_apply` applies — including when the list
+        # has since shrunk enough that `index` would 404 on its own. Refusing
+        # as stale here, rather than as not-found, is what keeps this case
+        # readable: "the list changed" is true and actionable, "this element
+        # doesn't exist" would not be, for an editor who watched it exist a
+        # moment ago.
+        if request.POST.get("token") != _digest(values):
+            messages.error(
+                request,
+                "Cette liste a changé depuis l'affichage de la page. Rien n'a été modifié : rechargez et réessayez.",
+            )
+            return redirect("edition:section", pk=pk)
+        _check_index(values, index)
         form = form_class(request.POST, request.FILES)
         if form.is_valid():
             values[index] = form.cleaned_data
@@ -413,6 +440,7 @@ def item(request, pk, name, index):
             messages.success(request, "Élément mis à jour.")
             return redirect("edition:section", pk=pk)
     else:
+        _check_index(values, index)
         form = form_class(initial=values[index])
 
     return render(
@@ -424,6 +452,7 @@ def item(request, pk, name, index):
             "field": field,
             "index": index,
             "form": form,
+            "token": _digest(values),
             "creating": False,
         },
     )
@@ -437,9 +466,16 @@ def item_add(request, pk, name):
     required (`search.Card`, most of them) would then hold an invalid item
     until someone opens it and fills it in — this is the only way such a
     list grows without ever containing one.
+
+    No concurrency token, unlike `item`: an append targets no position, so a
+    stale token here would guard nothing a stale read could actually corrupt
+    — the only thing a concurrent change could break (`max_num`, `unique`) is
+    already caught by `save_list`'s whole-list revalidation below.
     """
     row, section_type, field = _list_context(pk, name)
-    refusal = _refuse_if_unreadable(request, pk, row, section_type, name)
+    refusal = _refuse_if_unreadable(
+        request, pk, row, section_type, name, detail="impossible d'ajouter un élément depuis cet écran."
+    )
     if refusal is not None:
         return refusal
 

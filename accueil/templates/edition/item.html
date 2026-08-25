@@ -19,6 +19,13 @@
 
   <form class="editeur c-box" method="post" enctype="multipart/form-data">
     {% csrf_token %}
+    {% if not creating %}
+      {# Rides the GET -> POST round trip with no JavaScript: `edition.item` #}
+      {# refuses a stale save rather than silently overwrite whatever now #}
+      {# sits at this index. Not sent when creating: an append targets no #}
+      {# position for the token to protect. #}
+      <input type="hidden" name="token" value="{{ token }}">
+    {% endif %}
     {% for champ in form %}
       <div class="champ{% if champ.errors %} champ--erreur{% endif %}">
         <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>

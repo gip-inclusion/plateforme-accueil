@@ -277,12 +277,24 @@ def item_form_class(list_field):
     Built from `list_field.item_form.base_fields`, the same rule
     `section_form_class` applies: an `Illustration` becomes a real file
     picker (`IllustrationEditor`), everything else is copied from the
-    declared field untouched.
+    declared field untouched — with one more mapping `section_form_class`
+    never needed: a *nested* `ListField` (`profiles.Profile.steps`) becomes a
+    `ListEditor`, the same raw-JSON textarea the section form already uses
+    for a top-level list. A proper item-by-item editor for a nested repeater
+    is out of scope for this chantier; without this mapping the field would
+    deep-copy into a plain text input that can never satisfy
+    `ListField.clean` (it requires an actual list, not a string), and
+    `profiles` — the one section with such a field — would have no way left
+    to save `steps` at all once Task 11 removes lists from the section form.
+    The JSON textarea is a floor, not a destination: it is exactly the
+    editing experience `steps` has today, so nothing is lost by keeping it.
     """
     fields = {}
     for name, declared in list_field.item_form.base_fields.items():
         if isinstance(declared, Illustration):
             fields[name] = IllustrationEditor(declared)
+        elif isinstance(declared, ListField):
+            fields[name] = ListEditor(declared)
         else:
             fields[name] = copy.deepcopy(declared)
 
