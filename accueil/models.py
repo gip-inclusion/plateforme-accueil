@@ -69,12 +69,23 @@ class Section(models.Model):
         problemes = []
         for name, value in self.content.items():
             if name not in declared.Form.base_fields:
+                # No declared field to read a label from: this key is not
+                # (or no longer) in the code at all, so there is no French
+                # name to show instead — unlike the branch below, where one
+                # always exists.
                 problemes.append(f"{name} : ce champ n'existe pas dans cette section.")
                 continue
             try:
                 declared.clean_value(name, value)
             except ValidationError as erreur:
-                problemes.append(f"{name} : {erreur.messages[0]}")
+                # The field's own *label* ("Témoignages"), not `name` (`quotes`):
+                # this message reaches an editor through `SectionForm`'s
+                # form-wide error (see `accueil.forms.SectionForm._update_errors`),
+                # and identifiers are English precisely because they are never
+                # meant to be displayed (CLAUDE.md) — the same leak the
+                # injected credit labels were caught making.
+                label = declared.Form.base_fields[name].label or name
+                problemes.append(f"{label} : {erreur.messages[0]}")
         if problemes:
             raise ValidationError({"content": problemes})
 

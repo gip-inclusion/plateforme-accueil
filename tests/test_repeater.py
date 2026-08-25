@@ -758,7 +758,12 @@ def test_saving_a_section_with_an_unreadable_list_override_does_not_crash(client
     response = client.post(reverse("edition:section", args=[testimonials.pk]), data)
 
     assert response.status_code == 200  # redisplayed with the error, not a 500
-    assert any("quotes" in str(error) for error in response.context["form"].non_field_errors())
+    errors = [str(error) for error in response.context["form"].non_field_errors()]
+    # The list's declared *label* ("Témoignages"), never its English field
+    # identifier ("quotes") — identifiers are English precisely because
+    # they are never shown to an editor (CLAUDE.md).
+    assert any("Témoignages" in error for error in errors)
+    assert not any("quotes" in error for error in errors)
     assert Section.objects.get(pk=testimonials.pk).content == stored_before
     # The warning box, with its own path back to the code, is right there too.
     assert "n'est plus reconnue" in response.content.decode()
@@ -936,3 +941,30 @@ def test_a_successful_save_never_builds_the_boards(client, editor, testimonials,
 
     assert response.status_code == 302
     assert calls == []
+
+
+@pytest.mark.parametrize(
+    "kind, name, label",
+    [
+        ("testimonials", "quotes", "Témoignages"),
+        ("figures", "indicators", "Indicateurs"),
+        ("jobs", "cards", "Cartes en avant"),
+        ("features", "steps", "Étapes"),
+        ("advisors", "tags", "Exemples de structures"),
+    ],
+)
+def test_the_model_error_names_the_list_by_its_label_not_its_identifier(page, kind, name, label):
+    # `Section.clean` (the model) is where this message is built, and it
+    # reaches an editor as a form-wide error (`SectionForm._update_errors`).
+    # `name` is the field's English identifier — never meant to be shown,
+    # per CLAUDE.md — while `label` is what the section itself declares as
+    # the list's French name.
+    row = Section.objects.get(kind=kind)
+    row.content = {name: []}  # violates min_num=1 on every one of these lists
+
+    with pytest.raises(ValidationError) as excinfo:
+        row.full_clean()
+
+    message = str(excinfo.value)
+    assert label in message
+    assert name not in message
