@@ -170,4 +170,35 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 
+# Images uploaded by editors. The local disk is enough in development; in
+# production the container is ephemeral, so without a bucket there is no
+# durable storage — and the interface must say so rather than accept a file
+# that will vanish at the next deploy.
+MEDIA_URL = os.environ.get("MEDIA_URL", "/media/")
+MEDIA_ROOT = BASE_DIR / "media"
+
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
+MEDIA_CONFIGURED = bool(AWS_STORAGE_BUCKET_NAME) or DEBUG
+
+if AWS_STORAGE_BUCKET_NAME:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "endpoint_url": os.environ["AWS_S3_ENDPOINT_URL"],
+            "region_name": os.environ.get("AWS_S3_REGION_NAME", "fr-par"),
+            "access_key": os.environ["AWS_ACCESS_KEY_ID"],
+            "secret_key": os.environ["AWS_SECRET_ACCESS_KEY"],
+            # Files are named by a hash of their content: they never change,
+            # so the cache can be immortal.
+            "object_parameters": {"CacheControl": "public, max-age=31536000, immutable"},
+            # The bucket is publicly readable, so no signed URL — and
+            # signing would make botocore resolve credentials on every URL,
+            # which on a container without explicit keys turns into a
+            # network call (IMDS) per image and per request. Without
+            # signing, `url()` stays plain string composition.
+            "querystring_auth": False,
+        },
+    }
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
