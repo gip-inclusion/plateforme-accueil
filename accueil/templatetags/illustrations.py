@@ -16,7 +16,7 @@ from django import template
 from django.core.files.storage import storages
 from django.templatetags.static import static
 
-from accueil.uploads import UPLOAD_PREFIX
+from accueil.uploads import UPLOAD_PREFIX, is_well_shaped_path
 
 
 register = template.Library()
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @register.filter
 def illustration(path):
-    if not path or not isinstance(path, str) or ".." in path:
+    if not is_well_shaped_path(path):
         return ""
     if path.startswith(UPLOAD_PREFIX):
         try:

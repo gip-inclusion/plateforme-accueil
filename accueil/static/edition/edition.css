@@ -154,6 +154,19 @@
   font-size: 0.8125rem;
 }
 
+/* Illustration field --------------------------------------------------- */
+
+.champ-image {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.champ-image__apercu {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Confirming action last and rightmost, cancel to its left. */
 .editeur__actions {
   display: flex;

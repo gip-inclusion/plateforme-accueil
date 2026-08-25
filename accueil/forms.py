@@ -15,6 +15,7 @@ import json
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files.base import File
 
 from accueil import uploads
 from accueil.models import Section
@@ -67,6 +68,14 @@ class IllustrationWidget(forms.Widget):
     Written on `forms.Widget` rather than `ClearableFileInput`: the latter
     brings a clearing protocol and a data-reading behaviour this widget
     replaces entirely, and which would only hide surprises.
+
+    Holds the two facts about *this request*'s posted data that
+    `IllustrationEditor.bound_data` needs to decide what to re-render: the
+    hidden `_current` value, and the key a successful upload was stored under.
+    Both belong here, not on the field, because both are facts about what was
+    posted — the widget's domain. Safe to keep on `self`: a widget instance is
+    deep-copied per form instance (Django copies `base_fields`, widget
+    included, on every `Form()` call), never shared across requests.
     """
 
     template_name = "edition/widgets/illustration.html"
@@ -74,12 +83,13 @@ class IllustrationWidget(forms.Widget):
     # `multipart`, and the file never arrives.
     needs_multipart_form = True
 
+    def __init__(self, attrs=None):
+        super().__init__(attrs)
+        self.posted_current = ""
+        self.uploaded_key = None
+
     def value_from_datadict(self, data, files, name):
         uploaded = files.get(name)
-        # Remembered so `IllustrationEditor.bound_data` can fall back to it: a
-        # widget instance is deep-copied per form instance (Django copies
-        # `base_fields`, widget included, on every `Form()` call), so stashing
-        # per-request state here is safe.
         self.posted_current = data.get(f"{name}_current", "")
         if uploaded is not None:
             return uploaded
@@ -90,16 +100,19 @@ class IllustrationWidget(forms.Widget):
         context["widget"]["may_upload"] = settings.UPLOADS_ENABLED
         return context
 
+    def id_for_label(self, id_):
+        # With uploads disabled there is no `<input type="file">` to carry
+        # this id (see the widget template): a `<label for="…">` pointing at
+        # nothing is a dangling reference, so give the label nothing to point
+        # at. `edition/section.html` renders an empty `for` correctly.
+        if not settings.UPLOADS_ENABLED:
+            return ""
+        return super().id_for_label(id_)
+
 
 class IllustrationEditor(forms.CharField):
     """Edits an `Illustration`: a posted file becomes a storage key, otherwise
-    the current value is kept as it is.
-
-    A stored key is remembered on the field (`_uploaded_key`) so it survives a
-    re-render after some *other* field on the same form fails validation — see
-    `bound_data`. Safe to keep on `self`: a field instance is deep-copied per
-    form instance, never shared across requests.
-    """
+    the current value is kept as it is."""
 
     widget = IllustrationWidget
 
@@ -114,17 +127,33 @@ class IllustrationEditor(forms.CharField):
         )
 
     def clean(self, value):
-        if hasattr(value, "read"):
+        if isinstance(value, File):
+            if not settings.UPLOADS_ENABLED:
+                # `UPLOADS_ENABLED` (config/settings.py) means durable storage
+                # is actually configured; without it, `uploads.store` would
+                # still happily write onto disk that vanishes at the next
+                # deploy. The UI only offers the file input when this is true
+                # (see the widget template), so reaching here means a
+                # hand-crafted request — refuse it the same way any other
+                # invalid upload is refused.
+                raise ValidationError("Le téléversement d'image n'est pas disponible pour le moment.")
             value = uploads.store(value, max_width=self.illustration.max_width, ratio=self.illustration.ratio)
-            self._uploaded_key = value
+            # Kept on the widget (not returned here) so a re-render after some
+            # *other* field on the same form fails validation still shows this
+            # upload — see `bound_data`. The file this produced is not
+            # written again on a retry with the same bytes: `uploads.store`
+            # names by content hash and checks `exists()` first, so this is
+            # an accepted, harmless orphan on storage, never a duplicate.
+            self.widget.uploaded_key = value
         value = super().clean(value)
         # The hidden `<name>_current` input is client-supplied, and its value
         # ends up in a public `src`. The editing UI is staff-only, so this is
         # not a public attack surface, but the same shape check the display
-        # filter applies (`accueil/templatetags/illustrations.py`) is cheap
-        # enough to also apply here, so a mangled value is refused at save
-        # time rather than silently rendering nothing later.
-        if value and ".." in value:
+        # filter applies (`accueil/templatetags/illustrations.py`, sharing
+        # `accueil.uploads.is_well_shaped_path`) is cheap enough to also apply
+        # here, so a mangled value is refused at save time rather than
+        # silently rendering nothing later.
+        if value and not uploads.is_well_shaped_path(value):
             raise ValidationError("Chemin d'image invalide.")
         return value
 
@@ -134,15 +163,15 @@ class IllustrationEditor(forms.CharField):
         # (`value_from_datadict` runs again against the same `request.FILES`),
         # so a freshly uploaded file reappears here as the same file object,
         # not as the key `clean` already computed for it.
-        if hasattr(data, "read"):
-            # `_uploaded_key` is set when *this* field's own upload succeeded:
-            # show the new image, even though some other field on the form
-            # rejected the submission — the upload is not lost.
+        if isinstance(data, File):
+            # `widget.uploaded_key` is set when *this* field's own upload
+            # succeeded: show the new image, even though some other field on
+            # the form rejected the submission — the upload is not lost.
             # Otherwise (this field's own file was rejected, e.g. not an
             # image): fall back to what was actually posted as the current
             # value, so the editor still sees the image they had before this
             # attempt, not the field's own hard-coded default.
-            return getattr(self, "_uploaded_key", None) or getattr(self.widget, "posted_current", initial)
+            return self.widget.uploaded_key or self.widget.posted_current
         return data
 
 

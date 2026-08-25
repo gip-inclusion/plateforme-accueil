@@ -334,11 +334,11 @@ def test_a_section_upload_travels_through_the_editing_screen(client, editor, tmp
     row = Section.objects.get(kind="testimonials")
     url = reverse("edition:section", args=[row.pk])
 
-    body = client.get(url).content.decode()
-    assert 'enctype="multipart/form-data"' in body
+    response = client.get(url)
+    assert 'enctype="multipart/form-data"' in response.content.decode()
 
-    form = client.get(url).context["form"]
-    data = {name: bound.value() if bound.value() is not None else "" for name, bound in zip(form.fields, form)}
+    form = response.context["form"]
+    data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
     data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
     data["quotes"] = json.dumps(form.fields["quotes"].list_field.initial, ensure_ascii=False)
 

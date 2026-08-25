@@ -74,9 +74,12 @@ class Illustration(forms.CharField):
     def __init__(self, *, max_width, ratio=None, **kwargs):
         self.max_width = max_width
         self.ratio = ratio
-        # Provisional: right for a code-declared path, wrong once the upload
-        # widget lands and this can be an `uploads/…` key — revisit then.
-        kwargs.setdefault("help_text", "Chemin sous accueil/static/")
+        # Shown to an editor who sees a file picker, not a path field: name
+        # what actually happens on save, not the storage detail underneath.
+        kwargs.setdefault(
+            "help_text",
+            "Remplacez l'image en choisissant un fichier. Sans nouveau fichier, l'image actuelle est conservée.",
+        )
         super().__init__(**kwargs)
 
 

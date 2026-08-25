@@ -22,6 +22,21 @@ logger = logging.getLogger(__name__)
 
 UPLOAD_PREFIX = "uploads/"  # tells an uploaded file's storage key apart from a static path
 
+
+def is_well_shaped_path(path):
+    """A path an `Illustration` value is allowed to hold: non-empty text with
+    no `..` segment.
+
+    One rule, two callers with different jobs: `illustration` (the display
+    filter) is a render-time guard that must never raise on whatever is
+    already in the database, while `IllustrationEditor.clean` (accueil/forms.py)
+    is a write-time refusal. Sharing the predicate here — where `UPLOAD_PREFIX`
+    already lives — keeps a future tightening of the rule from being made in
+    one place and forgotten in the other.
+    """
+    return bool(path) and isinstance(path, str) and ".." not in path
+
+
 # 82 is a measured choice, not a default left alone: on the illustrations
 # actually shipped (shaded artwork, not flat vector art), lossless WebP costs
 # 3-4x the bytes for an RMS improvement of ~4/255 — not worth it. `WEBP`'s

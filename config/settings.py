@@ -233,7 +233,8 @@ if S3_CONFIGURED:
 # deploy. A developer sets this once in their shell instead.
 LOCAL_UPLOADS_ENABLED = os.environ.get("LOCAL_UPLOADS_ENABLED", "") == "1"
 
-# Will be consumed by the upload UI to decide whether to accept a file at all.
+# Consumed by `IllustrationEditor.clean` (accueil/forms.py) to decide whether
+# to accept a file at all.
 UPLOADS_ENABLED = S3_CONFIGURED or LOCAL_UPLOADS_ENABLED
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

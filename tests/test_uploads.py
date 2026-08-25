@@ -296,6 +296,7 @@ def test_posting_no_file_keeps_the_current_value():
 
 def test_posting_a_file_stores_it_and_yields_a_key(tmp_path, settings):
     settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
     form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": a_file(1600, 1000)})
     assert form.is_valid(), form.errors
     assert form.cleaned_data["visual"].startswith("uploads/")
@@ -303,6 +304,7 @@ def test_posting_a_file_stores_it_and_yields_a_key(tmp_path, settings):
 
 def test_a_bad_file_is_reported_on_the_field(tmp_path, settings):
     settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
     bad = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
     form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": bad})
     assert not form.is_valid()
@@ -314,3 +316,85 @@ def test_without_durable_storage_the_field_offers_no_upload():
     rendered = Upload(initial={"visual": "accueil/img/hero.webp"}).as_p()
     assert 'type="file"' not in rendered
     assert "accueil/img/hero.webp" in rendered
+
+
+@override_settings(UPLOADS_ENABLED=False)
+def test_without_durable_storage_the_label_points_at_nothing():
+    # `edition/section.html` renders `<label for="{{ field.id_for_label }}">`:
+    # with no `<input type="file">` on the page, a non-empty id would dangle.
+    form = Upload()
+    assert form["visual"].id_for_label == ""
+
+
+def test_a_hand_crafted_upload_is_refused_when_uploads_are_disabled(tmp_path, settings):
+    # `UPLOADS_ENABLED` (config/settings.py) means durable storage is actually
+    # configured. The UI only offers the file input when it is true, but
+    # nothing stops a direct POST — `clean` must enforce it itself rather than
+    # trust the widget to have hidden the option.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = False
+    form = Upload(data={"visual_current": "accueil/img/hero.webp"}, files={"visual": a_file(400, 300)})
+    assert not form.is_valid()
+    assert "visual" in form.errors
+
+
+def test_a_mangled_current_value_is_refused():
+    # The hidden `_current` input is client-supplied; a `..` segment must be
+    # rejected at save time, the same shape check the display filter applies.
+    form = Upload(data={"visual_current": "uploads/../../etc/passwd.webp"}, files={})
+    assert not form.is_valid()
+    assert "visual" in form.errors
+
+
+def test_the_field_requires_a_multipart_form():
+    # Without `needs_multipart_form = True` on the widget, Django does not
+    # know the surrounding form must be `multipart`, and a real browser would
+    # never actually send the file.
+    assert Upload().is_multipart()
+
+
+def test_a_successful_upload_survives_a_sibling_fields_failure(tmp_path, settings):
+    # The delicate case `bound_data` exists for: another field on the same
+    # form rejects the submission, and this field's own upload — already
+    # durably stored — must still be what gets shown on re-render, not lost
+    # back to the raw file object or the field's static default.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+
+    class WithFailingSibling(django_forms.Form):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.fields["visual"] = an_editor()
+            self.fields["other"] = django_forms.CharField()
+
+    form = WithFailingSibling(
+        data={"visual_current": "accueil/img/hero.webp", "other": ""},
+        files={"visual": a_file(1600, 1000)},
+    )
+    assert not form.is_valid()
+    assert "visual" not in form.errors
+    assert form["visual"].value().startswith("uploads/")
+
+
+def test_this_fields_own_bad_file_falls_back_to_the_posted_current_value(tmp_path, settings):
+    # Here it is *this* field's own file that is refused: the re-render must
+    # show what was actually posted as the current value (a previously stored
+    # override), not the field's hard-coded code default.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    bad = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
+    form = Upload(data={"visual_current": "uploads/previously-stored.webp"}, files={"visual": bad})
+    assert not form.is_valid()
+    assert "visual" in form.errors
+    assert form["visual"].value() == "uploads/previously-stored.webp"
+
+
+def test_the_rendered_input_carries_the_widgets_full_attrs():
+    # The template used to hand-pick `name`, `id` and `accept`, dropping
+    # everything else Django or `SectionForm` puts in `widget.attrs` — notably
+    # the theme's `class`, and `aria-describedby`/`aria-invalid`.
+    with override_settings(UPLOADS_ENABLED=True):
+        form = Upload()
+        form.fields["visual"].widget.attrs["class"] = "form-control"
+        rendered = str(form["visual"])
+        assert 'class="form-control"' in rendered
