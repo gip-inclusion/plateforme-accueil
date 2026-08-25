@@ -8,6 +8,8 @@ Never embeddable, and never public: every view here denies framing outright and
 requires an account that Authentik put in the editing group.
 """
 
+import copy
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
@@ -130,6 +132,29 @@ def toggle(request, pk):
 
 def _declared(kind):
     return {section_type.key: section_type for section_type in registry.types()}.get(kind)
+
+
+def list_values(row, section_type, name):
+    """The list as it renders: the override if there is one, else the code."""
+    return copy.deepcopy(section_type(row.content).content[name])
+
+
+def save_list(row, section_type, name, values):
+    """Write a list back after validating it whole.
+
+    Validating the whole list on every write — not just the touched item —
+    is what makes `min_num`, `max_num` and `unique` hold: removing the last
+    indicator must be refused, not accepted.
+    """
+    field = section_type.Form.base_fields[name]
+    cleaned = field.clean(values)
+    if cleaned == field.clean(copy.deepcopy(field.initial)):
+        # Back to the code's own values: the override no longer has a reason
+        # to exist, and the section follows pull requests again.
+        row.content.pop(name, None)
+    else:
+        row.content[name] = cleaned
+    row.save(update_fields=["content"])
 
 
 @editor_view()
