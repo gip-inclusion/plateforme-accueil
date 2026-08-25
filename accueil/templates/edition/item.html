@@ -1,6 +1,8 @@
 {% extends "edition/base.html" %}
 
-{% block titre %}{% if creating %}Ajouter — {{ field.label }}{% else %}Modifier — {{ field.label }}{% endif %}{% endblock %}
+{% block titre %}
+  {% if creating %}Ajouter — {{ field.label }}{% else %}Modifier — {{ field.label }}, élément {{ index|add:1 }}{% endif %}
+{% endblock %}
 
 {% block contenu %}
   <p class="fil">
@@ -10,7 +12,9 @@
   </p>
 
   <div class="plan__entete">
-    <h1>{% if creating %}Ajouter : {{ field.label }}{% else %}Modifier : {{ field.label }}{% endif %}</h1>
+    <h1>
+      {% if creating %}Ajouter : {{ field.label }}{% else %}Modifier : {{ field.label }}, élément {{ index|add:1 }}{% endif %}
+    </h1>
   </div>
 
   {% if form.non_field_errors %}
@@ -19,24 +23,12 @@
 
   <form class="editeur c-box" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {% if not creating %}
-      {# Rides the GET -> POST round trip with no JavaScript: `edition.item` #}
-      {# refuses a stale save rather than silently overwrite whatever now #}
-      {# sits at this index. Not sent when creating: an append targets no #}
-      {# position for the token to protect. #}
-      <input type="hidden" name="token" value="{{ token }}">
-    {% endif %}
+    {# Rides the GET -> POST round trip with no JavaScript: the view refuses #}
+    {# a stale save (or a stale add) rather than silently overwrite, or lose, #}
+    {# whatever the list now actually holds. #}
+    <input type="hidden" name="token" value="{{ token }}">
     {% for champ in form %}
-      <div class="champ{% if champ.errors %} champ--erreur{% endif %}">
-        <label for="{{ champ.id_for_label }}">{{ champ.label }}</label>
-        {{ champ }}
-        {% if champ.help_text %}<p class="champ__aide" id="{{ champ.auto_id }}_helptext">{{ champ.help_text }}</p>{% endif %}
-        {% if champ.errors %}
-          <ul class="champ__erreurs" id="{{ champ.auto_id }}_error">
-            {% for error in champ.errors %}<li class="champ__erreur">{{ error }}</li>{% endfor %}
-          </ul>
-        {% endif %}
-      </div>
+      {% include "edition/_champ.html" with champ=champ %}
     {% endfor %}
     <div class="editeur__actions">
       <a class="btn btn-outline-primary" href="{% url 'edition:section' row.pk %}">Annuler</a>

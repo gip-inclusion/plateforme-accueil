@@ -1,0 +1,18 @@
+{# One form field, the way every editing screen renders it: `section.html` #}
+{# and `item.html` both include this rather than keep their own copy, so the #}
+{# `_helptext` / `_error` id convention `aria-describedby` depends on lives #}
+{# in one place. Expects `champ` (a bound field); `overridden`, a set of #}
+{# field names shown with a "modifié" tag, is optional. #}
+<div class="champ{% if champ.errors %} champ--erreur{% endif %}">
+  <label for="{{ champ.id_for_label }}">
+    {{ champ.label }}
+    {% if overridden and champ.name in overridden %}<span class="tag">modifié</span>{% endif %}
+  </label>
+  {{ champ }}
+  {% if champ.help_text %}<p class="champ__aide" id="{{ champ.auto_id }}_helptext">{{ champ.help_text }}</p>{% endif %}
+  {% if champ.errors %}
+    <ul class="champ__erreurs" id="{{ champ.auto_id }}_error">
+      {% for error in champ.errors %}<li class="champ__erreur">{{ error }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+</div>

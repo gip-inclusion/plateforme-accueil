@@ -4,17 +4,18 @@ An editor thinks « the figures band sits too high », never « table Section,
 column position ». So the entry point is the page in miniature: reorder, show
 or hide, then drill into a section.
 
-Never embeddable, and never public: every view here denies framing outright and
-requires an account that Authentik put in the editing group. Alongside the
-views, this module also holds `list_values`/`save_list`, the request-free
-storage helpers a list's own editing screen (Tasks 9–11) reads and writes
-through — they know nothing about HTTP and raise `Http404` rather than
-redirect, so a view wraps them, not the other way round.
+Never embeddable, and never public: every view here denies framing outright
+and requires an account that Authentik put in the editing group.
+
+The request-free storage helpers a list's own editing screen reads and
+writes through — `list_values`, `save_list`, and the guards around them —
+live in `accueil.lists`: they know nothing about HTTP and raise `Http404`
+rather than redirect. This module is the HTTP wrapper around them, plus the
+concurrency and unreadable-override guards a *view* needs (a flash message,
+a redirect) and the two decorators every screen here shares.
 """
 
 import copy
-import hashlib
-import json
 
 from django.conf import settings
 from django.contrib import messages
@@ -28,8 +29,9 @@ from django.views.decorators.csp import csp_override
 from django.views.decorators.http import require_POST
 
 from accueil.forms import item_form_class, section_form_class
+from accueil.lists import _digest, _list_field, _override_is_unreadable, list_values, save_list
 from accueil.models import Page, Section
-from accueil.sections import ListField, registry
+from accueil.sections import Illustration, registry
 
 
 def may_publish(user):
@@ -157,126 +159,12 @@ def _list_context(pk, name):
     return row, section_type, field
 
 
-def _list_field(section_type, name):
-    """The declared `ListField` for `name`, or a 404.
-
-    A missing or mistyped `name` only ever reaches here from a URL segment
-    (Tasks 9–11), so it is the caller's routing that is wrong, not the data —
-    the same lens `get_object_or_404` applies to a bad primary key. Without
-    this, a name that exists but names some other kind of field (`"title"`)
-    would still reach `Field.clean`, which happily stringifies a list into
-    `"['a', 'b']"` and lets it through: nothing downstream would catch that
-    before it lands in the database.
-    """
-    field = section_type.Form.base_fields.get(name)
-    if not isinstance(field, ListField):
-        raise Http404(f"« {name} » n'est pas une liste déclarée sur « {section_type.key} ».")
-    return field
-
-
-def list_values(row, section_type, name, field=None):
-    """The list as it renders: the override if there is one, else the code.
-
-    `field` lets a caller that already resolved it through `_list_context`
-    pass it straight in, rather than have `_list_field` look it up again.
-
-    Known limitation, deliberately left unaddressed here: `SectionType.__init__`
-    swallows a per-field `ValidationError` and falls back to the code default
-    when an override no longer validates (a rule tightened after the override
-    was written, say). That is the right behaviour for the public page, but on
-    an editing screen it means an editor is shown the code's content in place
-    of their own unreadable override, with nothing to say so. `_apply` guards
-    against this with `_override_is_unreadable` before it ever calls this
-    function to mutate anything; a bare read through this helper (the section
-    screen's own display, say) still shows the code's content silently, which
-    remains a Task 10/11 concern, not this one.
-    """
-    field = field or _list_field(section_type, name)  # 404 on a bad name, before touching row.content
-    row_content = row.content if isinstance(row.content, dict) else {}
-    return copy.deepcopy(section_type(row_content).content[name])
-
-
-def save_list(row, section_type, name, values, field=None):
-    """Validate a list whole, then write it back. Returns the cleaned list.
-
-    `field` lets a caller that already resolved it through `_list_context`
-    pass it straight in, rather than have `_list_field` look it up again.
-
-    Validating the whole list on every write — not just the touched item — is
-    what makes `min_num`, `max_num` and `unique` hold: removing the last
-    indicator must be refused, not accepted.
-
-    Returns `cleaned`, not `values`: cleaning can change the shape (an
-    injected `..._credit` key, a coerced integer), so a caller that chains a
-    second operation must carry on from what was actually stored, not from
-    what it originally passed in.
-
-    Last-write-wins: this writes the whole `content` column, so a concurrent
-    edit — of this list or of any other field on the same section — made
-    between this row being loaded and this save is silently overwritten. That
-    was already true of the section form this replaces; the repeater turns
-    every add, duplicate, move and delete into its own full-column write,
-    which multiplies the exposure but does not change its nature. Acceptable
-    for a small editorial team working one section at a time; revisit if that
-    stops being true.
-    """
-    field = field or _list_field(section_type, name)
-    if not isinstance(row.content, dict):
-        row.content = {}
-    cleaned = field.clean(values)
-    if cleaned == field.clean(copy.deepcopy(field.initial)):
-        # Back to the code's own values: the override no longer has a reason
-        # to exist, and the section follows pull requests again.
-        row.content.pop(name, None)
-    else:
-        row.content[name] = cleaned
-    row.save(update_fields=["content"])
-    return cleaned
-
-
-def _override_is_unreadable(row, section_type, name):
-    """True when `row.content` holds an override for `name` that no longer
-    validates, and `SectionType.__init__` has silently fallen back to the
-    code default for it (see the limitation documented on `list_values`).
-
-    Acting on such a list would be destructive: `list_values` would hand
-    back the code's own items, an item operation would mutate those, and
-    `save_list` would write them back as if they were the editor's, erasing
-    whatever they had actually written with no message and nothing left to
-    recover. `_apply` calls this first and refuses the operation instead.
-    """
-    row_content = row.content if isinstance(row.content, dict) else {}
-    if name not in row_content:
-        return False
-    try:
-        section_type.clean_value(name, row_content[name])
-    except ValidationError:
-        return True
-    return False
-
-
-def _digest(values):
-    """A short fingerprint of a list's cleaned content.
-
-    Carried on the POST as an optimistic-concurrency token: the screen that
-    renders the list (Task 10/11) embeds the digest of the list as it was
-    read, and `_apply` refuses the operation rather than apply it if the
-    list has changed underneath since — the only signal available for a
-    list whose items were deliberately left without a stored identity.
-    """
-    payload = json.dumps(values, sort_keys=True, default=str).encode()
-    return hashlib.sha256(payload).hexdigest()[:16]
-
-
-def _refuse_if_unreadable(
-    request, pk, row, section_type, name, *, detail="impossible d'agir dessus depuis cet écran."
-):
+def _refuse_if_unreadable(request, row, section_type, name, *, detail="impossible d'agir dessus depuis cet écran."):
     """Redirect to the section, with a flash message, if `name`'s stored
-    override no longer validates — the same refusal `_apply` applies before
-    a duplicate, move or delete, and needed here for the same reason: acting
-    on `list_values`' silent fallback to the code default would replace an
-    editor's unreadable-but-real override with content built from the code,
-    with nothing to say so.
+    override no longer validates — needed on every screen that could mutate
+    a list: acting on `list_values`' silent fallback to the code default
+    would replace an editor's unreadable-but-real override with content
+    built from the code, with nothing to say so.
 
     `detail` completes the sentence for the caller's own operation: `_apply`
     refuses an operation on an item it never shows, while `item`/`item_add`
@@ -290,37 +178,53 @@ def _refuse_if_unreadable(
         request,
         f"Cette liste contient une modification qui n'est plus reconnue par le code : {detail} Rien n'a été modifié.",
     )
-    return redirect("edition:section", pk=pk)
+    return redirect("edition:section", pk=row.pk)
+
+
+def _refuse_if_stale(request, row, values, *, digest=None):
+    """Redirect to the section, with a flash message, unless the posted
+    `token` matches `_digest(values)`.
+
+    Shared verbatim by `_apply` and `item`/`item_add` — this is the one
+    editor-facing sentence, and the one guard, that must not drift between
+    the screens it protects: each of them turns a list that changed
+    underneath an editor into a refusal, rather than a silent, positional
+    overwrite of whatever is there now.
+
+    `digest` lets a caller that already computed it once (`item`, which also
+    needs it to render the next form) pass it straight in, rather than hash
+    `values` a second time for the same request.
+    """
+    if request.POST.get("token") == (digest if digest is not None else _digest(values)):
+        return None
+    messages.error(
+        request,
+        "Cette liste a changé depuis l'affichage de la page. Rien n'a été modifié : rechargez et réessayez.",
+    )
+    return redirect("edition:section", pk=row.pk)
 
 
 def _apply(request, pk, name, change):
     """Apply one operation to a list, and say so — success or refusal alike.
 
     Two guards run before `change` ever sees the list, in addition to the
-    whole-list validation `save_list` already does:
-
-    - an override that no longer validates is left untouched rather than
-      silently replaced by the code defaults, see `_override_is_unreadable`;
-    - the POST must carry a `token` matching `_digest` of the list as read
-      here, or the operation is refused as stale. The token is required, not
-      optional: were it optional, a template that forgot to send it (Task 10,
-      11) would simply never trigger the guard, rather than fail loudly with
-      buttons that do not work. This is deliberately the same guard for a
-      missing token and a mismatched one — both mean this POST cannot be
-      trusted to describe the list as it now stands.
+    whole-list validation `save_list` already does: an override that no
+    longer validates is left untouched (`_refuse_if_unreadable`), and the
+    POST must carry a `token` matching `_digest` of the list as read here, or
+    the operation is refused as stale (`_refuse_if_stale`). The token is
+    required, not optional: were it optional, a template that forgot to send
+    it would simply never trigger the guard, rather than fail loudly with
+    buttons that do not work.
     """
     row, section_type, field = _list_context(pk, name)
-    refusal = _refuse_if_unreadable(request, pk, row, section_type, name)
+    refusal = _refuse_if_unreadable(request, row, section_type, name)
     if refusal is not None:
         return refusal
 
     values = list_values(row, section_type, name, field)
-    if request.POST.get("token") != _digest(values):
-        messages.error(
-            request,
-            "Cette liste a changé depuis l'affichage de la page. Rien n'a été modifié : rechargez et réessayez.",
-        )
-        return redirect("edition:section", pk=pk)
+    refusal = _refuse_if_stale(request, row, values)
+    if refusal is not None:
+        return refusal
 
     try:
         change(values)
@@ -338,8 +242,7 @@ def item_duplicate(request, pk, name, index):
     # Structurally unusable on a list declaring `unique` (`profiles`, on
     # `slug`): every duplicate collides with the item it copies and is
     # refused by `save_list`'s whole-list validation, cleanly and with
-    # nothing written. That list has no way to grow until Task 10 adds a
-    # creation form — a known state, not a bug to fix here.
+    # nothing written. `item_add` is the only way such a list grows.
     def change(values):
         _check_index(values, index)
         values.insert(index + 1, copy.deepcopy(values[index]))
@@ -367,8 +270,7 @@ def _swap(index, direction):
     An unrecognised or absent `direction` is a no-op, not a downward move:
     only "up" and "down" carry meaning. Landing past either end of the list
     is a no-op too, and that is only correct for a screen that withholds the
-    button there in the first place — the contract Task 10/11's template
-    must honour.
+    button there in the first place — the contract the template must honour.
     """
     other = {"up": index - 1, "down": index + 1}.get(direction)
 
@@ -385,60 +287,84 @@ def _check_index(values, index):
         raise Http404("Cet élément n'existe pas.")
 
 
+def _blocks_creation_without_uploads(field):
+    """True when adding a new item is structurally impossible right now.
+
+    The item form declares a required `Illustration` with no `initial`
+    (`figures.Indicator.image`, `search.Card.image`: each real item has its
+    own picture, so there is no sane default to seed a new one with — see
+    `Illustration`'s own docstring), and uploads are not configured
+    (`settings.UPLOADS_ENABLED`, false whenever no bucket is set, which is
+    the default locally and on a deploy without one). Without this check the
+    add screen renders what looks like an ordinary form — `IllustrationWidget`
+    quietly omits the file input it has nothing to offer (see its template)
+    — and only fails on submit, with "Ce champ est obligatoire." pointing at
+    a control that was never on the page.
+    """
+    if settings.UPLOADS_ENABLED:
+        return False
+    return any(
+        isinstance(declared, Illustration) and declared.required and declared.initial is None
+        for declared in field.item_form.base_fields.values()
+    )
+
+
 @editor_view()
 def item(request, pk, name, index):
     """Edit one item of a list through the fields its item form declares.
 
     Carries the same concurrency token `_apply` requires, and for the same
-    reason: `values[index] = form.cleaned_data` is a positional write. If the
-    list shifted between the GET that rendered this form and the POST — an
-    item removed or reordered elsewhere — the editor who believes they are
-    saving item "B" silently overwrites whatever now sits at that index, with
-    a success redirect and nothing to say a *different* item was destroyed.
-    The token is embedded as a hidden input by the template, so it rides the
-    GET → POST round trip with no JavaScript, exactly as `_apply`'s buttons
-    already do.
-
-    `item_add` deliberately carries no such token: appending targets no
-    position to go stale, and `save_list`'s whole-list revalidation already
-    catches what a concurrent add could break (`max_num`, `unique`).
+    reason: `attempt[index] = form.cleaned_data` is a positional write. If
+    the list shifted between the GET that rendered this form and the POST —
+    an item removed or reordered elsewhere — the editor who believes they
+    are saving item "B" would otherwise silently overwrite whatever now sits
+    at that index, with a success redirect and nothing to say a *different*
+    item was destroyed. The token is embedded as a hidden input by the
+    template, so it rides the GET → POST round trip with no JavaScript,
+    exactly as `_apply`'s buttons already do.
     """
     row, section_type, field = _list_context(pk, name)
-    refusal = _refuse_if_unreadable(
-        request, pk, row, section_type, name, detail="impossible d'ouvrir cet élément depuis cet écran."
+    detail = (
+        "impossible d'enregistrer cet élément depuis cet écran."
+        if request.method == "POST"
+        else "impossible d'ouvrir cet élément depuis cet écran."
     )
+    refusal = _refuse_if_unreadable(request, row, section_type, name, detail=detail)
     if refusal is not None:
         return refusal
 
     values = list_values(row, section_type, name, field)
+    values_digest = _digest(values)
     form_class = item_form_class(field)
 
     if request.method == "POST":
         # Checked before `_check_index`, deliberately: a stale token already
         # means this POST cannot be trusted to describe the list as it now
-        # stands, the same lens `_apply` applies — including when the list
-        # has since shrunk enough that `index` would 404 on its own. Refusing
-        # as stale here, rather than as not-found, is what keeps this case
-        # readable: "the list changed" is true and actionable, "this element
-        # doesn't exist" would not be, for an editor who watched it exist a
-        # moment ago.
-        if request.POST.get("token") != _digest(values):
-            messages.error(
-                request,
-                "Cette liste a changé depuis l'affichage de la page. Rien n'a été modifié : rechargez et réessayez.",
-            )
-            return redirect("edition:section", pk=pk)
+        # stands, including when the list has since shrunk enough that
+        # `index` would 404 on its own. Refusing as stale here, rather than
+        # as not-found, is what keeps this case readable: "the list changed"
+        # is true and actionable, "this element doesn't exist" would not be,
+        # for an editor who watched it exist a moment ago.
+        refusal = _refuse_if_stale(request, row, values, digest=values_digest)
+        if refusal is not None:
+            return refusal
         _check_index(values, index)
         form = form_class(request.POST, request.FILES)
         if form.is_valid():
-            values[index] = form.cleaned_data
+            # A copy, not a mutation of `values` in place: `values_digest`
+            # above must still describe what is actually stored if this save
+            # is refused below (a collision with `unique`, say), or the next
+            # attempt's token would be checked against content that was
+            # never written — a false "list changed" for a list that did not.
+            attempt = list(values)
+            attempt[index] = form.cleaned_data
             try:
-                save_list(row, section_type, name, values, field)
+                save_list(row, section_type, name, attempt, field)
             except ValidationError as error:
                 messages.error(request, error.messages[0])
+            else:
+                messages.success(request, "Élément mis à jour.")
                 return redirect("edition:section", pk=pk)
-            messages.success(request, "Élément mis à jour.")
-            return redirect("edition:section", pk=pk)
     else:
         _check_index(values, index)
         form = form_class(initial=values[index])
@@ -452,7 +378,7 @@ def item(request, pk, name, index):
             "field": field,
             "index": index,
             "form": form,
-            "token": _digest(values),
+            "token": values_digest,
             "creating": False,
         },
     )
@@ -467,31 +393,53 @@ def item_add(request, pk, name):
     until someone opens it and fills it in — this is the only way such a
     list grows without ever containing one.
 
-    No concurrency token, unlike `item`: an append targets no position, so a
-    stale token here would guard nothing a stale read could actually corrupt
-    — the only thing a concurrent change could break (`max_num`, `unique`) is
-    already caught by `save_list`'s whole-list revalidation below.
+    Carries the same concurrency token `item` does, despite targeting no
+    position: two concurrent adds read the same list and, without a token,
+    each would append to its own snapshot and call `save_list`, whose
+    whole-column write (see its own docstring) means the second write simply
+    erases the first append — both editors are still told "Élément ajouté.",
+    and the list never grows past what a single add produced. The token
+    turns the second, stale add into a refusal instead of a silent loss.
     """
     row, section_type, field = _list_context(pk, name)
-    refusal = _refuse_if_unreadable(
-        request, pk, row, section_type, name, detail="impossible d'ajouter un élément depuis cet écran."
+    detail = (
+        "impossible d'ajouter cet élément depuis cet écran."
+        if request.method == "POST"
+        else "impossible d'ouvrir l'ajout d'un élément depuis cet écran."
     )
+    refusal = _refuse_if_unreadable(request, row, section_type, name, detail=detail)
     if refusal is not None:
         return refusal
 
+    if _blocks_creation_without_uploads(field):
+        messages.error(
+            request,
+            "Impossible d'ajouter un élément ici : cette liste exige une image, "
+            "et le téléversement n'est pas configuré pour le moment.",
+        )
+        return redirect("edition:section", pk=pk)
+
+    values = list_values(row, section_type, name, field)
+    values_digest = _digest(values)
     form_class = item_form_class(field)
+
     if request.method == "POST":
+        refusal = _refuse_if_stale(request, row, values, digest=values_digest)
+        if refusal is not None:
+            return refusal
         form = form_class(request.POST, request.FILES)
         if form.is_valid():
-            values = list_values(row, section_type, name, field)
-            values.append(form.cleaned_data)
+            # A copy, not a mutation of `values`, for the same reason `item`
+            # keeps one: `values_digest` must still describe what is
+            # actually stored if this save is refused below (`max_num`, say).
+            attempt = [*values, form.cleaned_data]
             try:
-                save_list(row, section_type, name, values, field)
+                save_list(row, section_type, name, attempt, field)
             except ValidationError as error:
                 messages.error(request, error.messages[0])
+            else:
+                messages.success(request, "Élément ajouté.")
                 return redirect("edition:section", pk=pk)
-            messages.success(request, "Élément ajouté.")
-            return redirect("edition:section", pk=pk)
     else:
         form = form_class(initial=field.item_defaults())
 
@@ -503,6 +451,7 @@ def item_add(request, pk, name):
             "section_type": section_type,
             "field": field,
             "form": form,
+            "token": values_digest,
             "creating": True,
         },
     )

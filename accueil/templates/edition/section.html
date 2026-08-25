@@ -18,20 +18,8 @@
 
   <form class="editeur c-box" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {% for field in form %}
-      <div class="champ{% if field.errors %} champ--erreur{% endif %}">
-        <label for="{{ field.id_for_label }}">
-          {{ field.label }}
-          {% if field.name in overridden %}<span class="tag">modifié</span>{% endif %}
-        </label>
-        {{ field }}
-        {% if field.help_text %}<p class="champ__aide" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</p>{% endif %}
-        {% if field.errors %}
-          <ul class="champ__erreurs" id="{{ field.auto_id }}_error">
-            {% for error in field.errors %}<li class="champ__erreur">{{ error }}</li>{% endfor %}
-          </ul>
-        {% endif %}
-      </div>
+    {% for champ in form %}
+      {% include "edition/_champ.html" with champ=champ overridden=overridden %}
     {% endfor %}
     <div class="editeur__actions">
       <a class="btn btn-outline-primary" href="{% url 'edition:plan' %}">Annuler</a>

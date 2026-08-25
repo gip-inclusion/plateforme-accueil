@@ -189,6 +189,56 @@ class IllustrationEditor(forms.CharField):
         return data
 
 
+def _map_editable_fields(base_fields):
+    """Map a form's declared fields to their editing widgets.
+
+    Shared by `section_form_class` and `item_form_class`, which used to carry
+    byte-identical copies of this loop: an `Illustration` becomes a real file
+    picker (`IllustrationEditor`), a `ListField` — top-level or nested inside
+    an item, `profiles.Profile.steps` — becomes a `ListEditor` (raw JSON;
+    there is no item-by-item editor for a nested repeater), and anything else
+    is deep-copied untouched, so the two callers never share a mutable field
+    instance.
+    """
+    fields = {}
+    for name, declared in base_fields.items():
+        if isinstance(declared, Illustration):
+            fields[name] = IllustrationEditor(declared)
+        elif isinstance(declared, ListField):
+            fields[name] = ListEditor(declared)
+        else:
+            fields[name] = copy.deepcopy(declared)
+    return fields
+
+
+def _apply_house_classes(fields, *, skip_illustration=False):
+    """House-theme widget classes, so the editing UI gets real form controls.
+
+    Shared by `SectionForm.__init__` and `item_form_class`'s `ItemForm`,
+    which used to carry two copies of this loop (the admin ignores these
+    classes, which is fine — it is on its way out).
+
+    `skip_illustration` differs between the two, deliberately, rather than
+    being unified away: `SectionForm` has long applied `form-control` to
+    `IllustrationWidget`'s file input too (see
+    `test_the_rendered_input_carries_the_widgets_full_attrs`, guarding that
+    exact behaviour), while `item_form_class`'s `ItemForm` skips it — its own
+    template already carries its styling, and these classes would otherwise
+    land on a control that isn't the point of contact a form-control class is
+    meant for there.
+    """
+    for field in fields.values():
+        widget = field.widget
+        if skip_illustration and isinstance(widget, IllustrationWidget):
+            continue
+        if isinstance(widget, forms.CheckboxInput):
+            widget.attrs.setdefault("class", "form-check-input")
+        elif isinstance(widget, forms.Select):
+            widget.attrs.setdefault("class", "form-select")
+        else:
+            widget.attrs["class"] = f"form-control {widget.attrs.get('class', '')}".strip()
+
+
 class SectionForm(forms.ModelForm):
     """The section's own fields, plus the content it declares.
 
@@ -205,16 +255,7 @@ class SectionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # House-theme classes, so the editing UI gets real form controls. The
-        # admin ignores them, which is fine — it is on its way out.
-        for field in self.fields.values():
-            widget = field.widget
-            if isinstance(widget, forms.CheckboxInput):
-                widget.attrs.setdefault("class", "form-check-input")
-            elif isinstance(widget, forms.Select):
-                widget.attrs.setdefault("class", "form-select")
-            else:
-                widget.attrs["class"] = f"form-control {widget.attrs.get('class', '')}".strip()
+        _apply_house_classes(self.fields)
 
         if self.section_type is None or not self.instance.pk:
             return
@@ -274,48 +315,22 @@ class SectionForm(forms.ModelForm):
 def item_form_class(list_field):
     """A form for one item of a `ListField`.
 
-    Built from `list_field.item_form.base_fields`, the same rule
-    `section_form_class` applies: an `Illustration` becomes a real file
-    picker (`IllustrationEditor`), everything else is copied from the
-    declared field untouched — with one more mapping `section_form_class`
-    never needed: a *nested* `ListField` (`profiles.Profile.steps`) becomes a
-    `ListEditor`, the same raw-JSON textarea the section form already uses
-    for a top-level list. A proper item-by-item editor for a nested repeater
-    is out of scope for this chantier; without this mapping the field would
-    deep-copy into a plain text input that can never satisfy
-    `ListField.clean` (it requires an actual list, not a string), and
-    `profiles` — the one section with such a field — would have no way left
-    to save `steps` at all once Task 11 removes lists from the section form.
-    The JSON textarea is a floor, not a destination: it is exactly the
-    editing experience `steps` has today, so nothing is lost by keeping it.
+    Built from `list_field.item_form.base_fields`, mapped the same way
+    `section_form_class` maps a section's own fields — see
+    `_map_editable_fields`. Note the mapping is applied to `base_fields`
+    directly: this `ItemForm` does not subclass `list_field.item_form`, so a
+    `clean()` declared on an item form (`Quote`, `Card`, `Profile`…) would
+    never run on this screen. No item form declares one today, and
+    `section_form_class` has the same shape (it does not subclass the
+    section's `Form` either) — consistent rather than new, and left as a
+    known state rather than fixed here.
     """
-    fields = {}
-    for name, declared in list_field.item_form.base_fields.items():
-        if isinstance(declared, Illustration):
-            fields[name] = IllustrationEditor(declared)
-        elif isinstance(declared, ListField):
-            fields[name] = ListEditor(declared)
-        else:
-            fields[name] = copy.deepcopy(declared)
+    fields = _map_editable_fields(list_field.item_form.base_fields)
 
     class ItemForm(forms.Form):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            # Same house-theme classes as `SectionForm.__init__`, except on
-            # `IllustrationWidget`: its own template already carries its
-            # styling, and these classes would otherwise land on its file
-            # input, which is not the point of contact a form-control class
-            # is meant for here.
-            for field in self.fields.values():
-                widget = field.widget
-                if isinstance(widget, IllustrationWidget):
-                    continue
-                if isinstance(widget, forms.CheckboxInput):
-                    widget.attrs.setdefault("class", "form-check-input")
-                elif isinstance(widget, forms.Select):
-                    widget.attrs.setdefault("class", "form-select")
-                else:
-                    widget.attrs["class"] = f"form-control {widget.attrs.get('class', '')}".strip()
+            _apply_house_classes(self.fields, skip_illustration=True)
 
     ItemForm.base_fields = fields
     ItemForm.declared_fields = fields
@@ -328,12 +343,5 @@ def section_form_class(section_type):
     Built as a class rather than added per instance: the admin reads
     `base_fields` off the class to decide what to render.
     """
-    fields = {}
-    for name, declared in section_type.Form.base_fields.items():
-        if isinstance(declared, Illustration):
-            fields[name] = IllustrationEditor(declared)
-        elif isinstance(declared, ListField):
-            fields[name] = ListEditor(declared)
-        else:
-            fields[name] = copy.deepcopy(declared)
+    fields = _map_editable_fields(section_type.Form.base_fields)
     return type("SectionForm", (SectionForm,), {**fields, "section_type": section_type})

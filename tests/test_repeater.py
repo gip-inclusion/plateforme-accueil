@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.http import Http404
 from django.shortcuts import resolve_url
+from django.test import override_settings
 from django.urls import reverse
 
 from accueil import editing
@@ -369,7 +370,9 @@ def test_adding_an_item_goes_through_a_form(client, editor, testimonials):
     assert client.get(url).status_code == 200
 
     before = len(quotes(testimonials))
-    response = client.post(url, {"quote": "Rien à redire.", "name": "Ana P.", "role": ""})
+    response = client.post(
+        url, {"token": token(testimonials), "quote": "Rien à redire.", "name": "Ana P.", "role": ""}
+    )
     assert response.status_code == 302
     after = quotes(testimonials)
     assert len(after) == before + 1
@@ -381,12 +384,61 @@ def test_a_full_list_refuses_a_new_item(client, editor, testimonials):
     client.force_login(editor)
     url = reverse("edition:item-add", args=[testimonials.pk, "quotes"])
     for rank in range(4):
-        client.post(url, {"quote": f"Avis {rank}.", "name": f"Personne {rank}", "role": ""})
+        client.post(
+            url, {"token": token(testimonials), "quote": f"Avis {rank}.", "name": f"Personne {rank}", "role": ""}
+        )
     assert len(quotes(testimonials)) == 4
 
-    response = client.post(url, {"quote": "De trop.", "name": "Zoé", "role": ""})
+    response = client.post(url, {"token": token(testimonials), "quote": "De trop.", "name": "Zoé", "role": ""})
+    assert response.status_code == 200
     assert len(quotes(testimonials)) == 4
     assert any("au plus" in str(message) for message in get_messages(response.wsgi_request))
+    # L'élément que l'éditeur venait de taper n'est pas perdu : la vue
+    # réaffiche le formulaire lié plutôt que de rediriger vers la section.
+    assert response.context["form"].data["name"] == "Zoé"
+
+
+def test_adding_an_item_without_a_token_is_refused(client, editor, testimonials):
+    client.force_login(editor)
+    url = reverse("edition:item-add", args=[testimonials.pk, "quotes"])
+    before = len(quotes(testimonials))
+
+    response = client.post(url, {"quote": "Sans jeton.", "name": "Personne", "role": ""})
+
+    assert len(quotes(testimonials)) == before
+    assert any("a changé" in str(message) for message in get_messages(response.wsgi_request))
+
+
+def test_adding_an_item_with_a_stale_token_is_refused(client, editor, testimonials):
+    # Deux ajouts concurrents lisent la même liste : sans jeton, le second
+    # écraserait le premier lors de l'écriture pleine-colonne de `save_list`,
+    # et les deux éditeurs se verraient pourtant dire « Élément ajouté ».
+    client.force_login(editor)
+    url = reverse("edition:item-add", args=[testimonials.pk, "quotes"])
+    stale = token(testimonials)
+    client.post(url, {"token": stale, "quote": "Premier.", "name": "Un", "role": ""})
+    before = quotes(testimonials)
+
+    response = client.post(url, {"token": stale, "quote": "Second.", "name": "Deux", "role": ""})
+
+    assert quotes(testimonials) == before
+    assert any("a changé" in str(message) for message in get_messages(response.wsgi_request))
+
+
+def test_adding_a_card_without_upload_support_is_refused_up_front(client, editor, page):
+    # `search.Card.image` est obligatoire, sans `initial` : sans
+    # téléversement configuré, l'écran d'ajout n'a aucun moyen de le
+    # satisfaire — le refuser tout de suite évite un « Ce champ est
+    # obligatoire. » pointant vers un contrôle absent de la page.
+    client.force_login(editor)
+    jobs = Section.objects.get(kind="jobs")
+    url = reverse("edition:item-add", args=[jobs.pk, "cards"])
+
+    with override_settings(UPLOADS_ENABLED=False):
+        response = client.get(url)
+
+    assert response.status_code == 302
+    assert any("téléversement" in str(message) for message in get_messages(response.wsgi_request))
 
 
 def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, editor, page):
@@ -400,10 +452,12 @@ def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, edit
     section_type = declared("profiles")
 
     add_url = reverse("edition:item-add", args=[profiles.pk, "profiles"])
+    add_token = editing._digest(editing.list_values(profiles, section_type, "profiles"))
     steps = json.dumps([{"title": "Étape unique", "detail": ""}])
     response = client.post(
         add_url,
         {
+            "token": add_token,
             "slug": "nouveau",
             "tab_label": "Nouveau",
             "icon": "ri-star-line",
@@ -448,3 +502,116 @@ def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, edit
     values = editing.list_values(profiles, section_type, "profiles")
     assert values[index]["title"] == "Titre modifié"
     assert values[index]["steps"] == [{"title": "Étape modifiée", "detail": "Un détail"}]
+
+
+def test_an_item_image_is_rendered_as_a_real_file_picker(client, editor, page):
+    # Le ⚠ de la tâche 10 : un `Illustration` niché dans un item de liste doit
+    # obtenir le même contrôle qu'un `Illustration` de section, pas rester un
+    # simple champ texte affichant le chemin brut.
+    client.force_login(editor)
+    figures = Section.objects.get(kind="figures")
+    body = client.get(reverse("edition:item", args=[figures.pk, "indicators", 0])).content.decode()
+    assert 'class="champ-image"' in body
+    assert 'name="image_current"' in body
+
+
+def test_an_uploaded_file_travels_through_the_item_screen(client, editor, tmp_path, settings):
+    # Sans multipart, ni lecture de `request.FILES`, le bouton s'affiche et
+    # rien n'arrive : ce test pose un vrai fichier, pas seulement un attribut
+    # d'accueil sur le formulaire.
+    import io
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from PIL import Image
+
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    client.force_login(editor)
+    figures = Section.objects.get(kind="figures")
+    section_type = declared("figures")
+    url = reverse("edition:item", args=[figures.pk, "indicators", 0])
+
+    form = client.get(url).context["form"]
+    data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
+    values = editing.list_values(figures, section_type, "indicators")
+    data["token"] = editing._digest(values)
+    data["image_current"] = values[0]["image"]
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (400, 300), (10, 20, 30)).save(buffer, format="PNG")
+    data["image"] = SimpleUploadedFile("neuf.png", buffer.getvalue(), content_type="image/png")
+
+    response = client.post(url, data)
+    assert response.status_code == 302
+    figures.refresh_from_db()
+    after = editing.list_values(figures, section_type, "indicators")
+    assert after[0]["image"].startswith("uploads/")
+
+
+def test_an_unreadable_override_refuses_to_open_an_item(client, editor, testimonials):
+    client.force_login(editor)
+    testimonials.content = {"quotes": []}  # violates min_num=1: no longer validates
+    testimonials.save(update_fields=["content"])
+
+    response = client.get(reverse("edition:item", args=[testimonials.pk, "quotes", 0]))
+
+    assert response.status_code == 302
+    assert any("n'est plus reconnue" in str(message) for message in get_messages(response.wsgi_request))
+
+
+def test_an_unreadable_override_refuses_to_open_the_add_screen(client, editor, testimonials):
+    client.force_login(editor)
+    testimonials.content = {"quotes": []}  # violates min_num=1: no longer validates
+    testimonials.save(update_fields=["content"])
+
+    response = client.get(reverse("edition:item-add", args=[testimonials.pk, "quotes"]))
+
+    assert response.status_code == 302
+    assert any("n'est plus reconnue" in str(message) for message in get_messages(response.wsgi_request))
+
+
+def test_editing_an_out_of_range_item_with_a_current_token_is_a_404(client, editor, testimonials):
+    # Un jeton à jour ne rend pas un index hors bornes valide : sans le
+    # contrôle, `values[index] = …` lèverait `IndexError` (une 500), plutôt
+    # que le 404 qu'un index qui n'existe pas doit produire.
+    client.force_login(editor)
+    out_of_range = len(quotes(testimonials))
+    url = reverse("edition:item", args=[testimonials.pk, "quotes", out_of_range])
+
+    response = client.post(url, {"token": token(testimonials), "quote": "X", "name": "Y", "role": ""})
+
+    assert response.status_code == 404
+
+
+def test_a_colliding_slug_re_renders_the_form_instead_of_losing_it(client, editor, page):
+    # `profiles` déclare `unique="slug"` : faire entrer en collision deux
+    # profils est refusé par `save_list`, whole-list. La règle de la tâche :
+    # ce refus réaffiche le formulaire lié, il ne redirige pas et n'efface
+    # rien de ce que l'éditeur vient de saisir.
+    client.force_login(editor)
+    profiles_row = Section.objects.get(kind="profiles")
+    section_type = declared("profiles")
+    values = editing.list_values(profiles_row, section_type, "profiles")
+    other_slug = values[1]["slug"]
+
+    edit_url = reverse("edition:item", args=[profiles_row.pk, "profiles", 0])
+    steps = json.dumps(values[0]["steps"])
+    response = client.post(
+        edit_url,
+        {
+            "token": editing._digest(values),
+            "slug": other_slug,  # collides with values[1]
+            "tab_label": values[0]["tab_label"],
+            "icon": values[0]["icon"],
+            "title": "Titre saisi à l'instant",
+            "chapo": "",
+            "cta_label": values[0]["cta_label"],
+            "cta_href": values[0]["cta_href"],
+            "steps": steps,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.context["form"].data["title"] == "Titre saisi à l'instant"
+    unchanged = editing.list_values(profiles_row, section_type, "profiles")
+    assert unchanged[0]["slug"] != other_slug
