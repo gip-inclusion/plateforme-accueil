@@ -151,6 +151,9 @@ def test_an_invalid_list_is_reported_not_saved(client, editor):
     assert not form.is_valid()
     assert "JSON invalide" in str(form.errors["steps"])
 
+    section.refresh_from_db()
+    assert section.content == {}
+
 
 def test_an_overridden_field_is_flagged_and_can_be_reverted(client, editor):
     from accueil.models import Section

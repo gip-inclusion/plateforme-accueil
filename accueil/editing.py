@@ -16,6 +16,7 @@ a redirect) and the two decorators every screen here shares.
 """
 
 import copy
+import json
 
 from django.conf import settings
 from django.contrib import messages
@@ -458,6 +459,55 @@ def item_add(request, pk, name):
     )
 
 
+def _boards(row, declared):
+    """Everything the section screen shows about `row`'s lists.
+
+    Called once, and only when the screen is actually about to render (a
+    successful POST redirects away before ever reaching this: recomputing it
+    then would be wasted work run on every save, for a page the request
+    never shows).
+
+    Returns `(boards, unreadable, overridden)`:
+
+    - `boards`: `accueil.previews.section_lists`' own boards, minus any list
+      whose stored override no longer validates (see `unreadable` below —
+      showing that board would render the code's own fallback items as
+      though they were the editor's), and with `can_add` narrowed by
+      `_blocks_creation_without_uploads`: a declaration alone cannot know
+      whether uploads are configured, only this view can.
+    - `unreadable`: for each list whose override no longer validates, its
+      name paired with the *raw* stored JSON — shown in the warning in its
+      place, so an editor can copy out what is otherwise about to become
+      the only way to recover it (`reset-field` drops it for good; the
+      admin's own textarea is no help either, since it reads the same
+      already-fallen-back content this screen would).
+    - `overridden`: which of the section's *other*, scalar fields an editor
+      has moved away from the code — for the generic "revenir au texte du
+      code" list at the bottom. A list's own name is deliberately left out
+      of it: resetting a whole hand-edited list is a different order of
+      loss than resetting a one-line `kicker`, and the generic list has no
+      way to say so — its own board carries that control instead, labelled
+      for what it does.
+    """
+    list_names = [name for name, field in declared.Form.base_fields.items() if isinstance(field, ListField)]
+    unreadable = {
+        name: json.dumps(row.content[name], ensure_ascii=False, indent=2)
+        for name in list_names
+        if _override_is_unreadable(row, declared, name)
+    }
+    content = declared(row.content).content
+    boards = []
+    for board in section_lists(declared, content):
+        if board["name"] in unreadable:
+            continue
+        field = declared.Form.base_fields[board["name"]]
+        board["can_add"] = board["can_add"] and not _blocks_creation_without_uploads(field)
+        board["customised"] = board["name"] in row.content
+        boards.append(board)
+    overridden = set(row.content) - set(list_names)
+    return boards, unreadable, overridden
+
+
 @editor_view()
 def section(request, pk):
     """Edit one section through the fields it declares.
@@ -484,18 +534,7 @@ def section(request, pk):
     else:
         form = form_class(instance=row)
 
-    overridden = set(row.content)
-    # A list whose stored override no longer validates: `list_values` (and so
-    # `section_lists`, built from the same merged content) would silently
-    # show the code's own items in its place. Rather than let the board
-    # render that as if it were the editor's real content, its name is
-    # carried separately so the template can show a warning — with a way
-    # back to the code, through the same `reset-field` a stray scalar
-    # override already uses — instead of the items themselves.
-    list_names = [name for name, field in declared.Form.base_fields.items() if isinstance(field, ListField)]
-    unreadable_lists = {name for name in list_names if _override_is_unreadable(row, declared, name)}
-    content = declared(row.content).content
-    boards = [board for board in section_lists(declared, content) if board["name"] not in unreadable_lists]
+    boards, unreadable, overridden = _boards(row, declared)
     return render(
         request,
         "edition/section.html",
@@ -508,7 +547,7 @@ def section(request, pk):
             # wording changed in a pull request cannot go unnoticed.
             "overridden": overridden,
             "boards": boards,
-            "unreadable_lists": sorted(unreadable_lists),
+            "unreadable_lists": unreadable,
         },
     )
 

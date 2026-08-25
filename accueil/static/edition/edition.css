@@ -238,8 +238,13 @@
 }
 
 .carte-liste__image {
+  /* A fixed box, not just a width: the upload's own intrinsic size varies
+     by list (each declares its own `ratio`), and reserving only a width
+     still lets the image shift everything below it while it loads. */
   width: 6rem;
-  height: auto;
+  height: 6rem;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .carte-liste__texte {
@@ -270,6 +275,7 @@
 .carte-liste__details dd {
   display: inline;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .carte-liste__details dt::after {
@@ -301,6 +307,20 @@
 
 .liste-illisible form {
   margin-top: 0.5rem;
+}
+
+.liste-illisible__brut {
+  max-width: 100%;
+  padding: 0.75rem;
+  overflow-x: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.8125rem;
+  background: #f6f6f6;
+  border: 1px solid #ddd;
+}
+
+.liste__revenir {
+  margin: 0.5rem 0 1rem;
 }
 
 @media (min-width: 40rem) {

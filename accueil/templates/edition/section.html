@@ -27,15 +27,17 @@
     </div>
   </form>
 
-  {% for name in unreadable_lists %}
+  {% for name, raw in unreadable_lists.items %}
     <section class="liste-illisible c-box">
       <p>
         La liste <code>{{ name }}</code> contient une modification qui n'est plus reconnue par le code : elle
         ne peut pas être affichée ni modifiée depuis cet écran.
       </p>
+      <p>Le contenu actuellement enregistré, pour le copier avant de le perdre :</p>
+      <pre class="liste-illisible__brut">{{ raw }}</pre>
       <form method="post" action="{% url 'edition:reset-field' row.pk name %}">
         {% csrf_token %}
-        <button class="btn btn-sm btn-outline-primary white-space-nowrap" type="submit">Revenir au texte du code</button>
+        <button class="btn btn-sm btn-outline-danger white-space-nowrap" type="submit">Supprimer ces éléments et revenir au texte du code</button>
       </form>
     </section>
   {% endfor %}

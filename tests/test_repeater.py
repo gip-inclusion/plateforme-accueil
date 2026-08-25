@@ -731,3 +731,208 @@ def test_an_unreadable_list_is_not_shown_as_though_it_were_the_editors(client, e
     assert "n'est plus reconnue" in body
     assert "Nadia B." not in body  # the code's own content is not shown as a stand-in
     assert not any(board["name"] == "quotes" for board in response.context["boards"])
+
+
+def test_saving_a_section_with_an_unreadable_list_override_does_not_crash(client, editor, testimonials):
+    # Regression: `SectionForm.clean` preserves an unreadable override
+    # untouched into `self.instance.content`; `_post_clean` then runs
+    # `Section.clean` (the model) against it, which rejects it keyed on
+    # "content" — a field this form does not carry. Django's own
+    # `_update_errors` cannot attach that and used to raise `ValueError`
+    # instead of a `ValidationError`: a 500 on every save of a section
+    # carrying this, not just on an operation touching the broken list.
+    testimonials.content = {"quotes": []}  # violates min_num=1: no longer validates
+    testimonials.save(update_fields=["content"])
+    stored_before = Section.objects.get(pk=testimonials.pk).content
+
+    client.force_login(editor)
+    defaults = declared("testimonials").defaults()
+    data = {
+        "position": testimonials.position,
+        "active": "on",
+        "kicker": defaults["kicker"],
+        "title": "Un titre neuf",
+        "illustration_current": defaults["illustration"],
+        "illustration_credit": "",
+    }
+    response = client.post(reverse("edition:section", args=[testimonials.pk]), data)
+
+    assert response.status_code == 200  # redisplayed with the error, not a 500
+    assert any("quotes" in str(error) for error in response.context["form"].non_field_errors())
+    assert Section.objects.get(pk=testimonials.pk).content == stored_before
+    # The warning box, with its own path back to the code, is right there too.
+    assert "n'est plus reconnue" in response.content.decode()
+
+
+def test_the_title_heuristic_never_promotes_an_icon():
+    # Run over every declared list in the registry, not just the two cases
+    # the icon-first bug was found on: a heuristic this generic must hold
+    # everywhere, not just where someone happened to look.
+    from accueil.previews import item_parts
+    from accueil.sections.base import ListField
+
+    checked = 0
+    for section_type in registry.types():
+        for field in section_type.Form.base_fields.values():
+            if not isinstance(field, ListField) or not field.initial:
+                continue
+            for item in field.initial:
+                if "icon" not in item:
+                    continue
+                parts = item_parts(field, item)
+                checked += 1
+                assert parts["title"] != item["icon"]
+    assert checked > 0
+
+
+def test_advisors_tags_title_is_the_label_not_the_icon():
+    from accueil.previews import item_parts
+    from accueil.sections.advisors import Advisors
+
+    field = Advisors.Form.base_fields["tags"]
+    first = field.initial[0]
+
+    parts = item_parts(field, first)
+
+    assert parts["title"] == first["label"]
+
+
+def test_features_steps_title_is_the_title_field_not_the_icon():
+    from accueil.previews import item_parts
+    from accueil.sections.features import Features
+
+    field = Features.Form.base_fields["steps"]
+    first = field.initial[0]
+
+    parts = item_parts(field, first)
+
+    assert parts["title"] == first["title"]
+
+
+def test_a_nested_list_field_renders_as_a_count_not_a_repr():
+    # `profiles.Profile.steps` is a `ListField` nested inside another list's
+    # item form. Its default widget is a plain `TextInput`, so without
+    # special handling it falls through to `details` as a raw Python repr
+    # of a list of dicts — exactly the kind of thing this board exists to
+    # stop showing.
+    from accueil.previews import item_parts
+    from accueil.sections.profiles import Profiles
+
+    field = Profiles.Form.base_fields["profiles"]
+    first = field.initial[0]
+
+    parts = item_parts(field, first)
+
+    rendered = repr(parts)
+    assert "'detail':" not in rendered  # no raw dump of the nested steps' own fields
+    assert any(str(len(first["steps"])) in str(value) for _, value in parts["details"])
+
+
+def test_an_empty_optional_field_is_left_out_of_the_details():
+    from accueil.previews import item_parts
+
+    field = declared("testimonials").Form.base_fields["quotes"]
+    item = {"quote": "Un avis.", "name": "Ana", "role": ""}
+
+    parts = item_parts(field, item)
+
+    assert not any(label == "Fonction" for label, _ in parts["details"])
+
+
+def test_can_add_accounts_for_uploads_being_disabled(client, editor, figures, settings):
+    # `figures.Indicator.image` is a required `Illustration` with no
+    # `initial`: adding a new indicator is structurally impossible without
+    # uploads configured (`_blocks_creation_without_uploads`), which the
+    # board's own `can_add` (from `min_num`/`max_num` alone) cannot know.
+    settings.UPLOADS_ENABLED = False
+    client.force_login(editor)
+
+    response = client.get(reverse("edition:section", args=[figures.pk]))
+    board = next(board for board in response.context["boards"] if board["name"] == "indicators")
+
+    assert board["can_add"] is False
+
+
+def test_the_unreadable_warning_shows_the_raw_stored_content(client, editor, testimonials):
+    # The board's only way out (below) drops the override for good, and the
+    # admin's own textarea shows the same already-fallen-back content this
+    # screen would — so the raw JSON must be readable here, to copy out
+    # before either happens.
+    client.force_login(editor)
+    testimonials.content = {"quotes": []}
+    testimonials.save(update_fields=["content"])
+
+    body = client.get(reverse("edition:section", args=[testimonials.pk])).content.decode()
+
+    assert '<pre class="liste-illisible__brut">[]</pre>' in body
+
+
+def test_an_overridden_list_gets_its_own_labelled_control(client, editor, testimonials):
+    # A list's own reset is destructive in a different way than a one-line
+    # `kicker`'s: it must not sit, indistinguishable, in the generic
+    # "revenir au texte du code" list at the bottom.
+    client.force_login(editor)
+    testimonials.content = {"quotes": [{"quote": "Un avis modifié.", "name": "Ana", "role": ""}]}
+    testimonials.save(update_fields=["content"])
+
+    response = client.get(reverse("edition:section", args=[testimonials.pk]))
+    body = response.content.decode()
+
+    assert "quotes" not in response.context["overridden"]
+    assert "Supprimer ces modifications et revenir aux éléments du code" in body
+    assert "<code>quotes</code>" not in body
+
+
+def test_every_item_control_carries_the_concurrency_token(client, editor, testimonials):
+    # Mutation-proof: a template that dropped the hidden token from a
+    # control would still pass every functional test (every button would
+    # just always refuse), and the suite would stay green.
+    client.force_login(editor)
+    values = editing.list_values(testimonials, declared("testimonials"), "quotes")
+
+    body = client.get(reverse("edition:section", args=[testimonials.pk])).content.decode()
+
+    # move + duplicate + delete: three controls per item, each carrying it.
+    assert body.count('name="token"') == 3 * len(values)
+
+
+def test_move_buttons_are_disabled_at_the_ends_only(client, editor, testimonials):
+    # Mutation-proof: removing every `disabled` (or adding it everywhere)
+    # must be caught, not just the functional no-op it produces.
+    client.force_login(editor)
+
+    body = client.get(reverse("edition:section", args=[testimonials.pk])).content.decode()
+
+    assert body.count('aria-label="Monter cet élément" disabled') == 1
+    assert body.count('aria-label="Descendre cet élément" disabled') == 1
+
+
+def test_a_successful_save_never_builds_the_boards(client, editor, testimonials, monkeypatch):
+    # The boards (and the unreadable-override check behind them) are wasted
+    # work on a POST that is about to redirect away: `_boards` must only run
+    # when the screen is actually about to render.
+    import accueil.editing as editing_module
+
+    original = editing_module._boards
+    calls = []
+
+    def spy(row, section_type):
+        calls.append((row, section_type))
+        return original(row, section_type)
+
+    monkeypatch.setattr(editing_module, "_boards", spy)
+
+    client.force_login(editor)
+    defaults = declared("testimonials").defaults()
+    data = {
+        "position": testimonials.position,
+        "active": "on",
+        "kicker": defaults["kicker"],
+        "title": "Encore un autre titre.",
+        "illustration_current": defaults["illustration"],
+        "illustration_credit": "",
+    }
+    response = client.post(reverse("edition:section", args=[testimonials.pk]), data)
+
+    assert response.status_code == 302
+    assert calls == []

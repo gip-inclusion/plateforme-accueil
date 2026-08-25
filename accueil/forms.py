@@ -14,7 +14,7 @@ import json
 
 from django import forms
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.core.files.base import File
 
 from accueil import uploads
@@ -278,13 +278,11 @@ class SectionForm(forms.ModelForm):
         defaults = self.section_type.defaults()
         # What the form does not show, it does not decide — but only if the
         # code still declares it. A field the code still declares but this
-        # form does not carry keeps its override untouched: once a later task
-        # moves the lists to their own editing screen, this is what stops
-        # saving a section's other fields from wiping its list overrides.
-        # Unreachable today — `section_form_class` still builds one field per
-        # declared name, and `SectionForm.__init__` assumes as much (it would
-        # raise `KeyError` first) — so this branch only becomes live once that
-        # assumption is lifted alongside the lists' removal. A key the code no
+        # form does not carry keeps its override untouched: since Task 11
+        # (which builds this form with `with_lists=False` for `/edition/`'s
+        # section screen), this is what stops saving a section's other
+        # fields from wiping its list overrides — every `ListField` reaches
+        # here through this branch, not the one below. A key the code no
         # longer declares at all is dropped, as it always was: `Section.clean`
         # (accueil/models.py) rejects an undeclared key at every save, so
         # keeping it here would 500 the editing screen for any section still
@@ -316,6 +314,31 @@ class SectionForm(forms.ModelForm):
         }
         self.instance.content = content
         return cleaned
+
+    def _update_errors(self, errors):
+        # `clean()` above preserves a field the code still declares but this
+        # form does not carry (every `ListField`, once built with
+        # `with_lists=False`) untouched in `self.instance.content` — including
+        # when that preserved value is an override that no longer validates
+        # (`accueil.lists._override_is_unreadable`'s case). `_post_clean`
+        # then runs `self.instance.full_clean()`, and `Section.clean` (the
+        # model) rejects that content, keyed on `"content"` — a column no
+        # field on *this* form carries. Django's own `_update_errors` cannot
+        # attach an error to a field the form does not have and raises
+        # `ValueError` instead of the `ValidationError` it is meant to
+        # surface. Before Task 7, an unreadable override was silently
+        # overwritten by the code's own content, since the whole form
+        # validated; before this fix, Task 11 traded that for a 500 on
+        # every save of a section carrying one — a more honest failure, but
+        # still not a legible one. Any field-keyed error this form cannot
+        # carry is folded into the form-wide error list instead.
+        if hasattr(errors, "error_dict"):
+            merged = {}
+            for field, messages in errors.error_dict.items():
+                key = field if field in self.fields or field == NON_FIELD_ERRORS else NON_FIELD_ERRORS
+                merged.setdefault(key, []).extend(messages)
+            errors = ValidationError(merged)
+        super()._update_errors(errors)
 
 
 def item_form_class(list_field):

@@ -7,11 +7,20 @@
 {# a change refuses afterwards rather than act on a shifted index. #}
 <section class="liste c-box">
   <div class="liste__entete">
-    <h2>{{ board.label }}</h2>
+    <h2>{{ board.label }}{% if board.customised %} <span class="tag">modifié</span>{% endif %}</h2>
     {% if board.can_add %}
       <a class="btn btn-sm btn-primary" href="{% url 'edition:item-add' row.pk board.name %}">Ajouter</a>
     {% endif %}
   </div>
+
+  {% if board.customised %}
+    <form class="liste__revenir" method="post" action="{% url 'edition:reset-field' row.pk board.name %}">
+      {% csrf_token %}
+      <button class="btn btn-sm btn-outline-primary white-space-nowrap" type="submit">
+        Supprimer ces modifications et revenir aux éléments du code
+      </button>
+    </form>
+  {% endif %}
 
   {% for item in board.items %}
     <article class="carte-liste">

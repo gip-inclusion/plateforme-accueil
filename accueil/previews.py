@@ -18,22 +18,39 @@ from accueil.lists import _digest
 from accueil.sections import Credit, Illustration, ListField, Reference
 
 
+# A field named one of these holds the item's own name, whichever position it
+# is declared at — checked in this order, so a form that declares both (it
+# never does today) picks `title` first. Preferred over "the first short
+# field", which promotes whatever happens to be declared first: several item
+# forms (`advisors.Tag`, `features.Step`, `profiles.Profile`) declare `icon`
+# before their real name, and an icon (`ri-home-smile-2-line`) is never a
+# title. Checked over the *name* Python identifiers actually use across this
+# codebase (CLAUDE.md: identifiers are English, and consistent), not a
+# per-section special case.
+TITLE_FIELD_NAMES = ("title", "label")
+
+
 def item_parts(list_field, item):
     """Decompose one item into what its card shows, in declaration order.
 
     Follows the table settled with the project owner: an `Illustration`
-    becomes the thumbnail, the first short text field becomes the card's
-    title, a field whose widget is a `Textarea` becomes a paragraph shown in
-    full, the remaining short fields become `label: value` details, a
-    `Reference` or an `IntegerField` becomes a setting shown at the bottom,
-    and a `Credit` never appears — it is an internal provenance note, not
-    content.
+    becomes the thumbnail, a field named like a title (`TITLE_FIELD_NAMES`)
+    becomes the card's title — falling back to the first remaining short
+    field, but never to `icon`, which never names the item — a field whose
+    widget is a `Textarea` becomes a paragraph shown in full, a nested
+    `ListField` (`profiles.Profile.steps`) becomes a count rather than a raw
+    dump of dicts, the remaining short fields become `label: value` details,
+    a `Reference` or an `IntegerField` becomes a setting shown at the
+    bottom, and a `Credit` never appears — it is an internal provenance
+    note, not content. An empty optional value (`role=""`, say) is left out
+    of `details`/`settings` entirely, rather than shown as a dangling label.
     """
     image = None
-    title = None
+    candidates = []  # (name, field, value), in declaration order
     paragraphs = []
     details = []
     settings = []
+
     for name, field in list_field.item_form.base_fields.items():
         if isinstance(field, Credit):
             continue
@@ -41,13 +58,36 @@ def item_parts(list_field, item):
         if isinstance(field, Illustration):
             image = value
         elif isinstance(field, (Reference, forms.IntegerField)):
-            settings.append((field.label, value))
+            if value not in (None, ""):
+                settings.append((field.label, value))
+        elif isinstance(field, ListField):
+            details.append((field.label, f"{len(value or [])} élément(s)"))
         elif isinstance(field.widget, forms.Textarea):
             paragraphs.append(value)
-        elif title is None:
-            title = value
         else:
+            candidates.append((name, field, value))
+
+    title = None
+    title_index = None
+    for wanted in TITLE_FIELD_NAMES:
+        for index, (name, field, value) in enumerate(candidates):
+            if name == wanted:
+                title, title_index = value, index
+                break
+        if title_index is not None:
+            break
+    if title_index is None:
+        for index, (name, field, value) in enumerate(candidates):
+            if name != "icon":
+                title, title_index = value, index
+                break
+    if title_index is not None:
+        del candidates[title_index]
+
+    for name, field, value in candidates:
+        if value not in (None, ""):
             details.append((field.label, value))
+
     return {
         "image": image,
         "title": title,
@@ -70,7 +110,10 @@ def section_lists(section_type, content):
     at either end (`index == 0`, `last`) — a `token`, the same digest
     `accueil.lists._digest` computes for that list's operations, and whether
     adding or deleting is allowed right now, from the field's
-    `min_num`/`max_num`.
+    `min_num`/`max_num`. `can_add` does not know about upload availability
+    (`accueil.editing._blocks_creation_without_uploads`): that is a
+    deployment fact, not something a declaration can answer, so the caller
+    narrows it further.
     """
     boards = []
     for name, field in section_type.Form.base_fields.items():
