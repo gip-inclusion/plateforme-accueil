@@ -147,9 +147,9 @@ class ListField(forms.Field):
     """A repeatable block, stored as a list of dictionaries.
 
     Each item is validated by an ordinary Django form, so a card or a shortcut
-    declares its fields exactly like a section does. The editing UI for these
-    is still to come; until then they are edited as JSON, and the validation
-    here is what keeps that honest.
+    declares its fields exactly like a section does. `/edition/` edits a
+    top-level list item by item, on a board; a list nested *inside* an item is
+    still edited as JSON, and the validation here is what keeps that honest.
 
     Construction is not side-effect free: it permanently adds credit fields to
     `item_form`, the class the caller passed in.

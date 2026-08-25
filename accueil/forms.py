@@ -1,10 +1,10 @@
 """Editing a section through the fields it declares.
 
 A section type already describes its content as a Django form, so the editor is
-that form — no per-section code. Two things are added here: a readable widget
-for repeatable lists (JSON, which only the admin still needs now that `/edition/`
-edits them item by item), and the rule that only *differences* from the code are
-stored.
+that form — no per-section code. Two things are added here: a readable JSON
+widget for repeatable lists — which the admin still needs for every list, and
+`/edition/` only for a list nested inside an item, its own board handling the
+rest — and the rule that only *differences* from the code are stored.
 
 Used by both the admin and `/edition/`.
 """
