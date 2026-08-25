@@ -23,3 +23,9 @@ dans `css/main.css`.
 Redépose un fichier au **même nom/format** pour l'écraser. Pour repartir d'un
 PNG source, préviens-moi : je le ré-optimise et j'ajuste la référence si le
 format change.
+
+Ces fichiers ne sont que le **défaut du code** : un rédacteur peut remplacer
+n'importe laquelle de ces images depuis `/edition/`, sans toucher au dépôt —
+le fichier posté est alors recadré, réduit et converti, et stocké à part.
+« Revenir au texte du code », sur l'écran de la section, ramène exactement le
+fichier listé ici.

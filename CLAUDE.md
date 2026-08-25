@@ -71,10 +71,34 @@ d'un rédacteur n'est jamais marqué `safe`. Le titre du héros porte un saut de
 ligne et passe par `|linebreaksbr` (voir `hero.py`).
 
 Une liste répétable (cartes, raccourcis) se déclare avec `ListField`, dont
-chaque élément est validé par un formulaire ordinaire.
+chaque élément est validé par un formulaire ordinaire. Elle s'édite ensuite
+élément par élément sur un tableau, dans `/edition/` — une liste imbriquée
+dans un élément (les étapes d'un profil) reste éditée en JSON brut, un
+plancher et non une cible.
 
 Les valeurs `initial` sont du contenu de production : elles se relisent en revue
 comme du texte, pas comme du code.
+
+Une image se déclare avec `Illustration(max_width=…, ratio=…)`. `max_width`
+n'est ni l'attribut HTML `width` (que le CSS écrase) ni la taille du fichier
+source : c'est deux fois la plus grande largeur à laquelle l'image s'affiche
+réellement **dans le CSS**, toutes largeurs d'écran confondues — à mesurer
+dans la feuille de style et à documenter en commentaire à côté de la
+déclaration, pour rester vérifiable. `ratio`, quand il est déclaré, est le
+format auquel un téléversement est recadré ; sans lui, les attributs
+`width`/`height` codés en dur dans le gabarit mentiraient dès qu'un rédacteur
+enverrait une image d'une autre forme. La valeur reste une chaîne à deux
+formes — un chemin sous `accueil/static/` pour le défaut du code, ou une clé
+`uploads/<hash>.webp` pour un téléversement — et un gabarit la résout
+toujours par le filtre `illustration`, jamais par `{% static %}`.
+
+Une `Illustration` dans un élément de liste répétable ne porte **pas**
+d'`initial` : un défaut y mettrait la photo d'un élément sur le contenu d'un
+autre, et les valeurs `initial` se relisent en revue comme du contenu de
+production, pas comme un espace réservé.
+
+Chaque `Illustration` reçoit automatiquement un champ `<name>_credit` pour sa
+provenance — jamais affiché sur la page publique, une note pour l'équipe.
 
 ### Base de données
 
