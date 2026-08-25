@@ -80,9 +80,6 @@ class Illustration(forms.CharField):
         super().__init__(**kwargs)
 
 
-UPLOAD_PREFIX = "uploads/"  # tells an uploaded file's storage key apart from a static path
-
-
 CREDIT_SUFFIX = "_credit"  # appended to an illustration's name to name its credit field
 
 

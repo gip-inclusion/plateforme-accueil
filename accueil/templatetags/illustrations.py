@@ -16,7 +16,7 @@ from django import template
 from django.core.files.storage import storages
 from django.templatetags.static import static
 
-from accueil.sections.base import UPLOAD_PREFIX
+from accueil.uploads import UPLOAD_PREFIX
 
 
 register = template.Library()

@@ -215,11 +215,39 @@ def test_a_transparent_pictogram_keeps_its_alpha_channel(tmp_path, settings):
     assert image.getpixel((0, 0))[3] == 0
 
 
-def test_a_huge_pixel_count_is_refused_before_decoding(tmp_path, settings):
+def test_a_huge_pixel_count_is_refused_before_decoding(tmp_path, settings, monkeypatch):
     # Une taille compressée modeste peut encore déclarer des dimensions
-    # énormes : le refus doit se faire sur les dimensions déclarées, pas
-    # après avoir décodé le bitmap complet.
+    # énormes : le refus doit se faire sur les dimensions déclarées, avant
+    # même d'appeler `.load()` — on épingle l'ordre, pas seulement le refus.
     settings.MEDIA_ROOT = tmp_path
     bomb = a_file(9000, 9000)  # 81 mégapixels, au-delà de MAX_PIXELS
-    with pytest.raises(ValidationError):
+
+    def boom(self, *args, **kwargs):
+        raise AssertionError("image.load() ne doit pas être appelé sur une image trop grande")
+
+    monkeypatch.setattr(Image.Image, "load", boom)
+    with pytest.raises(ValidationError, match="pixels"):
         uploads.store(bomb, max_width=800)
+
+
+def test_a_sliver_source_does_not_round_a_dimension_to_zero(tmp_path, settings):
+    # 2000x1 avec max_width=800 : round(1 * 800/2000) == round(0.4) == 0 sans
+    # le clamp — de quoi faire planter `ImageOps.fit` avec une division par
+    # zéro.
+    _, image = stored(tmp_path, settings, a_file(2000, 1), max_width=800)
+    assert image.size == (800, 1)
+
+
+def test_an_extreme_ratio_is_clamped_both_ways(tmp_path, settings):
+    # Une source 1x1 face à un ratio très large ou très haut arrondit une
+    # dimension à 0 des deux côtés de la branche `ratio` sans le clamp.
+    _, wide = stored(tmp_path, settings, a_file(1, 1), max_width=100, ratio=(32, 1))
+    assert wide.size == (1, 1)
+
+    _, tall = stored(tmp_path, settings, a_file(1, 1), max_width=100, ratio=(1, 32))
+    assert tall.size == (1, 1)
+
+
+def test_a_source_exactly_at_max_width_is_unchanged(tmp_path, settings):
+    _, image = stored(tmp_path, settings, a_file(500, 300), max_width=500)
+    assert image.size == (500, 300)
