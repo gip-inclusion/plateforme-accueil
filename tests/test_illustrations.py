@@ -106,3 +106,29 @@ def test_add_credit_fields_respects_a_hand_declared_credit():
     add_credit_fields(Form)
     assert isinstance(Form.base_fields["visual_credit"], CustomCredit)
     assert Form.base_fields["visual_credit"].required is True
+
+
+def test_a_subclass_of_a_processed_form_keeps_the_credit_field():
+    class Form(forms.Form):
+        visual = Illustration(max_width=800, initial="accueil/img/x.webp")
+
+    add_credit_fields(Form)
+
+    class Subform(Form):
+        pass
+
+    assert isinstance(Subform.base_fields["visual_credit"], Credit)
+
+
+def test_illustration_name_survives_deepcopy_and_a_form_instance():
+    class Form(forms.Form):
+        visual = Illustration(max_width=800, initial="accueil/img/x.webp")
+
+    add_credit_fields(Form)
+    credit_field = Form.base_fields["visual_credit"]
+
+    clone = copy.deepcopy(credit_field)
+    assert clone.illustration_name == "visual"
+
+    bound_form = Form()
+    assert bound_form.fields["visual_credit"].illustration_name == "visual"

@@ -69,11 +69,8 @@ class Credit(forms.CharField):
     """Provenance or licence of an uploaded image.
 
     Optional, and never shown on the public page: it is a note for the team.
-    A distinct type so a preview builder can leave it out of displayed
-    content, and so it stands out at a glance in a declaration. `add_credit_fields`
-    names each instance it injects after `CREDIT_SUFFIX`, and records the
-    illustration it belongs to on `illustration_name` — so downstream code
-    asks the field for its pairing rather than parsing its name.
+    A distinct type so the `/pilotage/` live preview can leave it out of
+    displayed content, and so it stands out at a glance in a declaration.
     """
 
 
@@ -82,13 +79,21 @@ def add_credit_fields(form_class):
 
     Injected rather than declared: a compliance field a section could forget
     to write would be forgotten. Called when a section type registers and
-    when a `ListField` is built, so repeated items get one too.
+    when a `ListField` is built, so repeated items get one too. Names each
+    field after `CREDIT_SUFFIX` and records the illustration it belongs to on
+    `illustration_name`, so downstream code asks the field for its pairing
+    rather than parsing its name.
 
     Rebuilds `base_fields` rather than appending, so each credit field sits
-    right after the illustration it describes. Idempotent, and a no-op for a
-    field a form already declares by hand: both re-registering a form and a
-    hand-declared override are legitimate, and neither should duplicate or
-    displace a field.
+    right after the illustration it describes — moving a hand-declared credit
+    there too rather than leaving it trailing, though its identity is kept,
+    never duplicated or replaced. Idempotent: a repeated call finds every
+    credit field already in place and changes nothing.
+
+    Also rebinds `declared_fields`, which Django's metaclass sets to the same
+    dict object at class creation: a subclass's own fields are collected from
+    its bases' `declared_fields`, not their `base_fields`, so leaving it
+    stale would silently drop the injected fields from any subclass.
     """
     fields = form_class.base_fields
     rebuilt = {}
@@ -109,6 +114,7 @@ def add_credit_fields(form_class):
         credit.illustration_name = name
         rebuilt[credit_name] = credit
     form_class.base_fields = rebuilt
+    form_class.declared_fields = rebuilt
 
 
 class ListField(forms.Field):
