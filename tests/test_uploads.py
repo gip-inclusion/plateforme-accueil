@@ -1,13 +1,18 @@
 """Téléversement d'images : traitement, nommage, stockage."""
 
 import importlib
+import io
 
 import pytest
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, override_settings
 from django.urls import clear_url_caches
+from PIL import Image
 
 import config.settings
 import config.urls
+from accueil import uploads
 from accueil.templatetags.illustrations import illustration
 
 
@@ -133,3 +138,88 @@ def test_a_locally_stored_upload_is_actually_served(tmp_path):
     finally:
         importlib.reload(config.urls)
         clear_url_caches()
+
+
+def a_file(width, height, name="photo.png", colour=(120, 90, 60)):
+    buffer = io.BytesIO()
+    Image.new("RGB", (width, height), colour).save(buffer, format="PNG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
+
+def a_transparent_file(width, height, name="pictogram.png"):
+    # Un pictogramme typique : fond transparent, un coin repérable pour
+    # vérifier que le canal alpha survit au traitement.
+    buffer = io.BytesIO()
+    image = Image.new("RGBA", (width, height), (10, 20, 30, 255))
+    image.putpixel((0, 0), (0, 0, 0, 0))
+    image.save(buffer, format="PNG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
+
+def stored(tmp_path, settings, uploaded, **kwargs):
+    settings.MEDIA_ROOT = tmp_path
+    key = uploads.store(uploaded, **kwargs)
+    return key, Image.open(tmp_path / key)
+
+
+def test_a_large_image_is_narrowed_and_converted(tmp_path, settings):
+    key, image = stored(tmp_path, settings, a_file(2400, 1500), max_width=800, ratio=(16, 10))
+    assert key.startswith("uploads/") and key.endswith(".webp")
+    assert image.format == "WEBP"
+    assert image.size == (800, 500)
+
+
+def test_a_small_image_is_never_enlarged(tmp_path, settings):
+    _, image = stored(tmp_path, settings, a_file(320, 200), max_width=800, ratio=(16, 10))
+    assert image.size == (320, 200)
+
+
+def test_a_wrong_shape_is_cropped_to_the_declared_ratio(tmp_path, settings):
+    # Le gabarit code width=122 height=86 : une image carrée doit en ressortir
+    # au bon format, sinon l'attribut ment et la page saute.
+    _, image = stored(tmp_path, settings, a_file(1000, 1000), max_width=366, ratio=(122, 86))
+    assert image.size == (366, 258)
+
+
+def test_without_a_ratio_the_shape_is_kept(tmp_path, settings):
+    _, image = stored(tmp_path, settings, a_file(1000, 400), max_width=500)
+    assert image.size == (500, 200)
+
+
+def test_the_same_file_twice_gives_the_same_key(tmp_path, settings):
+    first, _ = stored(tmp_path, settings, a_file(400, 250), max_width=400, ratio=(16, 10))
+    second, _ = stored(tmp_path, settings, a_file(400, 250), max_width=400, ratio=(16, 10))
+    assert first == second
+
+
+def test_something_that_is_not_an_image_is_refused(tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path
+    not_an_image = SimpleUploadedFile("cv.pdf", b"%PDF-1.4 not an image", content_type="application/pdf")
+    with pytest.raises(ValidationError):
+        uploads.store(not_an_image, max_width=800)
+
+
+def test_an_oversized_file_is_refused(tmp_path, settings):
+    settings.MEDIA_ROOT = tmp_path
+    heavy = SimpleUploadedFile("huge.png", b"x" * (uploads.MAX_BYTES + 1), content_type="image/png")
+    with pytest.raises(ValidationError):
+        uploads.store(heavy, max_width=800)
+
+
+def test_a_transparent_pictogram_keeps_its_alpha_channel(tmp_path, settings):
+    # Trois des quatre illustrations déclarées sont des WebP susceptibles
+    # d'avoir un fond transparent (pictogrammes) : les aplatir sur un noir
+    # implicite serait faux.
+    _, image = stored(tmp_path, settings, a_transparent_file(200, 200), max_width=200)
+    assert image.mode == "RGBA"
+    assert image.getpixel((0, 0))[3] == 0
+
+
+def test_a_huge_pixel_count_is_refused_before_decoding(tmp_path, settings):
+    # Une taille compressée modeste peut encore déclarer des dimensions
+    # énormes : le refus doit se faire sur les dimensions déclarées, pas
+    # après avoir décodé le bitmap complet.
+    settings.MEDIA_ROOT = tmp_path
+    bomb = a_file(9000, 9000)  # 81 mégapixels, au-delà de MAX_PIXELS
+    with pytest.raises(ValidationError):
+        uploads.store(bomb, max_width=800)
