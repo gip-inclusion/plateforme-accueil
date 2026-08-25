@@ -3,6 +3,7 @@
 import copy
 
 from django import forms
+from django.conf import settings
 from django.template import Context, Template
 from django.test import override_settings
 
@@ -139,12 +140,30 @@ def test_illustration_name_survives_deepcopy_and_a_form_instance():
 
 def test_a_code_path_resolves_through_staticfiles():
     assert illustration("accueil/img/hero.webp").endswith("accueil/img/hero.webp")
-    assert illustration("accueil/img/hero.webp").startswith("/static/")
+    assert illustration("accueil/img/hero.webp").startswith(settings.STATIC_URL)
 
 
-@override_settings(MEDIA_URL="/media/")
+class StubStorage:
+    """Un backend factice : renvoie une sentinelle, pour vérifier que le
+    filtre délègue bien à la storage plutôt que de concaténer `MEDIA_URL`."""
+
+    def url(self, name):
+        return f"https://cdn.example.test/{name}"
+
+
+class RaisingStorage:
+    """Simule un bucket mal configuré : `url()` explose comme le ferait
+    `storages["default"]` instancié en retard face à un réglage S3 invalide."""
+
+    def url(self, name):
+        raise Exception("boom")
+
+
+@override_settings(STORAGES={"default": {"BACKEND": f"{__name__}.StubStorage"}})
 def test_an_upload_key_resolves_through_the_media_store():
-    assert illustration("uploads/abc123.webp") == "/media/uploads/abc123.webp"
+    # Une simple concaténation de MEDIA_URL donnerait aussi ce résultat sur un
+    # backend fichier ; ce stub prouve que c'est bien la storage qui décide.
+    assert illustration("uploads/abc123.webp") == "https://cdn.example.test/uploads/abc123.webp"
 
 
 def test_an_empty_value_gives_an_empty_string():
@@ -154,8 +173,28 @@ def test_an_empty_value_gives_an_empty_string():
     assert illustration(None) == ""
 
 
+def test_a_non_string_value_gives_an_empty_string():
+    # Le filtre est appelé depuis un template : il ne doit jamais lever.
+    assert illustration(42) == ""
+
+
+def test_a_path_escaping_the_static_prefix_gives_an_empty_string():
+    # `urljoin` gomme les `..` et peut sortir de STATIC_URL : une valeur du
+    # code n'a rien à faire hors du préfixe statique.
+    assert illustration("../../etc/passwd") == ""
+    assert illustration("accueil/img/../../../etc/passwd") == ""
+
+
+@override_settings(STORAGES={"default": {"BACKEND": f"{__name__}.RaisingStorage"}})
+def test_a_broken_storage_gives_an_empty_string_instead_of_a_500():
+    # La page publique importe plus que l'image : une storage mal configurée
+    # (bucket S3 absent, credentials invalides) ne doit jamais faire tomber le
+    # rendu du template.
+    assert illustration("uploads/abc123.webp") == ""
+
+
 def test_the_filter_is_usable_from_a_template():
     rendered = Template("{% load illustrations %}{{ path|illustration }}").render(
         Context({"path": "accueil/img/hero.webp"})
     )
-    assert rendered.startswith("/static/")
+    assert rendered.startswith(settings.STATIC_URL)
