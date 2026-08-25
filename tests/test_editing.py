@@ -373,3 +373,37 @@ def test_an_illustration_error_is_associated_with_its_field(client, editor, tmp_
     body = response.content.decode()
     assert 'aria-describedby="id_illustration_helptext id_illustration_error"' in body
     assert 'id="id_illustration_error"' in body
+
+
+def test_saving_a_section_keeps_overrides_the_form_does_not_carry(client, editor, monkeypatch):
+    from accueil.sections.testimonials import Testimonials
+
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    row.content = {"quotes": [{"quote": "Épatant.", "name": "Ana", "role": ""}]}
+    row.save()
+
+    # Simule la disparition prochaine de `quotes` du formulaire (une tâche à
+    # venir déplace les listes vers leur propre écran d'édition). Sans ça, le
+    # formulaire soumettrait encore les témoignages tels quels et le test
+    # passerait pour de mauvaises raisons.
+    trimmed = {name: field for name, field in Testimonials.Form.base_fields.items() if name != "quotes"}
+    monkeypatch.setattr(Testimonials.Form, "base_fields", trimmed)
+    # Validation du modèle : `Section.clean` rejette un contenu dont une clé
+    # n'existe plus dans `Form.base_fields`, exactement ce que fait le
+    # monkeypatch ci-dessus. Le futur écran dédié aux listes réconciliera ça ;
+    # ce n'est pas ce que ce test vérifie, donc on le neutralise ici.
+    monkeypatch.setattr(Section, "clean", lambda self: None)
+
+    url = reverse("edition:section", args=[row.pk])
+    form = client.get(url).context["form"]
+    assert "quotes" not in form.fields
+    data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
+    data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
+    data["title"] = "Un autre titre."
+
+    assert client.post(url, data).status_code == 302
+
+    row.refresh_from_db()
+    assert row.content["title"] == "Un autre titre."
+    assert row.content["quotes"][0]["name"] == "Ana"

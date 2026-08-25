@@ -229,14 +229,19 @@ class SectionForm(forms.ModelForm):
         if self.section_type is None:
             return cleaned
         defaults = self.section_type.defaults()
-        # Store the differences only. Comparing the cleaned value against the
-        # default is what keeps `content` empty for untouched sections, so a
-        # wording changed in a pull request still reaches the page.
-        self.instance.content = {
+        # What the form does not show, it does not decide: overrides on fields
+        # absent from the form — the lists, edited elsewhere — are kept as they
+        # are.
+        content = {name: value for name, value in self.instance.content.items() if name not in self.fields}
+        # For the rest, store only the differences. Comparing against the
+        # default is what keeps `content` empty on an untouched section, and so
+        # what lets a wording changed in a pull request reach the page.
+        content |= {
             name: cleaned[name]
             for name in self.section_type.Form.base_fields
-            if name in cleaned and cleaned[name] != defaults[name]
+            if name in cleaned and name in self.fields and cleaned[name] != defaults[name]
         }
+        self.instance.content = content
         return cleaned
 
 
