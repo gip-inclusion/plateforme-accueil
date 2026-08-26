@@ -214,11 +214,16 @@ if S3_CONFIGURED:
             # Files are named by a hash of their content: they never change,
             # so the cache can be immortal.
             "object_parameters": {"CacheControl": "public, max-age=31536000, immutable"},
-            # The bucket is publicly readable, so no signed URL — and
-            # signing would make botocore resolve credentials on every URL,
-            # which on a container without explicit keys turns into a
-            # network call (IMDS) per image and per request. Without
-            # signing, `url()` stays plain string composition.
+            # Uploaded objects are world-readable. A bucket ACL is not enough
+            # on its own: in S3 it grants listing, while reading an object
+            # depends on that object's own ACL — so without this every
+            # unsigned URL would answer 403.
+            "default_acl": "public-read",
+            # Readable objects mean no signed URL — and signing would make
+            # botocore resolve credentials on every URL, which on a container
+            # without explicit keys turns into a network call (IMDS) per image
+            # and per request. Without signing, `url()` stays plain string
+            # composition.
             "querystring_auth": False,
             # Content-hash naming means a key never needs a new name: state
             # this explicitly rather than resting on the library default.
