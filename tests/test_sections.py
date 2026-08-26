@@ -37,10 +37,10 @@ def _displayed(section_type, content):
         if isinstance(field, sections.ListField):
             for item in content.get(name) or []:
                 for sub_name, sub_field in field.item_form.base_fields.items():
-                    if isinstance(sub_field, sections.Reference):
+                    if isinstance(sub_field, (sections.Reference, sections.Credit)):
                         continue
                     yield f"{name}.{sub_name}", item.get(sub_name)
-        elif not isinstance(field, sections.Reference):
+        elif not isinstance(field, (sections.Reference, sections.Credit)):
             yield name, content.get(name)
 
 
@@ -180,3 +180,16 @@ def test_a_reference_rejects_a_space():
     profiles[0]["slug"] = "pro conseil"
     with pytest.raises(ValidationError, match="Élément 1"):
         Profiles.clean_value("profiles", profiles)
+
+
+def test_every_declared_list_validates_its_own_defaults():
+    # A declaration that raises `min_num` without extending `initial`, adds
+    # `unique=` over duplicate defaults, or adds a required item subfield
+    # would otherwise only surface once an editor tried to save that
+    # section's list — presented as though the editor's edit were at fault,
+    # when the bug is in the code's own default. Cleaning here, once, in the
+    # suite, turns that into a red test instead.
+    for section_type in sections.registry.types():
+        for name, field in section_type.Form.base_fields.items():
+            if isinstance(field, sections.ListField):
+                field.clean(field.initial)  # raises ValidationError if the code's own default is invalid

@@ -13,27 +13,47 @@
   </div>
 
   {% if form.non_field_errors %}
-    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    <div class="alert alert-danger">
+      {{ form.non_field_errors }}
+      {% if unreadable_lists %}
+        <p>
+          Voir plus bas :
+          {% for name, info in unreadable_lists.items %}<a href="#liste-illisible-{{ name }}">{{ info.label }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.
+        </p>
+      {% endif %}
+    </div>
   {% endif %}
 
-  <form class="editeur c-box" method="post">
+  <form class="editeur c-box" method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    {% for field in form %}
-      <div class="champ{% if field.errors %} champ--erreur{% endif %}">
-        <label for="{{ field.id_for_label }}">
-          {{ field.label }}
-          {% if field.name in overridden %}<span class="tag">modifié</span>{% endif %}
-        </label>
-        {{ field }}
-        {% if field.help_text %}<p class="champ__aide">{{ field.help_text }}</p>{% endif %}
-        {% for error in field.errors %}<p class="champ__erreur">{{ error }}</p>{% endfor %}
-      </div>
+    {% for champ in form %}
+      {% include "edition/_champ.html" with champ=champ overridden=overridden %}
     {% endfor %}
     <div class="editeur__actions">
       <a class="btn btn-outline-primary" href="{% url 'edition:plan' %}">Annuler</a>
       <button class="btn btn-primary" type="submit">Enregistrer</button>
     </div>
   </form>
+
+  {% for name, info in unreadable_lists.items %}
+    <section class="liste-illisible c-box" id="liste-illisible-{{ name }}">
+      <p>
+        La liste « {{ info.label }} » est illisible : une modification qu'elle contient n'est plus reconnue
+        par le code, et elle ne peut donc être ni affichée ni modifiée depuis cet écran. Tant qu'elle ne
+        l'est pas, aucune modification de cette section ne peut être enregistrée.
+      </p>
+      <p>Le contenu actuellement enregistré, pour le copier avant de le perdre :</p>
+      <pre class="liste-illisible__brut">{{ info.raw }}</pre>
+      <form method="post" action="{% url 'edition:reset-field' row.pk name %}">
+        {% csrf_token %}
+        <button class="btn btn-sm btn-outline-danger white-space-nowrap" type="submit">Supprimer ces éléments et revenir au texte du code</button>
+      </form>
+    </section>
+  {% endfor %}
+
+  {% for board in boards %}
+    {% include "edition/_items.html" with board=board row=row %}
+  {% endfor %}
 
   {% if overridden %}
     <section class="revenir c-box">
@@ -43,9 +63,9 @@
         faite dans le code ne s'affichera pas.
       </p>
       <ul class="revenir__liste">
-        {% for name in overridden %}
+        {% for name, label in overridden.items %}
           <li>
-            <code>{{ name }}</code>
+            {{ label }}
             <form method="post" action="{% url 'edition:reset-field' row.pk name %}">
               {% csrf_token %}
               <button class="btn btn-sm btn-outline-primary white-space-nowrap" type="submit">Revenir au texte du code</button>

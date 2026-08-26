@@ -41,6 +41,37 @@ uv run python manage.py createsuperuser
 make dev     # puis http://localhost:8000/admin/
 ```
 
+Les images téléversées par les rédacteurs (`Illustration`) sont stockées sur un
+bucket S3, configuré par les variables d'environnement `AWS_STORAGE_BUCKET_NAME`,
+`AWS_S3_ENDPOINT_URL`, `AWS_S3_REGION_NAME`, `AWS_ACCESS_KEY_ID` et
+`AWS_SECRET_ACCESS_KEY` ; il faut les cinq pour que le bucket soit utilisé, sinon
+la page se contente des illustrations du code et l'interface refuse le
+téléversement. Pour tester le téléversement en local sans bucket, sans jamais le
+faire dépendre de `DEBUG` :
+
+```bash
+export LOCAL_UPLOADS_ENABLED=1   # stocke sur disque, sert /media/ en dev
+```
+
+`LOCAL_UPLOADS_ENABLED` ne doit **jamais** être positionnée sur un conteneur
+déployé : elle sert les fichiers via `django.views.static.serve`, que Django
+documente comme impropre à la production, et le disque du conteneur est
+éphémère — tout fichier stocké ainsi disparaît au prochain déploiement.
+
+Quand un rédacteur remplace une image depuis `/edition/`, le fichier posté est
+recadré au format déclaré, réduit à la largeur utile de l'image sur la page,
+converti en WebP et nommé d'après le hachage de son contenu. Deux
+conséquences : un même fichier reposté deux fois ne crée jamais de doublon, et
+le nom ne change jamais — le fichier peut donc être mis en cache
+indéfiniment. Sans stockage durable configuré (ni bucket, ni
+`LOCAL_UPLOADS_ENABLED`), l'interface n'offre simplement pas le
+sélecteur de fichier.
+
+Sans base de données, `make test` saute 141 tests sur 239 (édition,
+téléversement, opérations sur les listes) : il vérifie seulement que la page
+s'affiche, jamais qu'on peut la modifier. Pour une vérification complète,
+lancer la suite avec `DATABASE_URL` positionnée.
+
 Le déploiement est automatique à chaque push sur `main` ; il applique les
 migrations avant de basculer la nouvelle révision, et ne fait rien de ce côté
 si aucune base n'est configurée.
@@ -111,6 +142,14 @@ accordé par SSO.
 
 En local, sans ces variables, `DEBUG=1` suffit : `createsuperuser` puis
 `/edition/`.
+
+Une liste répétable (cartes, raccourcis, étapes…) s'édite sur une planche, à
+même l'écran de la section : chaque élément y est montré en entier, jamais en
+résumé. Ajouter, modifier, dupliquer, déplacer et supprimer sont des actions
+de formulaire ordinaires, sans JavaScript — ouvrir un élément mène à un écran
+dédié avec ses propres champs, y compris son image le cas échéant. Une liste
+imbriquée dans un élément (les étapes d'un profil, par exemple) reste éditée
+comme du JSON brut : c'est un plancher, pas une cible.
 
 ## Embarquer la page en iframe
 

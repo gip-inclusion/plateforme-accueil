@@ -1,14 +1,17 @@
 """The editing UI: who gets in, and what the page must never become."""
 
+import io
 import json
 
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.shortcuts import resolve_url
 from django.test import override_settings
 from django.urls import reverse
+from PIL import Image
 
 from accueil.models import Section
 
@@ -102,8 +105,11 @@ def test_the_editor_shows_the_declared_fields(client, editor):
     client.force_login(editor)
     section = Section.objects.get(kind="features")
     body = client.get(reverse("edition:section", args=[section.pk])).content.decode()
-    for field in ('name="kicker"', 'name="title"', 'name="intro"', 'name="steps"'):
+    for field in ('name="kicker"', 'name="title"', 'name="intro"'):
         assert field in body
+    # `steps` is a `ListField`: it is edited item by item on the board below
+    # the form (Task 11), not as a field of the form itself.
+    assert 'name="steps"' not in body
 
 
 def test_saving_stores_only_the_change(client, editor):
@@ -125,19 +131,26 @@ def test_saving_stores_only_the_change(client, editor):
 
 
 def test_an_invalid_list_is_reported_not_saved(client, editor):
+    # `/edition/`'s own section screen no longer carries a list as a form
+    # field (Task 11: it is edited item by item on the board instead), so
+    # this can no longer be exercised through the real screen. `ListEditor`
+    # itself — the admin's JSON textarea, `section_form_class`'s default
+    # (`with_lists=True`) — still validates the same way; this is the one
+    # place left that checks it does.
+    from accueil.forms import section_form_class
     from accueil.models import Section
     from accueil.sections.features import Features
 
-    client.force_login(editor)
     section = Section.objects.get(kind="features")
     data = {"position": section.position, "active": "on"}
     for name, value in Features.defaults().items():
         data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
     data["steps"] = "{pas du json"
 
-    response = client.post(reverse("edition:section", args=[section.pk]), data)
-    assert response.status_code == 200  # redisplayed with the error
-    assert "JSON invalide" in response.content.decode()
+    form = section_form_class(Features)(data, instance=section)
+    assert not form.is_valid()
+    assert "JSON invalide" in str(form.errors["steps"])
+
     section.refresh_from_db()
     assert section.content == {}
 
@@ -320,3 +333,155 @@ def test_the_admin_login_page_is_never_framable(client):
     response = client.get("/admin/login/")
     assert response.headers["X-Frame-Options"] == "DENY"
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_a_section_upload_travels_through_the_editing_screen(client, editor, tmp_path, settings):
+    # Le champ image ne sert à rien si le gabarit n'est pas `multipart` ou si la
+    # vue ne lit pas `request.FILES` : le bouton s'affiche, et rien n'arrive.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    url = reverse("edition:section", args=[row.pk])
+
+    response = client.get(url)
+    assert 'enctype="multipart/form-data"' in response.content.decode()
+
+    form = response.context["form"]
+    data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
+    data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (1200, 700), (10, 20, 30)).save(buffer, format="PNG")
+    data["illustration"] = SimpleUploadedFile("neuf.png", buffer.getvalue(), content_type="image/png")
+
+    assert client.post(url, data).status_code == 302
+    row.refresh_from_db()
+    assert row.content["illustration"].startswith("uploads/")
+
+
+def test_an_illustration_error_is_associated_with_its_field(client, editor, tmp_path, settings):
+    # `aria-describedby` sur le champ fichier ne sert à rien si rien sur la
+    # page ne porte réellement cet id : `edition/section.html` doit rendre le
+    # paragraphe d'erreur avec l'id que Django attend, pas seulement à côté du
+    # champ visuellement.
+    settings.MEDIA_ROOT = tmp_path
+    settings.UPLOADS_ENABLED = True
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    url = reverse("edition:section", args=[row.pk])
+
+    form = client.get(url).context["form"]
+    data = {bound.name: bound.value() if bound.value() is not None else "" for bound in form}
+    data["illustration_current"] = "accueil/img/temoignages-illustration.webp"
+    data["illustration"] = SimpleUploadedFile("cv.pdf", b"%PDF-1.4", content_type="application/pdf")
+
+    response = client.post(url, data)
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert 'aria-describedby="id_illustration_helptext id_illustration_error"' in body
+    assert 'id="id_illustration_error"' in body
+
+
+def test_saving_a_section_keeps_overrides_the_form_does_not_carry(client, editor):
+    # `quotes` is still declared on `Testimonials.Form` — so `Section.clean`
+    # (the model) still validates it at every save — but Task 11 removes it
+    # from the *generated* form for good: it is edited item by item on the
+    # board below, not as a field here. Saving the section's other fields
+    # must leave this override untouched, exercising `SectionForm.clean`'s
+    # `name in self.fields` guard through the real screen, not a form built
+    # by hand.
+    from accueil.sections.testimonials import Testimonials
+
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    row.content = {"quotes": [{"quote": "Épatant.", "name": "Ana", "role": ""}]}
+    row.save()
+
+    defaults = Testimonials.defaults()
+    data = {
+        "position": row.position,
+        "active": "on",
+        "kicker": defaults["kicker"],
+        "title": "Un autre titre.",
+        "illustration_current": defaults["illustration"],
+        "illustration_credit": "",
+    }
+    response = client.post(reverse("edition:section", args=[row.pk]), data)
+    assert response.status_code == 302
+
+    row.refresh_from_db()
+    assert row.content["title"] == "Un autre titre."
+    assert row.content["quotes"][0]["name"] == "Ana"
+
+
+def test_a_stale_key_still_saves_and_is_dropped(client, editor):
+    from accueil.sections.testimonials import Testimonials
+
+    # Contrairement à `quotes` dans le test ci-dessus (déplacée, mais toujours
+    # déclarée dans `Testimonials.Form.base_fields`), une clé que le code ne
+    # déclare plus du tout doit continuer à être écartée à chaque
+    # enregistrement — comme avant cette tâche. `Section.clean` (modèle) la
+    # rejette de toute façon à chaque sauvegarde ; la garder ferait planter
+    # l'écran d'édition (500), pas juste échouer la validation.
+    client.force_login(editor)
+    row = Section.objects.get(kind="testimonials")
+    row.content = {"vestige": "un champ disparu du code"}
+    row.save()
+
+    url = reverse("edition:section", args=[row.pk])
+    form = client.get(url).context["form"]
+    data = {}
+    for bound in form:
+        value = bound.value()
+        data[bound.name] = value if value is not None else ""
+    data["illustration_current"] = Testimonials.defaults()["illustration"]
+    data["title"] = "Un autre titre."
+
+    assert client.post(url, data).status_code == 302
+
+    row.refresh_from_db()
+    assert row.content["title"] == "Un autre titre."
+    assert "vestige" not in row.content
+
+
+def test_posting_the_default_value_clears_the_override(client, editor):
+    # Le garde de `SectionForm.clean` (ce qui a remplacé la reconstruction
+    # totale de `content`) doit continuer à effacer un override quand
+    # l'autrice retape le texte du code dans un champ que le formulaire porte
+    # bien : sans lui, `content` garderait la valeur périmée pour toujours et
+    # ce champ cesserait de suivre les changements du code.
+    from accueil.sections.features import Features
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="features")
+    section.content = {"title": "Ancien titre personnalisé."}
+    section.save()
+
+    data = {"position": section.position, "active": "on"}
+    for name, value in Features.defaults().items():
+        data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
+
+    assert client.post(reverse("edition:section", args=[section.pk]), data).status_code == 302
+    section.refresh_from_db()
+    assert section.content == {}
+
+
+def test_saving_an_unchanged_list_with_an_illustration_adds_no_override(client, editor):
+    # Regression: `SectionForm.clean` used to compare the cleaned list against
+    # the *raw* default. Cleaning `figures.indicators` injects an
+    # `image_credit: ""` on every item (each `Indicator.image` is an
+    # `Illustration`), so the cleaned list and the raw default never matched —
+    # saving the section with nothing changed wrote a spurious `indicators`
+    # override, which then stopped following pull requests.
+    from accueil.sections.figures import Figures
+
+    client.force_login(editor)
+    section = Section.objects.get(kind="figures")
+    data = {"position": section.position, "active": "on"}
+    for name, value in Figures.defaults().items():
+        data[name] = json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value
+
+    assert client.post(reverse("edition:section", args=[section.pk]), data).status_code == 302
+    section.refresh_from_db()
+    assert section.content == {}

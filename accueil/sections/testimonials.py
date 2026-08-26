@@ -2,7 +2,7 @@
 
 from django import forms
 
-from accueil.sections.base import ListField, SectionType, registry
+from accueil.sections.base import Illustration, ListField, SectionType, registry
 
 
 class Quote(forms.Form):
@@ -41,8 +41,11 @@ class Testimonials(SectionType):
                 },
             ],
         )
-        illustration = forms.CharField(
+        illustration = Illustration(
             label="Illustration",
-            help_text="Chemin sous accueil/static/",
+            # .temoignages__illu caps at max-width: 20rem (320px); twice, for
+            # dense screens.
+            max_width=640,
+            ratio=(56, 34),
             initial="accueil/img/temoignages-illustration.webp",
         )

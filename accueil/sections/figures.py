@@ -3,13 +3,22 @@
 from django import forms
 
 from accueil import key_figures
-from accueil.sections.base import ListField, Reference, SectionType, registry
+from accueil.sections.base import Illustration, ListField, Reference, SectionType, registry
 
 
 class Indicator(forms.Form):
     key = Reference(label="Identifiant dans le flux")
     label = forms.CharField(label="Libellé")
-    image = forms.CharField(label="Image", help_text="Chemin sous accueil/static/")
+    image = Illustration(
+        label="Pictogramme",
+        # .stat__illu is height-driven (height: 4rem = 64px at the >=48rem
+        # breakpoint), rendering ~91px wide at this ratio; twice is ~182,
+        # rounded up. No `initial`: each of the three real indicators has its
+        # own pictogram, so guessing one for a fourth would be wrong more
+        # often than not — see Card.image, which makes the same call.
+        max_width=190,
+        ratio=(122, 86),
+    )
     fallback = forms.IntegerField(
         label="Valeur de repli",
         help_text="Affichée si le flux est injoignable.",

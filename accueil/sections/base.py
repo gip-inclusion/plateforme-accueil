@@ -40,23 +40,137 @@ class Reference(forms.SlugField):
     up in HTML ids, where a space would silently break `aria-controls`."""
 
 
+class Illustration(forms.CharField):
+    """An image on the page.
+
+    The value is a path, and stays text: either a static file declared in the
+    code, or the key of an uploaded file (`uploads/…`). This single shape is
+    what lets a value be compared to its default, only the deviation stored,
+    and a fallback to the code happen without a special case.
+
+    `max_width` is the image's useful width on the page, in pixels: an upload
+    wider than that is scaled down to it, a smaller one is never enlarged. The
+    rule for choosing it: measure the widest width the image actually renders
+    at in the page's CSS across every breakpoint, not just the widest viewport
+    — a narrower viewport can still render the image wider, if a column that
+    was split becomes single at that width. Never use the HTML `width`
+    attribute, which CSS can override, or the source file's own size. Double
+    that measured width for dense screens, and round *up* to a tidy number —
+    rounding down loses pixels. Name the CSS selector and the measured width
+    in a comment next to the declaration, so the number stays checkable
+    against the stylesheet rather than becoming folklore.
+
+    `ratio`, when declared, is the `(width, height)` shape an upload is
+    cropped to — without it, the `width`/`height` attributes hard-coded in
+    the template would lie the moment an editor uploads an image of another
+    shape.
+
+    The `illustration` template filter (`accueil/templatetags/illustrations.py`)
+    resolves this value to a URL, and returns an empty string when there is
+    nothing to show. A template must treat that as *render no image* — guard
+    it, never emit `<img src="">` (see CLAUDE.md, section « Iframe »).
+    """
+
+    def __init__(self, *, max_width, ratio=None, **kwargs):
+        self.max_width = max_width
+        self.ratio = ratio
+        # Shown to an editor who sees a file picker, not a path field: name
+        # what actually happens on save, not the storage detail underneath.
+        # True whether this field sits at the top of a section
+        # (`hero.visual`, `testimonials.illustration`) or inside a
+        # `ListField` item (`figures.Indicator.image`, `search.Card.image`):
+        # both are rendered through `IllustrationEditor`, via
+        # `section_form_class` and `item_form_class` respectively.
+        kwargs.setdefault(
+            "help_text",
+            "Remplacez l'image en choisissant un fichier. Sans nouveau fichier, l'image actuelle est conservée.",
+        )
+        super().__init__(**kwargs)
+
+
+CREDIT_SUFFIX = "_credit"  # appended to an illustration's name to name its credit field
+
+
+class Credit(forms.CharField):
+    """Provenance or licence of an uploaded image.
+
+    Optional, and never shown on the public page: it is a note for the team.
+    A distinct type so the item previews in `/edition/` can leave it out of
+    displayed content, and so it stands out at a glance in a declaration.
+    """
+
+
+def add_credit_fields(form_class):
+    """Give each `Illustration` on the form its provenance field.
+
+    Injected rather than declared: a compliance field a section could forget
+    to write would be forgotten. Called when a section type registers and
+    when a `ListField` is built, so repeated items get one too. Names each
+    field after `CREDIT_SUFFIX` and records the illustration it belongs to on
+    `illustration_name`, so downstream code asks the field for its pairing
+    rather than parsing its name.
+
+    Rebuilds `base_fields` rather than appending, so each credit field sits
+    right after the illustration it describes — moving a hand-declared credit
+    there too rather than leaving it trailing, though its identity is kept,
+    never duplicated or replaced. Idempotent: a repeated call finds every
+    credit field already in place and changes nothing.
+
+    Also rebinds `declared_fields`, which Django's metaclass sets to the same
+    dict object at class creation: a subclass's own fields are collected from
+    its bases' `declared_fields`, not their `base_fields`, so leaving it
+    stale would silently drop the injected fields from any subclass.
+    """
+    fields = form_class.base_fields
+    rebuilt = {}
+    for name, field in fields.items():
+        rebuilt[name] = field
+        if not isinstance(field, Illustration):
+            continue
+        credit_name = f"{name}{CREDIT_SUFFIX}"
+        if credit_name in fields:
+            rebuilt[credit_name] = fields[credit_name]
+            continue
+        credit = Credit(
+            label=f"Provenance de « {field.label} »" if field.label else "Provenance de l'image",
+            required=False,
+            initial="",
+            help_text="Origine ou licence de l'image. Pour l'équipe : jamais affiché sur la page.",
+        )
+        credit.illustration_name = name
+        rebuilt[credit_name] = credit
+    form_class.base_fields = rebuilt
+    form_class.declared_fields = rebuilt
+
+
 class ListField(forms.Field):
     """A repeatable block, stored as a list of dictionaries.
 
     Each item is validated by an ordinary Django form, so a card or a shortcut
-    declares its fields exactly like a section does. The editing UI for these
-    is still to come; until then they are edited as JSON, and the validation
-    here is what keeps that honest.
+    declares its fields exactly like a section does. `/edition/` edits a
+    top-level list item by item, on a board; a list nested *inside* an item is
+    still edited as JSON, and the validation here is what keeps that honest.
+
+    Construction is not side-effect free: it permanently adds credit fields to
+    `item_form`, the class the caller passed in.
     """
 
     def __init__(self, item_form, *, min_num=0, max_num=None, unique=None, **kwargs):
         self.item_form = item_form
+        add_credit_fields(item_form)
         self.min_num = min_num
         self.max_num = max_num
         self.unique = unique  # name of a key that must not repeat across items
         # A list with a minimum is required by definition; deriving it keeps a
         # declaration from contradicting itself.
         kwargs["required"] = min_num > 0
+        # `/edition/`'s own board edits a top-level list item by item, with
+        # no JSON in sight — but a `ListField` nested *inside* an item
+        # (`profiles.Profile.steps`) still goes through `ListEditor`
+        # (`accueil/forms.py`) as raw JSON, on the one screen whose whole
+        # premise is that an editor no longer writes JSON. Without a default
+        # help text that textarea would carry none at all.
+        kwargs.setdefault("help_text", "Liste au format JSON : un tableau d'objets, un par élément.")
         super().__init__(**kwargs)
 
     def item_defaults(self):
@@ -93,7 +207,11 @@ class ListField(forms.Field):
         if self.unique:
             valeurs = [item.get(self.unique) for item in nettoyes]
             if len(set(valeurs)) != len(valeurs):
-                raise ValidationError(f"Le champ « {self.unique} » doit être différent pour chaque élément.")
+                # The label ("Identifiant"), never `self.unique` ("slug"):
+                # identifiers are English precisely because an editor never
+                # reads them (CLAUDE.md).
+                label = self.item_form.base_fields[self.unique].label or self.unique
+                raise ValidationError(f"Le champ « {label} » doit être différent pour chaque élément.")
         return nettoyes
 
 
@@ -157,6 +275,7 @@ class Registry:
             raise ValueError(f"{cls.__name__} doit définir `key` et `template`")
         if cls.key in self._types:
             raise ValueError(f"clé de section déjà enregistrée : {cls.key}")
+        add_credit_fields(cls.Form)
         self._types[cls.key] = cls
         return cls
 

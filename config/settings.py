@@ -1,3 +1,4 @@
+import logging
 import os
 import urllib.parse
 from pathlib import Path
@@ -5,13 +6,15 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+logger = logging.getLogger(__name__)
+
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-only")
 
 DEBUG = os.environ.get("DEBUG", "") == "1"
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
-# The admin is the stopgap editing UI, until /pilotage/ and Authentik land.
+# The admin is the stopgap editing UI, until /edition/ is complete.
 # Only its URLs are gated, so a deploy never exposes a login form backed by
 # local passwords. The apps stay installed in every environment: making
 # INSTALLED_APPS conditional would make the set of migrations depend on the
@@ -169,5 +172,69 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
+
+# Images uploaded by editors. Mirrors the DATABASE_URL policy just above:
+# incomplete configuration must not stop the container from booting — it
+# must fall back to "no durable upload storage" instead, the same way a
+# malformed DATABASE_URL falls back to code defaults rather than crashing.
+# MEDIA_URL/MEDIA_ROOT only matter for that fallback — FileSystemStorage,
+# Django's own default — since S3Storage composes its own URLs from the
+# bucket and endpoint and ignores both.
+MEDIA_URL = os.environ.get("MEDIA_URL", "/media/")
+MEDIA_ROOT = BASE_DIR / "media"
+
+_s3_settings = {
+    "bucket_name": os.environ.get("AWS_STORAGE_BUCKET_NAME", ""),
+    "endpoint_url": os.environ.get("AWS_S3_ENDPOINT_URL", ""),
+    "region_name": os.environ.get("AWS_S3_REGION_NAME", ""),
+    "access_key": os.environ.get("AWS_ACCESS_KEY_ID", ""),
+    "secret_key": os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
+}
+_s3_missing = [name for name, value in _s3_settings.items() if not value]
+S3_CONFIGURED = not _s3_missing
+
+if _s3_missing and len(_s3_missing) < len(_s3_settings):
+    # Someone clearly attempted to configure a bucket, but not fully: this is
+    # silent from here on, since we choose to render the page rather than
+    # crash — so it needs a signal somewhere.
+    logger.warning(
+        "Incomplete S3 configuration, missing: %s. Uploads will not use durable storage.",
+        ", ".join(_s3_missing),
+    )
+
+if S3_CONFIGURED:
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": _s3_settings["bucket_name"],
+            "endpoint_url": _s3_settings["endpoint_url"],
+            "region_name": _s3_settings["region_name"],
+            "access_key": _s3_settings["access_key"],
+            "secret_key": _s3_settings["secret_key"],
+            # Files are named by a hash of their content: they never change,
+            # so the cache can be immortal.
+            "object_parameters": {"CacheControl": "public, max-age=31536000, immutable"},
+            # The bucket is publicly readable, so no signed URL — and
+            # signing would make botocore resolve credentials on every URL,
+            # which on a container without explicit keys turns into a
+            # network call (IMDS) per image and per request. Without
+            # signing, `url()` stays plain string composition.
+            "querystring_auth": False,
+            # Content-hash naming means a key never needs a new name: state
+            # this explicitly rather than resting on the library default.
+            "file_overwrite": True,
+        },
+    }
+
+# Local disk uploads only exist for development, and only on explicit opt-in
+# — never inferred from DEBUG. `ADMIN_ENABLED` already opens the editing UI
+# whenever DEBUG is set, so a `DEBUG=1` left on in production would silently
+# turn this on too and accept uploads onto storage that vanishes at the next
+# deploy. A developer sets this once in their shell instead.
+LOCAL_UPLOADS_ENABLED = os.environ.get("LOCAL_UPLOADS_ENABLED", "") == "1"
+
+# Consumed by `IllustrationEditor.clean` (accueil/forms.py) to decide whether
+# to accept a file at all.
+UPLOADS_ENABLED = S3_CONFIGURED or LOCAL_UPLOADS_ENABLED
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

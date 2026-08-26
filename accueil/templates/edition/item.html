@@ -1,0 +1,38 @@
+{% extends "edition/base.html" %}
+
+{% block titre %}
+  {% if creating %}Ajouter — {{ field.label }}{% else %}Modifier — {{ field.label }}, élément {{ index|add:1 }}{% endif %}
+{% endblock %}
+
+{% block contenu %}
+  <p class="fil">
+    <a href="{% url 'edition:plan' %}">‹ Plan de la page</a>
+    ·
+    <a href="{% url 'edition:section' row.pk %}">‹ {{ section_type.label }}</a>
+  </p>
+
+  <div class="plan__entete">
+    <h1>
+      {% if creating %}Ajouter : {{ field.label }}{% else %}Modifier : {{ field.label }}, élément {{ index|add:1 }}{% endif %}
+    </h1>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <form class="editeur c-box" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {# Rides the GET -> POST round trip with no JavaScript: the view refuses #}
+    {# a stale save (or a stale add) rather than silently overwrite, or lose, #}
+    {# whatever the list now actually holds. #}
+    <input type="hidden" name="token" value="{{ token }}">
+    {% for champ in form %}
+      {% include "edition/_champ.html" with champ=champ %}
+    {% endfor %}
+    <div class="editeur__actions">
+      <a class="btn btn-outline-primary" href="{% url 'edition:section' row.pk %}">Annuler</a>
+      <button class="btn btn-primary" type="submit">Enregistrer</button>
+    </div>
+  </form>
+{% endblock %}

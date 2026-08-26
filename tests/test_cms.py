@@ -151,9 +151,16 @@ def test_saving_an_unknown_field_is_refused(page):
 
 
 def test_saving_a_javascript_url_is_refused(page):
+    # The message names the field by its declared *label* ("Cible du lien"),
+    # not its English identifier ("see_all_href") — identifiers are English
+    # precisely because they are never meant to be shown to an editor
+    # (CLAUDE.md).
+    from accueil.sections.jobs import Jobs
+
     section = Section.objects.get(kind="jobs")
     section.content = {"see_all_href": "javascript:alert(1)"}
-    with pytest.raises(DjangoValidationError, match="see_all_href"):
+    label = Jobs.Form.base_fields["see_all_href"].label
+    with pytest.raises(DjangoValidationError, match=label):
         section.full_clean()
 
 

@@ -1,0 +1,16 @@
+{% load illustrations %}
+<div class="champ-image">
+  {% with url=widget.value|illustration %}
+    {% if url %}
+      <img class="champ-image__apercu" src="{{ url }}" alt="">
+    {% endif %}
+  {% endwith %}
+  <input type="hidden" name="{{ widget.name }}_current" value="{{ widget.value|default_if_none:'' }}">
+  {% if widget.may_upload %}
+    <input type="file" name="{{ widget.name }}" accept="image/*"{% include "django/forms/widgets/attrs.html" %}>
+  {% else %}
+    <p class="champ__aide">
+      Aucun stockage d'images durable n'est configuré : le téléversement est indisponible.
+    </p>
+  {% endif %}
+</div>
