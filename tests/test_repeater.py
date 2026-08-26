@@ -169,13 +169,22 @@ def test_deleting_an_item_removes_it(client, editor, testimonials):
     assert [item["name"] for item in quotes(testimonials)] == names[1:]
 
 
-def test_a_successful_operation_flashes_a_message(client, editor, testimonials):
-    # Without JavaScript a successful move is otherwise a silent full page
-    # reload — and, combined with the digest guard, an operation that hit the
-    # wrong item would look exactly like one that hit the right one.
+@pytest.mark.parametrize(
+    ("view", "expected"),
+    [("item-delete", "supprimé"), ("item-duplicate", "dupliqué"), ("item-move", "déplacé")],
+)
+def test_a_successful_operation_says_which_one_it_was(client, editor, testimonials, view, expected):
+    # Sans JavaScript, une opération réussie est sinon un rechargement muet —
+    # et, avec la garde d'empreinte, une opération qui a frappé le mauvais
+    # élément ressemblerait à une qui a frappé le bon. Surtout : dire « mis à
+    # jour » après une suppression est le message qu'il ne faut pas se
+    # permettre dans un chantier dont le sujet est de ne rien détruire.
     client.force_login(editor)
-    response = post(client, "item-delete", testimonials, "quotes", 0, {"token": token(testimonials)})
-    assert any("mis à jour" in message for message in messages_of(response))
+    data = {"token": token(testimonials)}
+    if view == "item-move":
+        data["direction"] = "down"
+    response = post(client, view, testimonials, "quotes", 0, data)
+    assert any(expected in message for message in messages_of(response))
 
 
 def test_deleting_the_last_item_is_refused_with_a_message(client, editor, testimonials):

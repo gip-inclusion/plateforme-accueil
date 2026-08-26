@@ -206,8 +206,13 @@ def _refuse_if_stale(request, row, values, *, digest=None):
     return redirect("edition:section", pk=row.pk)
 
 
-def _apply(request, pk, name, change):
+def _apply(request, pk, name, change, done):
     """Apply one operation to a list, and say so — success or refusal alike.
+
+    `done` is the sentence shown once it applied. Each operation passes its
+    own: an editor who deletes a testimonial must not be told it was updated,
+    and this branch's whole subject is not destroying an editor's work by
+    accident.
 
     Two guards run before `change` ever sees the list, in addition to the
     whole-list validation `save_list` already does: an override that no
@@ -235,7 +240,7 @@ def _apply(request, pk, name, change):
         messages.error(request, error.messages[0])
         return redirect("edition:section", pk=pk)
 
-    messages.success(request, "Élément mis à jour.")
+    messages.success(request, done)
     return redirect("edition:section", pk=pk)
 
 
@@ -249,7 +254,7 @@ def item_duplicate(request, pk, name, index):
         _check_index(values, index)
         values.insert(index + 1, copy.deepcopy(values[index]))
 
-    return _apply(request, pk, name, change)
+    return _apply(request, pk, name, change, "Élément dupliqué.")
 
 
 @editor_view(post_only=True)
@@ -258,12 +263,12 @@ def item_delete(request, pk, name, index):
         _check_index(values, index)
         values.pop(index)
 
-    return _apply(request, pk, name, change)
+    return _apply(request, pk, name, change, "Élément supprimé.")
 
 
 @editor_view(post_only=True)
 def item_move(request, pk, name, index):
-    return _apply(request, pk, name, _swap(index, request.POST.get("direction")))
+    return _apply(request, pk, name, _swap(index, request.POST.get("direction")), "Élément déplacé.")
 
 
 def _swap(index, direction):
@@ -552,11 +557,21 @@ def section(request, pk):
     )
 
 
+def _field_label(row, name):
+    """What an editor calls this field, falling back to its name only when the
+    code no longer declares it and there is no label left to read."""
+    section_type = _declared(row.kind)
+    field = section_type.Form.base_fields.get(name) if section_type else None
+    return getattr(field, "label", None) or name
+
+
 @editor_view(post_only=True)
 def reset_field(request, pk, name):
     """Drop one override, so the field follows the code again."""
     row = get_object_or_404(Section, pk=pk, page__slug="accueil")
     if row.content.pop(name, None) is not None:
         row.save(update_fields=["content"])
-        messages.success(request, f"« {name} » suit de nouveau le texte du code.")
+        # The label, never the identifier: identifiers are English precisely
+        # because an editor never reads them.
+        messages.success(request, f"« {_field_label(row, name)} » suit de nouveau le texte du code.")
     return redirect("edition:section", pk=pk)
