@@ -143,7 +143,7 @@ accordé par SSO.
 En local, sans ces variables, `DEBUG=1` suffit : `createsuperuser` puis
 `/edition/`.
 
-Une liste répétable (cartes, raccourcis, étapes…) s'édite sur un tableau, à
+Une liste répétable (cartes, raccourcis, étapes…) s'édite sur une planche, à
 même l'écran de la section : chaque élément y est montré en entier, jamais en
 résumé. Ajouter, modifier, dupliquer, déplacer et supprimer sont des actions
 de formulaire ordinaires, sans JavaScript — ouvrir un élément mène à un écran

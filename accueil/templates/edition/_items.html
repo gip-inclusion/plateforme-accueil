@@ -10,6 +10,8 @@
     <h2>{{ board.label }}{% if board.customised %} <span class="tag">modifié</span>{% endif %}</h2>
     {% if board.can_add %}
       <a class="btn btn-sm btn-primary" href="{% url 'edition:item-add' row.pk board.name %}">Ajouter</a>
+    {% elif board.add_blocked_reason %}
+      <p class="liste__aide">{{ board.add_blocked_reason }}</p>
     {% endif %}
   </div>
 
@@ -60,7 +62,8 @@
         <form method="post" action="{% url 'edition:item-duplicate' row.pk board.name item.index %}">
           {% csrf_token %}
           <input type="hidden" name="token" value="{{ board.token }}">
-          <button class="btn btn-sm btn-outline-primary white-space-nowrap" type="submit">Dupliquer</button>
+          <button class="btn btn-sm btn-outline-primary white-space-nowrap" type="submit"
+                  {% if not board.can_duplicate %}disabled title="{{ board.duplicate_blocked_reason }}"{% endif %}>Dupliquer</button>
         </form>
         <form method="post" action="{% url 'edition:item-delete' row.pk board.name item.index %}">
           {% csrf_token %}

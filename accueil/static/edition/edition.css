@@ -229,6 +229,15 @@
   font-size: 1rem;
 }
 
+/* Stands in for the "Ajouter" link when adding is blocked (no upload
+   storage configured, or the list is already at its max_num): same slot,
+   an explanation instead of a control. */
+.liste__aide {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #555;
+}
+
 .carte-liste {
   display: flex;
   flex-direction: column;

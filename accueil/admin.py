@@ -63,6 +63,6 @@ class SectionAdmin(admin.ModelAdmin):
         declared = _declared(section.kind)
         return declared.label if declared else f"{section.kind} — type absent du code"
 
-    @admin.display(description="textes personnalisés", boolean=True)
+    @admin.display(description="modifié", boolean=True)
     def customised(self, section):
         return bool(section.content)

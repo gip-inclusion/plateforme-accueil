@@ -72,7 +72,7 @@ ligne et passe par `|linebreaksbr` (voir `hero.py`).
 
 Une liste répétable (cartes, raccourcis) se déclare avec `ListField`, dont
 chaque élément est validé par un formulaire ordinaire. Elle s'édite ensuite
-élément par élément sur un tableau, dans `/edition/` — une liste imbriquée
+élément par élément sur une planche, dans `/edition/` — une liste imbriquée
 dans un élément (les étapes d'un profil) reste éditée en JSON brut, un
 plancher et non une cible.
 

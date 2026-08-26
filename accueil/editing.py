@@ -91,10 +91,21 @@ def _plan(page):
 
 
 def _summary(section_type, section):
-    """One line describing the section by its content, not by its type."""
+    """One line describing the section by its content, not by its type.
+
+    Counts each list under its declared label ("Témoignages"), the same
+    label the section screen's own board carries for it — never the field's
+    identifier ("quotes"), which an editor never reads (CLAUDE.md).
+    """
     content = section_type(section.content).content
     title = content.get("title") or content.get("kicker") or ""
-    counts = [f"{len(value)} {name}" for name, value in content.items() if isinstance(value, list) and value]
+    counts = []
+    for name, value in content.items():
+        if not (isinstance(value, list) and value):
+            continue
+        field = section_type.Form.base_fields.get(name)
+        label = getattr(field, "label", None) or name
+        counts.append(f"{len(value)} {label}")
     parts = [f"« {title} »"] if title else []
     parts += counts
     return " · ".join(parts)
@@ -178,7 +189,8 @@ def _refuse_if_unreadable(request, row, section_type, name, *, detail="impossibl
         return None
     messages.error(
         request,
-        f"Cette liste contient une modification qui n'est plus reconnue par le code : {detail} Rien n'a été modifié.",
+        f"Cette liste est illisible : une modification qu'elle contient n'est plus reconnue par le "
+        f"code, et {detail} Rien n'a été modifié.",
     )
     return redirect("edition:section", pk=row.pk)
 
@@ -292,6 +304,12 @@ def _swap(index, direction):
 def _check_index(values, index):
     if not 0 <= index < len(values):
         raise Http404("Cet élément n'existe pas.")
+
+
+UPLOADS_BLOCK_REASON = (
+    "Impossible d'ajouter un élément ici : cette liste exige une image, "
+    "et le téléversement n'est pas configuré pour le moment."
+)
 
 
 def _blocks_creation_without_uploads(field):
@@ -419,11 +437,7 @@ def item_add(request, pk, name):
         return refusal
 
     if _blocks_creation_without_uploads(field):
-        messages.error(
-            request,
-            "Impossible d'ajouter un élément ici : cette liste exige une image, "
-            "et le téléversement n'est pas configuré pour le moment.",
-        )
+        messages.error(request, UPLOADS_BLOCK_REASON)
         return redirect("edition:section", pk=pk)
 
     values = list_values(row, section_type, name, field)
@@ -479,24 +493,31 @@ def _boards(row, declared):
       showing that board would render the code's own fallback items as
       though they were the editor's), and with `can_add` narrowed by
       `_blocks_creation_without_uploads`: a declaration alone cannot know
-      whether uploads are configured, only this view can.
+      whether uploads are configured, only this view can. When that narrows
+      `can_add`, `add_blocked_reason` carries the sentence to show where the
+      "Ajouter" link would have been — a list at its own `max_num` already
+      carries a different reason from `section_lists`, and is left as is.
     - `unreadable`: for each list whose override no longer validates, its
-      name paired with the *raw* stored JSON — shown in the warning in its
-      place, so an editor can copy out what is otherwise about to become
-      the only way to recover it (`reset-field` drops it for good; the
-      admin's own textarea is no help either, since it reads the same
-      already-fallen-back content this screen would).
-    - `overridden`: which of the section's *other*, scalar fields an editor
-      has moved away from the code — for the generic "revenir au texte du
-      code" list at the bottom. A list's own name is deliberately left out
-      of it: resetting a whole hand-edited list is a different order of
-      loss than resetting a one-line `kicker`, and the generic list has no
-      way to say so — its own board carries that control instead, labelled
-      for what it does.
+      *label* ("Témoignages", never the field's identifier — an editor never
+      reads one) paired with the raw stored JSON, so an editor can copy out
+      what is otherwise about to become the only way to recover it
+      (`reset-field` drops it for good; the admin's own textarea is no help
+      either, since it reads the same already-fallen-back content this
+      screen would).
+    - `overridden`: the labels of the section's *other*, scalar fields an
+      editor has moved away from the code, in declaration order — for the
+      generic "revenir au texte du code" list at the bottom. A list's own
+      name is deliberately left out of it: resetting a whole hand-edited
+      list is a different order of loss than resetting a one-line `kicker`,
+      and the generic list has no way to say so — its own board carries
+      that control instead, labelled for what it does.
     """
     list_names = [name for name, field in declared.Form.base_fields.items() if isinstance(field, ListField)]
     unreadable = {
-        name: json.dumps(row.content[name], ensure_ascii=False, indent=2)
+        name: {
+            "label": declared.Form.base_fields[name].label or name,
+            "raw": json.dumps(row.content[name], ensure_ascii=False, indent=2),
+        }
         for name in list_names
         if _override_is_unreadable(row, declared, name)
     }
@@ -506,10 +527,20 @@ def _boards(row, declared):
         if board["name"] in unreadable:
             continue
         field = declared.Form.base_fields[board["name"]]
-        board["can_add"] = board["can_add"] and not _blocks_creation_without_uploads(field)
+        if board["can_add"] and _blocks_creation_without_uploads(field):
+            board["can_add"] = False
+            board["add_blocked_reason"] = UPLOADS_BLOCK_REASON
         board["customised"] = board["name"] in row.content
         boards.append(board)
-    overridden = set(row.content) - set(list_names)
+    # Declaration order, not a `set`'s arbitrary one: an editor reading this
+    # list twice should see the same order both times. A stored key the code
+    # no longer declares at all (`stale_keys` on `SectionType`) has no label
+    # to show instead, so it falls back to its own name, sorted after the
+    # rest rather than interleaved arbitrarily.
+    known = [name for name in declared.Form.base_fields if name in row.content and name not in list_names]
+    unknown = sorted(name for name in row.content if name not in declared.Form.base_fields and name not in list_names)
+    overridden = {name: declared.Form.base_fields[name].label or name for name in known}
+    overridden.update({name: name for name in unknown})
     return boards, unreadable, overridden
 
 

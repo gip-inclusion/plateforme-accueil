@@ -16,6 +16,7 @@ from django.urls import reverse
 from accueil import editing
 from accueil.models import Section
 from accueil.sections import registry
+from accueil.sections.base import ListField
 
 
 pytestmark = pytest.mark.django_db
@@ -524,6 +525,43 @@ def test_an_item_image_is_rendered_as_a_real_file_picker(client, editor, page):
     assert 'name="image_current"' in body
 
 
+def test_an_illustration_field_does_not_contradict_itself_when_uploads_are_off(client, editor, page, settings):
+    # With uploads disabled, the widget already says so
+    # ("le téléversement est indisponible"); the field's own help text used
+    # to say, right below it, "Remplacez l'image en choisissant un
+    # fichier." — one box, two contradictory sentences.
+    settings.UPLOADS_ENABLED = False
+    client.force_login(editor)
+    testimonials = Section.objects.get(kind="testimonials")
+
+    body = client.get(reverse("edition:section", args=[testimonials.pk])).content.decode()
+
+    assert "le téléversement est indisponible" in body
+    assert "Remplacez l" not in body  # not even the escaped apostrophe form
+
+
+def test_an_illustration_field_keeps_its_help_text_when_uploads_are_on(client, editor, page, settings):
+    settings.UPLOADS_ENABLED = True
+    client.force_login(editor)
+    testimonials = Section.objects.get(kind="testimonials")
+
+    body = client.get(reverse("edition:section", args=[testimonials.pk])).content.decode()
+
+    assert "en choisissant un fichier" in body
+
+
+def test_a_nested_list_json_textarea_carries_help_text(client, editor, page):
+    # `profiles.Profile.steps`: a raw JSON blob, on the one screen whose
+    # whole premise is that an editor no longer writes JSON — it had no
+    # help text at all before.
+    client.force_login(editor)
+    profiles = Section.objects.get(kind="profiles")
+
+    body = client.get(reverse("edition:item", args=[profiles.pk, "profiles", 0])).content.decode()
+
+    assert "JSON" in body
+
+
 def test_an_uploaded_file_travels_through_the_item_screen(client, editor, tmp_path, settings):
     # Sans multipart, ni lecture de `request.FILES`, le bouton s'affiche et
     # rien n'arrive : ce test pose un vrai fichier, pas seulement un attribut
@@ -742,6 +780,61 @@ def test_an_unreadable_list_is_not_shown_as_though_it_were_the_editors(client, e
     assert not any(board["name"] == "quotes" for board in response.context["boards"])
 
 
+@pytest.mark.parametrize("section_type", registry.types(), ids=lambda section_type: section_type.key)
+def test_the_reset_list_never_shows_a_raw_field_identifier(client, editor, page, section_type):
+    """Pin the identifier leak this branch has fixed four times over: every
+    overridden scalar field is listed by its declared *label* ('Titre',
+    'Surtitre'…), never by its Python identifier ('title', 'kicker'…) —
+    identifiers are English precisely because an editor never reads them
+    (CLAUDE.md)."""
+    scalar_fields = {
+        name: field for name, field in section_type.Form.base_fields.items() if not isinstance(field, ListField)
+    }
+    if not scalar_fields:
+        pytest.skip(f"« {section_type.key} » ne déclare aucun champ simple éditable")
+
+    row = Section.objects.get(kind=section_type.key)
+    defaults = section_type.defaults()
+    row.content = {name: defaults[name] for name in scalar_fields}
+    row.save(update_fields=["content"])
+
+    client.force_login(editor)
+    body = client.get(reverse("edition:section", args=[row.pk])).content.decode()
+
+    assert "<code>" not in body
+    for name, field in scalar_fields.items():
+        label = field.label or name
+        assert label in body
+
+
+@pytest.mark.parametrize(
+    "section_type",
+    [
+        section_type
+        for section_type in registry.types()
+        if any(isinstance(field, ListField) for field in section_type.Form.base_fields.values())
+    ],
+    ids=lambda section_type: section_type.key,
+)
+def test_an_unreadable_list_is_named_by_its_label_not_its_identifier(client, editor, page, section_type):
+    """Same pin as above, for the quarantine box: it names the list by its
+    label, never by the field name a URL segment is built from."""
+    list_fields = {
+        name: field for name, field in section_type.Form.base_fields.items() if isinstance(field, ListField)
+    }
+    name, field = next(iter(list_fields.items()))
+
+    row = Section.objects.get(kind=section_type.key)
+    row.content = {name: "not-a-list"}  # fails `check_shape` regardless of min_num
+    row.save(update_fields=["content"])
+
+    client.force_login(editor)
+    body = client.get(reverse("edition:section", args=[row.pk])).content.decode()
+
+    assert f"<code>{name}</code>" not in body
+    assert (field.label or name) in body
+
+
 def test_saving_a_section_with_an_unreadable_list_override_does_not_crash(client, editor, testimonials):
     # Regression: `SectionForm.clean` preserves an unreadable override
     # untouched into `self.instance.content`; `_post_clean` then runs
@@ -775,7 +868,14 @@ def test_saving_a_section_with_an_unreadable_list_override_does_not_crash(client
     assert not any("quotes" in error for error in errors)
     assert Section.objects.get(pk=testimonials.pk).content == stored_before
     # The warning box, with its own path back to the code, is right there too.
-    assert "n'est plus reconnue" in response.content.decode()
+    body = response.content.decode()
+    assert "n'est plus reconnue" in body
+    # The two messages point at each other: the top error links down to the
+    # quarantine box, which the box's own `id` makes reachable, and the box
+    # itself says outright that saving anything on this section is blocked.
+    assert 'href="#liste-illisible-quotes"' in body
+    assert 'id="liste-illisible-quotes"' in body
+    assert "aucune modification de cette section ne peut être enregistrée" in body
 
 
 def test_the_title_heuristic_never_promotes_an_icon():
@@ -853,6 +953,20 @@ def test_an_empty_optional_field_is_left_out_of_the_details():
     assert not any(label == "Fonction" for label, _ in parts["details"])
 
 
+def test_an_empty_textarea_field_yields_no_empty_paragraph():
+    # `profiles.Profile.chapo` is an optional `Textarea`: unlike `details`
+    # and `settings`, `paragraphs` used to append an empty value verbatim,
+    # rendering a dangling `<p></p>` on the card.
+    from accueil.previews import item_parts
+
+    field = declared("profiles").Form.base_fields["profiles"]
+    item = {**field.item_defaults(), "chapo": ""}
+
+    parts = item_parts(field, item)
+
+    assert parts["paragraphs"] == []
+
+
 def test_can_add_accounts_for_uploads_being_disabled(client, editor, figures, settings):
     # `figures.Indicator.image` is a required `Illustration` with no
     # `initial`: adding a new indicator is structurally impossible without
@@ -862,9 +976,77 @@ def test_can_add_accounts_for_uploads_being_disabled(client, editor, figures, se
     client.force_login(editor)
 
     response = client.get(reverse("edition:section", args=[figures.pk]))
+    body = response.content.decode()
     board = next(board for board in response.context["boards"] if board["name"] == "indicators")
 
     assert board["can_add"] is False
+    # The "Ajouter" link vanishes for a real reason, and that reason is what
+    # actually reaches the screen in its place — not just an empty slot.
+    assert board["add_blocked_reason"]
+    assert "cette liste exige une image" in board["add_blocked_reason"]
+    # Escaped apostrophes and all: the same sentence, not a paraphrase.
+    assert "cette liste exige une image" in body
+
+
+def test_section_lists_reports_add_blocked_reason_at_max_num(figures):
+    # A list at its own `max_num` is a different reason than uploads being
+    # unconfigured, and `section_lists` — not the view — is what can answer
+    # it: it knows nothing about deployment, only about the declaration.
+    from accueil.previews import section_lists
+
+    section_type = declared("figures")
+    content = section_type(figures.content).content
+    content["indicators"] = content["indicators"][:1] * 4  # pad to max_num=4
+
+    boards = section_lists(section_type, content)
+    board = next(board for board in boards if board["name"] == "indicators")
+
+    assert board["can_add"] is False
+    assert board["add_blocked_reason"]
+    assert "4" in board["add_blocked_reason"]
+
+
+def test_section_lists_reports_duplicate_eligibility(figures):
+    from accueil.previews import section_lists
+
+    section_type = declared("figures")
+    content = section_type(figures.content).content
+
+    boards = section_lists(section_type, content)
+    board = next(board for board in boards if board["name"] == "indicators")
+
+    assert board["can_duplicate"] is True
+    assert board["duplicate_blocked_reason"] is None
+
+
+def test_section_lists_blocks_duplicate_on_a_unique_list(page):
+    # `profiles.profiles` declares `unique="slug"`: every duplicate would
+    # collide with the item it copies and be refused, cleanly, by
+    # `save_list`'s own validation — `item_duplicate`'s docstring says so,
+    # but nothing told the editor that before this.
+    from accueil.previews import section_lists
+
+    section_type = declared("profiles")
+    content = section_type(None).content
+
+    boards = section_lists(section_type, content)
+    board = next(board for board in boards if board["name"] == "profiles")
+
+    assert board["can_duplicate"] is False
+    assert board["duplicate_blocked_reason"]
+    assert "Identifiant" in board["duplicate_blocked_reason"]
+
+
+def test_a_dead_duplicate_button_says_why_it_is_disabled(client, editor, page):
+    # The button stays on the card — same layout as any other list — but is
+    # disabled, and carries the reason rather than leaving it unexplained.
+    row = Section.objects.get(kind="profiles")
+    client.force_login(editor)
+
+    body = client.get(reverse("edition:section", args=[row.pk])).content.decode()
+
+    assert "Identifiant" in body
+    assert 'disabled title="Dupliquer est impossible ici' in body
 
 
 def test_the_unreadable_warning_shows_the_raw_stored_content(client, editor, testimonials):
@@ -895,6 +1077,24 @@ def test_an_overridden_list_gets_its_own_labelled_control(client, editor, testim
     assert "quotes" not in response.context["overridden"]
     assert "Supprimer ces modifications et revenir aux éléments du code" in body
     assert "<code>quotes</code>" not in body
+
+
+def test_the_reset_list_order_follows_the_declaration_not_a_sets_arbitrary_one(client, editor, testimonials):
+    # `overridden` used to be built from `set(row.content) - set(list_names)`:
+    # unordered, and liable to change between runs for no reason an editor
+    # could see. Stored here in the reverse of declaration order, on
+    # purpose, to catch exactly that.
+    testimonials.content = {
+        "illustration_credit": "",
+        "title": "Un titre neuf",
+        "kicker": "Un surtitre neuf",
+    }
+    testimonials.save(update_fields=["content"])
+
+    client.force_login(editor)
+    response = client.get(reverse("edition:section", args=[testimonials.pk]))
+
+    assert list(response.context["overridden"]) == ["kicker", "title", "illustration_credit"]
 
 
 def test_every_item_control_carries_the_concurrency_token(client, editor, testimonials):

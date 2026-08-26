@@ -164,6 +164,13 @@ class ListField(forms.Field):
         # A list with a minimum is required by definition; deriving it keeps a
         # declaration from contradicting itself.
         kwargs["required"] = min_num > 0
+        # `/edition/`'s own board edits a top-level list item by item, with
+        # no JSON in sight — but a `ListField` nested *inside* an item
+        # (`profiles.Profile.steps`) still goes through `ListEditor`
+        # (`accueil/forms.py`) as raw JSON, on the one screen whose whole
+        # premise is that an editor no longer writes JSON. Without a default
+        # help text that textarea would carry none at all.
+        kwargs.setdefault("help_text", "Liste au format JSON : un tableau d'objets, un par élément.")
         super().__init__(**kwargs)
 
     def item_defaults(self):
@@ -200,7 +207,11 @@ class ListField(forms.Field):
         if self.unique:
             valeurs = [item.get(self.unique) for item in nettoyes]
             if len(set(valeurs)) != len(valeurs):
-                raise ValidationError(f"Le champ « {self.unique} » doit être différent pour chaque élément.")
+                # The label ("Identifiant"), never `self.unique` ("slug"):
+                # identifiers are English precisely because an editor never
+                # reads them (CLAUDE.md).
+                label = self.item_form.base_fields[self.unique].label or self.unique
+                raise ValidationError(f"Le champ « {label} » doit être différent pour chaque élément.")
         return nettoyes
 
 

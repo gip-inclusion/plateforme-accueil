@@ -129,10 +129,16 @@ class IllustrationEditor(forms.CharField):
 
     def __init__(self, illustration, **kwargs):
         self.illustration = illustration
+        # `illustration.help_text` ("Remplacez l'image en choisissant un
+        # fichier…") tells an editor to do exactly what the widget template
+        # says is unavailable, right below it, when uploads are not
+        # configured — the widget's own sentence already covers that case,
+        # so this one steps aside rather than contradict it.
+        help_text = illustration.help_text if settings.UPLOADS_ENABLED else ""
         super().__init__(
             required=illustration.required,
             label=illustration.label,
-            help_text=illustration.help_text,
+            help_text=help_text,
             initial=illustration.initial,
             **kwargs,
         )

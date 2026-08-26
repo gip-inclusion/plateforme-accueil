@@ -43,7 +43,8 @@ def item_parts(list_field, item):
     a `Reference` or an `IntegerField` becomes a setting shown at the
     bottom, and a `Credit` never appears — it is an internal provenance
     note, not content. An empty optional value (`role=""`, say) is left out
-    of `details`/`settings` entirely, rather than shown as a dangling label.
+    of `paragraphs`/`details`/`settings` entirely, rather than shown as a
+    dangling label or an empty paragraph.
     """
     image = None
     candidates = []  # (name, field, value), in declaration order
@@ -63,7 +64,8 @@ def item_parts(list_field, item):
         elif isinstance(field, ListField):
             details.append((field.label, f"{len(value or [])} élément(s)"))
         elif isinstance(field.widget, forms.Textarea):
-            paragraphs.append(value)
+            if value not in (None, ""):
+                paragraphs.append(value)
         else:
             candidates.append((name, field, value))
 
@@ -109,11 +111,22 @@ def section_lists(section_type, content):
     `item_parts` and numbered, so the template can withhold the move button
     at either end (`index == 0`, `last`) — a `token`, the same digest
     `accueil.lists._digest` computes for that list's operations, and whether
-    adding or deleting is allowed right now, from the field's
-    `min_num`/`max_num`. `can_add` does not know about upload availability
+    adding, deleting or duplicating is allowed right now, from the field's
+    `min_num`/`max_num`/`unique`.
+
+    `can_add` does not know about upload availability
     (`accueil.editing._blocks_creation_without_uploads`): that is a
     deployment fact, not something a declaration can answer, so the caller
-    narrows it further.
+    narrows it further, and only then sets `add_blocked_reason` if it did —
+    a list already at its own `max_num` gets its reason here instead, since
+    that is a fact this declaration *can* answer.
+
+    `can_duplicate` is false for a list declaring `unique`
+    (`profiles.profiles`, on `slug`): every duplicate would collide with the
+    item it copies and be refused, cleanly, by `save_list`'s whole-list
+    validation — but a disabled button with no explanation reads as broken,
+    not as unavailable, so `duplicate_blocked_reason` names the field an
+    editor would otherwise have to guess at.
     """
     boards = []
     for name, field in section_type.Form.base_fields.items():
@@ -124,14 +137,31 @@ def section_lists(section_type, content):
             {"index": index, "last": index == len(values) - 1, **item_parts(field, item)}
             for index, item in enumerate(values)
         ]
+        at_max = field.max_num is not None and len(values) >= field.max_num
+        unique_label = None
+        if field.unique:
+            unique_field = field.item_form.base_fields.get(field.unique)
+            unique_label = getattr(unique_field, "label", None) or field.unique
         boards.append(
             {
                 "name": name,
                 "label": field.label,
                 "items": items,
                 "token": _digest(values),
-                "can_add": field.max_num is None or len(values) < field.max_num,
+                "can_add": not at_max,
+                "add_blocked_reason": (
+                    f"Cette liste est déjà à son maximum de {field.max_num} élément(s) : "
+                    "supprimez-en un pour pouvoir en ajouter un autre."
+                    if at_max
+                    else None
+                ),
                 "can_delete": len(values) > field.min_num,
+                "can_duplicate": field.unique is None,
+                "duplicate_blocked_reason": (
+                    f"Dupliquer est impossible ici : chaque élément doit avoir un « {unique_label} » différent."
+                    if field.unique
+                    else None
+                ),
             }
         )
     return boards
