@@ -459,3 +459,13 @@ def test_widgets_do_not_share_state_across_form_instances(tmp_path, settings):
 
     assert first.fields["visual"].widget is not second.fields["visual"].widget
     assert second.fields["visual"].widget.uploaded_key is None
+
+
+def test_the_s3_backend_makes_uploaded_objects_publicly_readable(reload_settings):
+    # Une ACL publique sur le bucket autorise le listage, pas la lecture des
+    # objets : celle-ci dépend de l'ACL de chaque objet. Sans `default_acl`,
+    # toute URL non signée répondrait 403 — et comme le rendu ne fait que
+    # composer une URL, l'image serait cassée sur la page publique sans que
+    # rien ne le signale.
+    reloaded = reload_settings(**COMPLETE_BUCKET)
+    assert reloaded.STORAGES["default"]["OPTIONS"]["default_acl"] == "public-read"
