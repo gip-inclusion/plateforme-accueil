@@ -47,4 +47,7 @@ def cities(request):
             results = []
         cache.set(key, results, CITIES_CACHE_TTL)
 
-    return JsonResponse({"results": results})
+    return JsonResponse(
+        {"results": results},
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
