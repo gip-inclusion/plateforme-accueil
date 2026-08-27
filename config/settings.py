@@ -112,11 +112,15 @@ SECURE_CSP = {
         "https://*.inclusion.beta.gouv.fr",
         "https://*.cleverapps.io",
         "https://*.scalingo.io",
+        # A site running on the developer machine, so the embed can be worked on
+        # against the deployed page. The port varies with the embedding project,
+        # hence the wildcard.
+        "http://localhost:*",
     ],
 }
 
 if DEBUG:
-    SECURE_CSP["frame-ancestors"] += ["http://localhost:*", "http://127.0.0.1:*"]
+    SECURE_CSP["frame-ancestors"] += ["http://127.0.0.1:*"]
 
 # Extra origins allowed to embed the page (comma-separated), to test an embed
 # from a host not listed above.

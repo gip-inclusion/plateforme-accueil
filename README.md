@@ -169,7 +169,13 @@ Le tag recommandé côté site hôte :
 
 Seuls certains domaines sont autorisés à embarquer la page (CSP
 `frame-ancestors`) : `*.inclusion.gouv.fr`, `*.inclusion.beta.gouv.fr`,
-`*.cleverapps.io`, `*.scalingo.io`.
+`*.cleverapps.io`, `*.scalingo.io`, ainsi que `http://localhost:*` — un site
+lancé sur le poste d'un développeur peut donc embarquer la page déployée,
+quel que soit son port.
+
+Pour un hôte absent de cette liste, la variable d'environnement
+`CSP_EXTRA_FRAME_ANCESTORS` (origines séparées par des virgules) en ajoute
+sans passer par une modification du code.
 
 ### Ajustement automatique de la hauteur (optionnel)
 

@@ -101,7 +101,9 @@ def test_index_allows_iframe_embedding(client):
     assert "https://*.inclusion.beta.gouv.fr" in csp
     assert "https://*.cleverapps.io" in csp
     assert "https://*.scalingo.io" in csp
-    assert "localhost" not in csp  # DEBUG=False in tests
+    # A site served from the developer machine may embed the deployed page.
+    assert "http://localhost:*" in csp
+    assert "127.0.0.1" not in csp  # DEBUG=False in tests
 
 
 def test_index_has_no_inline_styles_or_scripts(client):
