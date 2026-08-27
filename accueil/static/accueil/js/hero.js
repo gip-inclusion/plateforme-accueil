@@ -23,5 +23,11 @@ if (bar) {
     tab.addEventListener("click", () => activate(tab));
   }
 
-  activate(tabs[0]);
+  const tabIds = tabs.map((tab) => tab.id);
+  const params = new URLSearchParams(window.location.search);
+  let activeTabIndex = tabIds.indexOf(params.get("tab"));
+  if (activeTabIndex === -1) {
+    activeTabIndex = 0;
+  }
+  activate(tabs[activeTabIndex]);
 }
