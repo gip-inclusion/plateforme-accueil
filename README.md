@@ -151,6 +151,46 @@ dédié avec ses propres champs, y compris son image le cas échéant. Une liste
 imbriquée dans un élément (les étapes d'un profil, par exemple) reste éditée
 comme du JSON brut : c'est un plancher, pas une cible.
 
+## Mesure d'audience
+
+Le Tag Manager Matomo est chargé pour toutes les pages
+(`accueil/static/accueil/js/matomo.js`). En plus des pages vues,
+`analytics.js` publie un événement par interaction avec une section.
+
+Le repère est posé dans les gabarits, sur l'élément cliquable :
+
+```html
+<a class="pastille-lien" href="…"
+   data-matomo-category="emplois" data-matomo-action="raccourci"
+   data-matomo-name="Industrie">Industrie</a>
+```
+
+Au clic (ou à l'envoi, pour un `<form>`), le script pousse dans la couche de
+données du conteneur :
+
+```js
+window._mtm.push({
+  event: "accueil.interaction",
+  matomoCategory: "emplois",
+  matomoAction: "raccourci",
+  matomoName: "Industrie",
+});
+```
+
+| Catégorie | Actions mesurées |
+| --- | --- |
+| `hero` | `onglet`, `recherche` |
+| `emplois`, `services` | `raccourci`, `carte`, `voir-tout` |
+| `accompagnateurs` | `recherche` |
+| `pour-qui` | `onglet`, `inscription` |
+| `modale-ville` | `recherche` |
+
+Côté conteneur Matomo, il reste à créer **un déclencheur** sur l'événement
+`accueil.interaction` et **une balise « événement Matomo »** alimentée par les
+variables `matomoCategory` / `matomoAction` / `matomoName` : sans cela les
+poussées s'empilent sans être envoyées. Les deux attributs `category` et
+`action` vont toujours ensemble — un test le vérifie.
+
 ## Embarquer la page en iframe
 
 Le tag recommandé côté site hôte :

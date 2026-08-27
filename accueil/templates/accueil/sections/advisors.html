@@ -11,7 +11,8 @@
         {% endfor %}
       </ul>
     </div>
-    <a class="bouton recherche-cta" href="{{ content.cta_href }}" target="_top">
+    <a class="bouton recherche-cta" href="{{ content.cta_href }}" target="_top"
+       data-matomo-category="{{ section.anchor }}" data-matomo-action="recherche" data-matomo-name="{{ content.cta_label }}">
       <svg class="icone" aria-hidden="true"><use href="#ri-search-line"/></svg>
       <span>{{ content.cta_label }}</span>
     </a>

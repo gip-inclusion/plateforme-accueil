@@ -1,5 +1,6 @@
 import io
 import json
+import re
 from unittest import mock
 
 from django.utils.html import escape
@@ -117,7 +118,27 @@ def test_static_assets_are_served(client):
         "/static/accueil/js/iframe-embed.js",
         "/static/accueil/js/matomo.js",
         "/static/accueil/js/profiles.js",
+        "/static/accueil/js/analytics.js",
         "/static/accueil/css/main.css",
         "/static/accueil/fonts/Marianne-Regular.woff2",
     ):
         assert client.get(path).status_code == 200, path
+
+
+def test_index_tags_the_sections_for_analytics(client):
+    # Every interactive element of a section carries the pair the tag manager
+    # reads; without it the click is invisible to the audience measurement.
+    body = client.get("/").content.decode()
+    assert "/static/accueil/js/analytics.js" in body
+    for category in ["hero", "emplois", "services", "accompagnateurs", "pour-qui"]:
+        assert f'data-matomo-category="{category}"' in body
+    for action in ["onglet", "recherche", "raccourci", "carte", "voir-tout", "inscription"]:
+        assert f'data-matomo-action="{action}"' in body
+
+
+def test_analytics_tags_always_come_in_pairs(client):
+    # A category without an action (or the other way round) is never measured:
+    # the script keys off both attributes at once.
+    body = client.get("/").content.decode()
+    for tag in re.findall(r"<(?:a|button|form)[^>]*data-matomo-[^>]*>", body):
+        assert "data-matomo-category=" in tag and "data-matomo-action=" in tag, tag
