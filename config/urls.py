@@ -42,5 +42,6 @@ if settings.ADMIN_ENABLED or settings.OIDC_ENABLED:
 
     urlpatterns += [
         path("edition/", include("config.urls_edition")),
+        path("admin/logout/", views.logout_url, name="logout"),
         path("admin/", admin.site.urls),
     ]

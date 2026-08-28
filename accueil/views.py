@@ -2,6 +2,7 @@ import json
 import urllib.parse
 import urllib.request
 
+from django.contrib.auth import logout
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -55,3 +56,9 @@ def cities(request):
 
 def login_view(request):
     return redirect("oidc_authentication_init")
+
+
+def logout_url(request):
+    # It would be better to logout from our sso but's it's not really an issue
+    logout(request)
+    return redirect("index")

@@ -32,6 +32,7 @@ OIDC_ENABLED = bool(OIDC_RP_CLIENT_ID and OIDC_RP_CLIENT_SECRET and OIDC_PROVIDE
 # second the Publier button.
 OIDC_EDITOR_GROUP = os.environ.get("OIDC_EDITOR_GROUP", "accueil-redaction")
 OIDC_PUBLISHER_GROUP = os.environ.get("OIDC_PUBLISHER_GROUP", "accueil-publication")
+LOGOUT_REDIRECT_URL = "/index/"
 
 if OIDC_ENABLED:
     AUTHENTICATION_BACKENDS = ["accueil.auth.AuthentikBackend"]
@@ -48,7 +49,6 @@ if OIDC_ENABLED:
     OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 15 * 60
     LOGIN_URL = "oidc_authentication_init"
     LOGIN_REDIRECT_URL = "/edition/"
-    LOGOUT_REDIRECT_URL = "/edition/"
 elif ADMIN_ENABLED:
     LOGIN_URL = "admin:login"
 else:

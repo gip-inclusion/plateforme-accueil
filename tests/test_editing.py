@@ -5,6 +5,7 @@ import json
 
 import pytest
 from django.conf import settings
+from django.contrib.auth import get_user
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -302,6 +303,32 @@ def test_admin_auto_login(db, client):
     response = client.get(expected_url)
     # We don't keep the next parameter as it's not used in the oidc callback
     assertRedirects(response, reverse("oidc_authentication_init"), fetch_redirect_response=False)
+
+
+@oidc_configured
+def test_logout(db, client):
+    user = User.objects.create(
+        email="bob@example.test", first_name="bad", last_name="bad", is_staff=True, is_superuser=True
+    )
+    client.force_login(user)
+
+    response = client.post(reverse("logout"))
+    assertRedirects(response, reverse("index"))
+
+    assert get_user(client).is_authenticated is False
+
+
+@oidc_configured
+def test_admin_logout(db, client):
+    user = User.objects.create(
+        email="bob@example.test", first_name="bad", last_name="bad", is_staff=True, is_superuser=True
+    )
+    client.force_login(user)
+
+    response = client.post(reverse("admin:logout"))
+    assertRedirects(response, reverse("index"))
+
+    assert get_user(client).is_authenticated is False
 
 
 def test_the_public_page_never_loads_the_editing_theme(client):
