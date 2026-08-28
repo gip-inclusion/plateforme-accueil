@@ -12,6 +12,7 @@ from django.shortcuts import resolve_url
 from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
+from pytest_django.asserts import assertRedirects
 
 from accueil.models import Section
 
@@ -245,6 +246,7 @@ def test_an_unknown_section_is_a_404_not_a_500(client, editor):
 # The backend refuses to instantiate without a full OIDC configuration; these
 # are the endpoints it checks for, pointing nowhere since nothing is fetched.
 oidc_configured = override_settings(
+    OIDC_PROVIDER_URL="http://testserver",
     OIDC_RP_CLIENT_ID="test",
     OIDC_RP_CLIENT_SECRET="test",
     OIDC_RP_SIGN_ALGO="RS256",
@@ -261,38 +263,34 @@ def _backend():
 
 
 @oidc_configured
-def test_losing_the_group_downgrades_the_account(db):
-    from django.contrib.auth.models import User
-
+def test_sso_user_creation(db):
     backend = _backend()
-    claims = {"email": "nadia@example.test", "groups": ["accueil-redaction", "accueil-publication"]}
-    user = backend.create_user(claims)
-    assert user.is_staff and user.groups.count() == 2
-
-    # Same person, next login, removed from the group upstream.
-    user = backend.update_user(user, {"email": "nadia@example.test", "groups": []})
+    user = backend.create_user({"email": "bob@example.test", "given_name": "Bob", "usual_name": "Beauregard"})
     assert not user.is_staff
-    assert user.groups.count() == 0
-    assert not User.objects.get(pk=user.pk).is_staff
-
-
-@oidc_configured
-def test_sso_never_grants_superuser(db):
-    from django.contrib.auth.models import User
-
-    # An account matched on email must not inherit local superuser rights.
-    local = User.objects.create_superuser("chef", "chef@example.test", "x")
-    backend = _backend()
-    user = backend.update_user(local, {"email": "chef@example.test", "groups": ["accueil-redaction"]})
     assert not user.is_superuser
-    assert user.is_staff
+    assert user.first_name == "Bob"
+    assert user.last_name == "Beauregard"
 
 
 @oidc_configured
-def test_a_string_groups_claim_grants_nothing(db):
+def test_sso_user_update(db):
+    User.objects.create(email="bob@example.test", first_name="bad", last_name="bad", is_staff=True, is_superuser=True)
     backend = _backend()
-    user = backend.create_user({"email": "bob@example.test", "groups": "accueil-redaction"})
-    assert not user.is_staff
+    user = backend.create_user({"email": "bob@example.test", "given_name": "Bob", "usual_name": "Beauregard"})
+    # These are updated
+    assert user.first_name == "Bob"
+    assert user.last_name == "Beauregard"
+    # There are not updated
+    assert user.is_staff
+    assert user.is_superuser
+
+
+@oidc_configured
+def test_auto_login(db, client):
+    response = client.get(reverse("edition:plan"))
+    assertRedirects(
+        response, reverse("oidc_authentication_init") + "?next=%2Fedition%2F", fetch_redirect_response=False
+    )
 
 
 def test_the_public_page_never_loads_the_editing_theme(client):

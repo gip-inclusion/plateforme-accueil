@@ -36,11 +36,11 @@ OIDC_PUBLISHER_GROUP = os.environ.get("OIDC_PUBLISHER_GROUP", "accueil-publicati
 if OIDC_ENABLED:
     AUTHENTICATION_BACKENDS = ["accueil.auth.AuthentikBackend"]
     OIDC_RP_SIGN_ALGO = "RS256"
-    OIDC_RP_SCOPES = "openid email profile"
-    OIDC_OP_AUTHORIZATION_ENDPOINT = f"{OIDC_PROVIDER_URL}/authorize/"
-    OIDC_OP_TOKEN_ENDPOINT = f"{OIDC_PROVIDER_URL}/token/"
-    OIDC_OP_USER_ENDPOINT = f"{OIDC_PROVIDER_URL}/userinfo/"
-    OIDC_OP_JWKS_ENDPOINT = f"{OIDC_PROVIDER_URL}/jwks/"
+    OIDC_RP_SCOPES = "openid email given_name usual_name"
+    OIDC_OP_AUTHORIZATION_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/authorize/"
+    OIDC_OP_TOKEN_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/token/"
+    OIDC_OP_USER_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/userinfo/"
+    OIDC_OP_JWKS_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/accueil-plateforme/jwks/"
     OIDC_USE_PKCE = True
     # Re-checks the session against Authentik rather than trusting a cookie for
     # the full two weeks: without it, revoking an editor upstream would not bite
