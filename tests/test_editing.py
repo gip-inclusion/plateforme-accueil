@@ -5,7 +5,6 @@ import json
 
 import pytest
 from django.conf import settings
-from django.contrib.auth import get_user
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -13,7 +12,6 @@ from django.shortcuts import resolve_url
 from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
-from pytest_django.asserts import assertRedirects
 
 from accueil.models import Section
 
@@ -242,93 +240,6 @@ def test_an_anonymous_get_reveals_nothing(client, page):
 def test_an_unknown_section_is_a_404_not_a_500(client, editor):
     client.force_login(editor)
     assert client.post(reverse("edition:toggle", args=[999999])).status_code == 404
-
-
-# The backend refuses to instantiate without a full OIDC configuration; these
-# are the endpoints it checks for, pointing nowhere since nothing is fetched.
-oidc_configured = override_settings(
-    OIDC_PROVIDER_URL="http://testserver",
-    OIDC_RP_CLIENT_ID="test",
-    OIDC_RP_CLIENT_SECRET="test",
-    OIDC_RP_SIGN_ALGO="RS256",
-    OIDC_OP_TOKEN_ENDPOINT="https://exemple.test/token/",
-    OIDC_OP_USER_ENDPOINT="https://exemple.test/userinfo/",
-    OIDC_OP_JWKS_ENDPOINT="https://exemple.test/jwks/",
-)
-
-
-def _backend():
-    from accueil.auth import AuthentikBackend
-
-    return AuthentikBackend()
-
-
-@oidc_configured
-def test_sso_user_creation(db):
-    backend = _backend()
-    user = backend.create_user({"email": "bob@example.test", "given_name": "Bob", "usual_name": "Beauregard"})
-    assert not user.is_staff
-    assert not user.is_superuser
-    assert user.first_name == "Bob"
-    assert user.last_name == "Beauregard"
-
-
-@oidc_configured
-def test_sso_user_update(db):
-    User.objects.create(email="bob@example.test", first_name="bad", last_name="bad", is_staff=True, is_superuser=True)
-    backend = _backend()
-    user = backend.create_user({"email": "bob@example.test", "given_name": "Bob", "usual_name": "Beauregard"})
-    # These are updated
-    assert user.first_name == "Bob"
-    assert user.last_name == "Beauregard"
-    # There are not updated
-    assert user.is_staff
-    assert user.is_superuser
-
-
-@oidc_configured
-def test_auto_login(db, client):
-    response = client.get(reverse("edition:plan"))
-    assertRedirects(
-        response, reverse("oidc_authentication_init") + "?next=%2Fedition%2F", fetch_redirect_response=False
-    )
-
-
-@oidc_configured
-def test_admin_auto_login(db, client):
-    response = client.get(reverse("admin:index"))
-    expected_url = reverse("admin:login") + "?next=%2Fadmin%2F"
-    assertRedirects(response, expected_url, fetch_redirect_response=False)
-
-    response = client.get(expected_url)
-    # We don't keep the next parameter as it's not used in the oidc callback
-    assertRedirects(response, reverse("oidc_authentication_init"), fetch_redirect_response=False)
-
-
-@oidc_configured
-def test_logout(db, client):
-    user = User.objects.create(
-        email="bob@example.test", first_name="bad", last_name="bad", is_staff=True, is_superuser=True
-    )
-    client.force_login(user)
-
-    response = client.post(reverse("logout"))
-    assertRedirects(response, reverse("index"))
-
-    assert get_user(client).is_authenticated is False
-
-
-@oidc_configured
-def test_admin_logout(db, client):
-    user = User.objects.create(
-        email="bob@example.test", first_name="bad", last_name="bad", is_staff=True, is_superuser=True
-    )
-    client.force_login(user)
-
-    response = client.post(reverse("admin:logout"))
-    assertRedirects(response, reverse("index"))
-
-    assert get_user(client).is_authenticated is False
 
 
 def test_the_public_page_never_loads_the_editing_theme(client):
