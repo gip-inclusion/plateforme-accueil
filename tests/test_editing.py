@@ -293,6 +293,17 @@ def test_auto_login(db, client):
     )
 
 
+@oidc_configured
+def test_admin_auto_login(db, client):
+    response = client.get(reverse("admin:index"))
+    expected_url = reverse("admin:login") + "?next=%2Fadmin%2F"
+    assertRedirects(response, expected_url, fetch_redirect_response=False)
+
+    response = client.get(expected_url)
+    # We don't keep the next parameter as it's not used in the oidc callback
+    assertRedirects(response, reverse("oidc_authentication_init"), fetch_redirect_response=False)
+
+
 def test_the_public_page_never_loads_the_editing_theme(client):
     # Two CSS worlds: the house theme dresses /edition/, the public page keeps
     # its own hand-written stylesheet and must not pull in a Bootstrap build.

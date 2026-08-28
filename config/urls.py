@@ -35,6 +35,11 @@ if settings.OIDC_ENABLED:
 if settings.ADMIN_ENABLED or settings.OIDC_ENABLED:
     from django.contrib import admin
 
+    if settings.OIDC_ENABLED:
+        urlpatterns.append(
+            path("admin/login/", views.login_view, name="login"),
+        )
+
     urlpatterns += [
         path("edition/", include("config.urls_edition")),
         path("admin/", admin.site.urls),

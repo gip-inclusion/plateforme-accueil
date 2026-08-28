@@ -4,7 +4,7 @@ import urllib.request
 
 from django.core.cache import cache
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from accueil import content
 
@@ -51,3 +51,7 @@ def cities(request):
         {"results": results},
         headers={"Access-Control-Allow-Origin": "*"},
     )
+
+
+def login_view(request):
+    return redirect("oidc_authentication_init")
