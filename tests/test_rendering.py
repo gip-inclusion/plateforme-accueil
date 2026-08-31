@@ -167,3 +167,12 @@ def test_the_documented_sandbox_allows_what_the_page_needs(client):
         assert "allow-top-navigation-by-user-activation" in sandbox
     # Together, these two let the framed page remove its own sandbox.
     assert not ("allow-same-origin" in sandbox and "allow-scripts" in sandbox)
+
+
+def test_the_analytics_bridge_loads_before_the_page_is_measured(client):
+    # The bridge holds the consent and the visitor id the tag needs, so it must
+    # be listening before the container can fire.
+    head = re.findall(r"<head>.*?</head>", client.get("/").content.decode(), re.DOTALL)[0]
+    bridge = head.index("js/analytics-bridge.js")
+    assert head.index("js/matomo.js") < bridge
+    assert "defer" not in head[head.rindex("<script", 0, bridge) : bridge]
