@@ -130,8 +130,8 @@ const wireForm = (form) => {
   if (!input || !slug || !list) {
     return;
   }
-  const searchAction = form.getAttribute("action");
-  const resultsAction = form.getAttribute("data-resultats");
+  // Where the search lands is the server's call (accueil.views.search):
+  // picking a city here only has to fill the field.
   autocomplete(
     form,
     input,
@@ -139,11 +139,9 @@ const wireForm = (form) => {
     (item) => {
       input.value = item.label;
       slug.value = item.slug;
-      form.setAttribute("action", resultsAction);
     },
     () => {
       slug.value = "";
-      form.setAttribute("action", searchAction);
     },
   );
 };

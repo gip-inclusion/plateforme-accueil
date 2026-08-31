@@ -13,8 +13,11 @@
 const SELECTOR = "[data-matomo-category][data-matomo-action]";
 
 const track = (element) => {
-  const { matomoCategory, matomoAction, matomoName } = element.dataset;
-  const name = (matomoName || "").trim();
+  const { matomoCategory, matomoAction } = element.dataset;
+  // The hero runs one of three searches from a single form: its name is the
+  // choice made inside it.
+  const chosen = element.matches("form") && element.querySelector("[data-matomo-name]:checked");
+  const name = (element.dataset.matomoName || chosen?.dataset.matomoName || "").trim();
   window._paq = window._paq || [];
   window._paq.push(["trackEvent", matomoCategory, matomoAction, ...(name ? [name] : [])]);
 };
@@ -22,7 +25,15 @@ const track = (element) => {
 // Clicks land on the icon or the label inside a link or a button, hence closest().
 document.addEventListener("click", (event) => {
   const element = event.target.closest?.(SELECTOR);
-  if (element && !element.matches("form")) {
+  if (element && !element.matches("form, input")) {
+    track(element);
+  }
+});
+
+// A radio is also changed with the arrow keys, which fires no click at all.
+document.addEventListener("change", (event) => {
+  const element = event.target.closest?.(SELECTOR);
+  if (element) {
     track(element);
   }
 });
