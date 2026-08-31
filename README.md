@@ -201,11 +201,27 @@ Le tag recommandé côté site hôte :
   title="La plateforme de l'inclusion"
   loading="lazy"
   referrerpolicy="no-referrer"
-  sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+  sandbox="allow-forms allow-scripts allow-top-navigation-by-user-activation"
   style="width: 100%; height: 600px; border: 0;"
   data-plateforme-accueil
 ></iframe>
 ```
+
+Chaque jeton du `sandbox` est nécessaire, et la liste s'arrête là :
+
+- `allow-forms` — **toute la recherche du héros est un formulaire**. Sans ce
+  jeton l'iframe en bloque purement et simplement la soumission, et la
+  recherche ne fonctionne pas.
+- `allow-scripts` — l'autocomplétion des villes et le report de hauteur. La
+  page reste utilisable sans, en dégradé.
+- `allow-top-navigation-by-user-activation` — les recherches et les cartes
+  ouvrent leur destination dans la fenêtre du haut (`target="_top"`), sur un
+  geste du visiteur.
+
+`allow-same-origin` est **délibérément absent** : combiné à `allow-scripts`, il
+permettrait à la page embarquée de se soustraire au bac à sable. La page vit
+donc dans une origine opaque, et les ressources qu'elle appelle sont servies
+avec `Access-Control-Allow-Origin`.
 
 Seuls certains domaines sont autorisés à embarquer la page (CSP
 `frame-ancestors`) : `*.inclusion.gouv.fr`, `*.inclusion.beta.gouv.fr`,
