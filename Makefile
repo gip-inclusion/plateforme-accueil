@@ -9,7 +9,7 @@ db: ## Start the local PostgreSQL container
 	docker compose up -d
 
 dev: ## Run the dev server on :8000
-	DEBUG=1 uv run python manage.py runserver
+	DEBUG=1 uv run python manage.py runserver --nostatic
 
 embed-test: ## Serve the fake host page on :8001 (needs `make dev` on :8000)
 	uv run python -m http.server 8001 --directory docs/embed-test
