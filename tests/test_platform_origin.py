@@ -94,3 +94,16 @@ def test_a_local_host_is_reached_over_plain_http(client):
 def test_a_port_is_refused_on_a_public_host(client):
     # Only local development runs off-port; a port elsewhere is someone probing.
     assert client.get("/search", {"type": "emploi", "host": f"{DEMO}:8001"}).url == PROD + EMPLOI
+
+
+def test_an_extra_host_can_be_declared_for_a_local_setup(client):
+    # A homegrown hostname is a deployment fact, not a code change.
+    with override_settings(PLATFORM_ALLOWED_HOSTS=settings.PLATFORM_ALLOWED_HOSTS + ["emplois.local:*"]):
+        assert client.get("/search", {"type": "emploi", "host": "emplois.local:8000"}).url.startswith(
+            "https://emplois.local:8000"
+        )
+
+
+def test_a_refused_host_says_so_in_the_logs(client, caplog):
+    client.get("/search", {"type": "emploi", "host": "0.0.0.0:8000"})
+    assert "0.0.0.0:8000" in caplog.text

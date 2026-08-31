@@ -268,7 +268,11 @@ déclarée dans `config/settings.py` (`PLATFORM_ALLOWED_HOSTS`) :
 | `c1-review-*.cleverapps.io` | recettes jetables |
 
 En développement (`DEBUG`), `localhost` et `127.0.0.1` s'ajoutent, sur
-n'importe quel port et en clair — le reste doit être en HTTPS, sans port.
+n'importe quel port et en clair — le reste doit être en HTTPS, sans port. Un nom
+d'hôte maison (`0.0.0.0`, `emplois.local`) s'ajoute avec
+`PLATFORM_EXTRA_HOSTS`, sans toucher au code. Un hôte refusé est journalisé en
+`warning` : sans ça, des liens qui filent en production pendant qu'on développe
+n'ont aucune explication visible.
 
 Toute autre valeur retombe silencieusement sur `PLATFORM_DEFAULT_ORIGIN`
 (`https://plateforme.inclusion.gouv.fr`, ajustable par variable

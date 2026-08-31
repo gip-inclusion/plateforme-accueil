@@ -18,10 +18,14 @@ falls back to `DEFAULT_ORIGIN`. Building the target from the request instead
 would make this an open redirect, and the page is linked from gouv.fr domains.
 """
 
+import logging
 import re
 from fnmatch import fnmatchcase
 
 from django.conf import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 # A hostname, and a port only for local development. No scheme, no path, no
@@ -59,6 +63,9 @@ def origin(request):
     if any(_matches(host, pattern) for pattern in settings.PLATFORM_ALLOWED_HOSTS):
         scheme = "http" if host.split(":")[0] in _LOCAL else "https"
         return f"{scheme}://{host}"
+    # Falling back is the safe answer, but a silent one costs a developer an
+    # afternoon wondering why local links leave for production.
+    logger.warning("Unknown platform host %r, falling back to the default origin", host)
     return settings.PLATFORM_DEFAULT_ORIGIN
 
 
