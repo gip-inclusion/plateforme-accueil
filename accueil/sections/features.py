@@ -2,11 +2,11 @@
 
 from django import forms
 
-from accueil.sections.base import ListField, SectionType, registry
+from accueil.sections.base import Icon, ListField, SectionType, registry
 
 
 class Step(forms.Form):
-    icon = forms.CharField(label="Icône")
+    icon = Icon(label="Icône")
     title = forms.CharField(label="Titre")
     text = forms.CharField(label="Texte", required=False, widget=forms.Textarea)
 

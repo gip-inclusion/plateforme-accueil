@@ -218,13 +218,16 @@ def _refuse_if_stale(request, row, values, *, digest=None):
     return redirect("edition:section", pk=row.pk)
 
 
-def _apply(request, pk, name, change, done):
+def _apply(request, pk, name, change, done, then=None):
     """Apply one operation to a list, and say so — success or refusal alike.
 
     `done` is the sentence shown once it applied. Each operation passes its
     own: an editor who deletes a testimonial must not be told it was updated,
     and this branch's whole subject is not destroying an editor's work by
     accident.
+
+    `then` builds where a *successful* operation lands. A refusal always returns
+    to the section: that is where the message and the board are.
 
     Two guards run before `change` ever sees the list, in addition to the
     whole-list validation `save_list` already does: an override that no
@@ -253,7 +256,7 @@ def _apply(request, pk, name, change, done):
         return redirect("edition:section", pk=pk)
 
     messages.success(request, done)
-    return redirect("edition:section", pk=pk)
+    return then(pk) if then else redirect("edition:section", pk=pk)
 
 
 @editor_view(post_only=True)
@@ -266,7 +269,16 @@ def item_duplicate(request, pk, name, index):
         _check_index(values, index)
         values.insert(index + 1, copy.deepcopy(values[index]))
 
-    return _apply(request, pk, name, change, "Élément dupliqué.")
+    # Straight to the copy: duplicating is how an editor starts a new item from
+    # an old one, so the next thing they want is to change it.
+    return _apply(
+        request,
+        pk,
+        name,
+        change,
+        "Élément dupliqué.",
+        then=lambda pk: redirect("edition:item", pk=pk, name=name, index=index + 1),
+    )
 
 
 @editor_view(post_only=True)

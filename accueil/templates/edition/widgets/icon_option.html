@@ -1,0 +1,7 @@
+{# The same `<svg><use>` glyph the public page renders, so what an editor #}
+{# picks is what the page draws. #}
+{% include "django/forms/widgets/input.html" %}
+<label class="champ-icone__option" for="{{ widget.attrs.id }}">
+  <svg class="champ-icone__glyphe" aria-hidden="true"><use href="#{{ widget.value }}"/></svg>
+  <span class="champ-icone__nom">{{ widget.value }}</span>
+</label>

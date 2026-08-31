@@ -13,6 +13,9 @@
     <link rel="stylesheet" href="{% static 'edition/edition.css' %}">
   </head>
   <body class="edition">
+    {# `IconWidget` draws each option through this same public sprite (see #}
+    {# accueil/templates/accueil/base.html). #}
+    {% include "accueil/icones.svg" %}
     <header class="edition__entete">
       <a class="edition__marque" href="{% url 'edition:plan' %}">Édition de la page d'accueil</a>
       <p class="edition__compte">

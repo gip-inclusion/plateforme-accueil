@@ -172,6 +172,52 @@
   height: auto;
 }
 
+/* Icon field ------------------------------------------------------------
+   IconWidget (accueil/sections/base.py): every icon from the public sprite,
+   as a grid of radio inputs — the whole set (39) fits on screen at once, so
+   no dialog or search is needed. */
+
+.champ-icone {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: 0.375rem;
+}
+
+.champ-icone__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.champ-icone input:checked + .champ-icone__option {
+  border-color: #333;
+  background: #eef1fb;
+}
+
+.champ-icone__option input {
+  /* Kept in the document, not display:none, so keyboard focus and browser
+     validation still land on a real control — only its own box is hidden,
+     the surrounding label already shows the selection. */
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.champ-icone__glyphe {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #333;
+}
+
 /* Confirming action last and rightmost, cancel to its left. */
 .editeur__actions {
   display: flex;
@@ -351,4 +397,25 @@
     flex-direction: column;
     align-items: flex-end;
   }
+}
+
+
+/* Icon sprite -------------------------------------------------------------
+   The same partial the public page includes, so an editor's glyphs come from
+   exactly what the page can draw. `main.css` hides it there; the editing UI
+   never loads `main.css`, so without this rule the <svg> lays out at the
+   default replaced-element size and pushes the whole page down by 150px. */
+
+.icones-sprite {
+  display: none;
+}
+
+/* Keyboard focus must be visible: the radio itself is `opacity: 0`, so its
+   native ring is invisible and this is the only indicator there is. Reached
+   through the adjacent sibling rather than `:has()`, so it holds everywhere —
+   the same reasoning as the hero's search tabs. */
+
+.champ-icone input:focus-visible + .champ-icone__option {
+  outline: 2px solid var(--primary, #000);
+  outline-offset: 2px;
 }

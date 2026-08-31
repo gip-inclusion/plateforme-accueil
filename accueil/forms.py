@@ -237,6 +237,10 @@ def _apply_house_classes(fields, *, skip_illustration=False):
         widget = field.widget
         if skip_illustration and isinstance(widget, IllustrationWidget):
             continue
+        if isinstance(widget, forms.RadioSelect):
+            # A group of radios, not a text box. `RadioSelect` is not a
+            # `Select` subclass, so it would otherwise reach the else branch.
+            continue
         if isinstance(widget, forms.CheckboxInput):
             widget.attrs.setdefault("class", "form-check-input")
         elif isinstance(widget, forms.Select):

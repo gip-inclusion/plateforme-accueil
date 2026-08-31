@@ -13,9 +13,35 @@ See CLAUDE.md, section « Sections », for the authoring contract.
 """
 
 import copy
+import re
+from functools import lru_cache
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
+
+
+# The sprite is the only place the page draws an icon from, so its symbol ids
+# are the whole set. Read from it rather than copied, so there is no second
+# list to keep in step.
+SPRITE_PATH = settings.BASE_DIR / "accueil" / "templates" / "accueil" / "icones.svg"
+_SYMBOL_ID_RE = re.compile(r'<symbol\b[^>]*\bid="([^"]+)"')
+
+
+@lru_cache(maxsize=1)
+def sprite_icon_names():
+    """Every icon id declared by the public sprite, sorted."""
+    text = SPRITE_PATH.read_text(encoding="utf-8")
+    names = _SYMBOL_ID_RE.findall(text)
+    if not names:
+        raise ValueError(f"no <symbol id=…> found in {SPRITE_PATH}")
+    return tuple(sorted(names))
+
+
+def icon_choices():
+    """The sprite's names as `ChoiceField` choices. A callable, so the file is
+    read on first use rather than at import time."""
+    return [(name, name) for name in sprite_icon_names()]
 
 
 def check_shape(field, value):
@@ -38,6 +64,31 @@ class Reference(forms.SlugField):
     """An identifier the page consumes but never displays — a feed id, or a
     slug tying a tab to its panel. Slug-shaped on purpose: several of these end
     up in HTML ids, where a space would silently break `aria-controls`."""
+
+
+class IconWidget(forms.RadioSelect):
+    """The sprite's icons as a grid of radios, each showing its own glyph.
+
+    Ordinary radios rather than a picker: the whole set fits on screen, so
+    nothing here needs JavaScript to work.
+    """
+
+    template_name = "edition/widgets/icon.html"
+    option_template_name = "edition/widgets/icon_option.html"
+
+
+class Icon(forms.ChoiceField):
+    """An icon id from the public sprite (`accueil/templates/accueil/icones.svg`).
+
+    A `ChoiceField` so an id outside the sprite is a form error rather than an
+    icon that silently fails to draw. The cleaned value stays a plain string,
+    so it is stored and compared to its default like any other text.
+    """
+
+    widget = IconWidget
+
+    def __init__(self, **kwargs):
+        super().__init__(choices=icon_choices, **kwargs)
 
 
 class Illustration(forms.CharField):

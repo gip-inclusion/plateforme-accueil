@@ -470,7 +470,7 @@ def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, edit
             "token": add_token,
             "slug": "nouveau",
             "tab_label": "Nouveau",
-            "icon": "ri-star-line",
+            "icon": "ri-user-line",
             "title": "Titre",
             "chapo": "",
             "cta_label": "Go",
@@ -498,7 +498,7 @@ def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, edit
             "token": edit_token,
             "slug": "nouveau",
             "tab_label": "Nouveau",
-            "icon": "ri-star-line",
+            "icon": "ri-user-line",
             "title": "Titre modifié",
             "chapo": "",
             "cta_label": "Go",
@@ -1232,3 +1232,25 @@ def test_a_non_staff_visitor_is_refused_every_list_item_screen(client, visitor, 
     assert "/edition/" not in response["Location"].split("?")[0]
     assert response.headers["X-Frame-Options"] == "DENY"
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_duplicating_lands_on_the_copy_ready_to_edit(client, editor, testimonials):
+    # Duplicating starts a new item from an old one: the next move is to edit
+    # the copy, not to walk back to the board.
+    client.force_login(editor)
+    response = post(client, "item-duplicate", testimonials, "quotes", 0, {"token": token(testimonials)})
+    assert response["Location"] == reverse("edition:item", args=[testimonials.pk, "quotes", 1])
+
+
+def test_a_refused_duplicate_goes_back_to_the_section(client, editor, page):
+    # A refusal must land where the message is visible, not on an item that was
+    # never created. `profiles` declares unique="slug", so a duplicate there is
+    # always refused.
+    client.force_login(editor)
+    profiles = Section.objects.get(kind="profiles")
+    values = editing.list_values(profiles, declared("profiles"), "profiles")
+    response = client.post(
+        reverse("edition:item-duplicate", args=[profiles.pk, "profiles", 0]),
+        {"token": editing._digest(values)},
+    )
+    assert response["Location"] == reverse("edition:section", args=[profiles.pk])
