@@ -1,5 +1,6 @@
 import io
 import json
+import pathlib
 import re
 from unittest import mock
 
@@ -151,3 +152,18 @@ def test_an_extra_frame_ancestor_can_be_opened_per_deployment(client, settings):
     # The documented way to embed the deployed page from a developer machine.
     settings.SECURE_CSP = {"frame-ancestors": ["https://*.inclusion.gouv.fr", "http://localhost:8000"]}
     assert "http://localhost:8000" in client.get("/").headers["Content-Security-Policy"]
+
+
+def test_the_documented_sandbox_allows_what_the_page_needs(client):
+    # Hosts copy this snippet verbatim, and a token it omits disables the
+    # feature it gates with no error anywhere.
+    readme = pathlib.Path("README.md").read_text()
+    sandbox = re.search(r'sandbox="([^"]+)"', readme).group(1).split()
+
+    page = client.get("/").content.decode()
+    if "<form" in page:
+        assert "allow-forms" in sandbox
+    if 'target="_top"' in page:
+        assert "allow-top-navigation-by-user-activation" in sandbox
+    # Together, these two let the framed page remove its own sandbox.
+    assert not ("allow-same-origin" in sandbox and "allow-scripts" in sandbox)
