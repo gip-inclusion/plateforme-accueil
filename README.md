@@ -165,17 +165,17 @@ Le repère est posé dans les gabarits, sur l'élément cliquable :
    data-matomo-name="Industrie">Industrie</a>
 ```
 
-Au clic (ou à l'envoi, pour un `<form>`), le script pousse dans la couche de
-données du conteneur :
+Au clic (ou à l'envoi, pour un `<form>`), le script pousse un événement Matomo
+ordinaire :
 
 ```js
-window._mtm.push({
-  event: "accueil.interaction",
-  matomoCategory: "emplois",
-  matomoAction: "raccourci",
-  matomoName: "Industrie",
-});
+window._paq.push(["trackEvent", "emplois", "raccourci", "Industrie"]);
 ```
+
+`_paq` est la file du traqueur, pas la couche de données du Tag Manager : rien
+à déclarer dans le conteneur, un nouveau repère est mesuré dès qu'il est dans un
+gabarit. Le traqueur n'existant qu'une fois le consentement transmis par l'hôte,
+la file attend jusque-là et rien ne part avant.
 
 | Catégorie | Actions mesurées |
 | --- | --- |
@@ -185,11 +185,8 @@ window._mtm.push({
 | `pour-qui` | `onglet`, `inscription` |
 | `modale-ville` | `recherche` |
 
-Côté conteneur Matomo, il reste à créer **un déclencheur** sur l'événement
-`accueil.interaction` et **une balise « événement Matomo »** alimentée par les
-variables `matomoCategory` / `matomoAction` / `matomoName` : sans cela les
-poussées s'empilent sans être envoyées. Les deux attributs `category` et
-`action` vont toujours ensemble — un test le vérifie.
+Les deux attributs `category` et `action` vont toujours ensemble — un élément
+qui n'en porte qu'un n'est jamais mesuré, et un test le vérifie.
 
 ## Embarquer la page en iframe
 
