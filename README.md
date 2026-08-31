@@ -211,6 +211,23 @@ Seuls certains domaines sont autorisés à embarquer la page (CSP
 `frame-ancestors`) : `*.inclusion.gouv.fr`, `*.inclusion.beta.gouv.fr`,
 `*.cleverapps.io`, `*.scalingo.io`.
 
+Un hôte absent de cette liste s'ajoute **par déploiement**, sans toucher au
+code, avec `CSP_EXTRA_FRAME_ANCESTORS` (origines séparées par des virgules) :
+
+```
+CSP_EXTRA_FRAME_ANCESTORS=http://localhost:8000,http://localhost:8080
+```
+
+C'est la voie à prendre pour développer l'embarquement depuis son poste contre
+la page **déployée** : on l'ouvre sur la recette, jamais sur la production. Y
+ajouter `localhost` en dur reviendrait à laisser n'importe quelle page servie
+sur la machine d'un visiteur encadrer la page de production, pour la commodité
+d'un poste de développement.
+
+En local (`DEBUG=1`), `localhost` et `127.0.0.1` sont déjà autorisés sur tous
+les ports : rien à poser pour embarquer une vitrine qui tourne elle aussi en
+local.
+
 ### Ajustement automatique de la hauteur (optionnel)
 
 La page fonctionne sans JavaScript : l'iframe garde alors la hauteur fixée par
