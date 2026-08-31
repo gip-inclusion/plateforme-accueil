@@ -284,6 +284,44 @@ par frame, et seulement si la valeur a changé) :
 { "source": "plateforme-accueil", "type": "viewport", "top": 320, "height": 700 }
 ```
 
+L'hôte émet aussi, une fois que le visiteur a accepté la mesure d'audience chez
+lui et jamais avant :
+
+```json
+{ "source": "plateforme-accueil", "type": "analytics", "consent": true,
+  "visitorId": "1a2b3c4d5e6f7a8b", "siteId": 117 }
+```
+
+La page adopte cet identifiant de visiteur et ce site : ses hits rejoignent la
+visite déjà en cours chez l'hôte, dans le site Matomo de l'hôte, au lieu d'en
+ouvrir une seconde ailleurs. Le `siteId` transite plutôt que d'être figé dans le
+container, pour qu'un environnement de recette n'écrive jamais dans le site de
+production.
+
+Le tag Matomo du container se déclenche sur l'événement `host-analytics` émis à
+la réception de ce message, et non sur la page vue : le traqueur sérialise sa
+requête dès que le tag se déclenche, donc une identité arrivée après coup ne
+corrigerait plus la page vue. Le container exige en outre le consentement.
+
+Le même message avec `"consent": false` **retire** le consentement : la page
+appelle `forgetConsentGiven` et cesse de mesurer. L'hôte doit l'émettre si le
+visiteur revient sur son choix — une iframe survit largement au clic qui révoque,
+et sans ce message elle continuerait de mesurer quelqu'un qui a demandé l'arrêt.
+Un consentement redonné ensuite reprend la mesure sans recompter la page vue.
+
+L'hôte peut republier le message autant qu'il veut : une répétition est sans
+effet. C'est ce qui lui permet de le renvoyer à chaque message reçu de l'iframe,
+et de couvrir ainsi le cas où le consentement précède le chargement de celle-ci.
+
+Un hôte qui n'implémente pas le protocole obtient donc une page non mesurée —
+c'est voulu, la vitrine n'a pas de bandeau de consentement à elle.
+
+Côté container, il reste à créer une variable de couche de données
+`hostSiteId`, un déclencheur sur l'événement `host-analytics`, et à y brancher
+la balise Matomo à la place de la page vue — dans l'interface du Tag Manager,
+comme pour `accueil.interaction` plus haut. Tant que ce n'est pas fait,
+l'événement poussé ici ne déclenche rien.
+
 `top` et `height` décrivent la bande visible **dans le repère du document
 embarqué**, c'est-à-dire `max(0, -rect.top)` et la hauteur restant dans la
 fenêtre, où `rect` est le `getBoundingClientRect()` de l'iframe. Le document
