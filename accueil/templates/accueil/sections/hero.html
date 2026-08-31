@@ -10,16 +10,19 @@
     <div class="recherche">
       <div class="recherche__onglets" role="tablist" aria-label="Type de recherche">
         <button type="button" class="recherche__onglet est-actif" role="tab"
+                data-matomo-category="hero" data-matomo-action="onglet" data-matomo-name="Un emploi inclusif"
                 id="onglet-emploi" aria-controls="form-emploi" aria-selected="true">
           <svg class="icone" aria-hidden="true"><use href="#ri-briefcase-line"/></svg>
           <span class="onglet__court">Emploi</span><span class="onglet__long">Un emploi inclusif</span>
         </button>
         <button type="button" class="recherche__onglet" role="tab"
+                data-matomo-category="hero" data-matomo-action="onglet" data-matomo-name="Un service d'insertion"
                 id="onglet-insertion" aria-controls="form-insertion" aria-selected="false">
           <svg class="icone" aria-hidden="true"><use href="#ri-compass-3-line"/></svg>
           <span class="onglet__court">Insertion</span><span class="onglet__long">Un service d'insertion</span>
         </button>
         <button type="button" class="recherche__onglet" role="tab"
+                data-matomo-category="hero" data-matomo-action="onglet" data-matomo-name="Un accompagnateur"
                 id="onglet-accompagnateur" aria-controls="form-accompagnateur" aria-selected="false">
           <svg class="icone" aria-hidden="true"><use href="#ri-user-line"/></svg>
           <span class="onglet__court">Accompagnateur</span><span class="onglet__long">Un accompagnateur</span>
@@ -27,6 +30,7 @@
       </div>
 
       <form class="recherche__barre" id="form-emploi" role="search" method="get" target="_top"
+            data-matomo-category="hero" data-matomo-action="recherche" data-matomo-name="Un emploi inclusif"
             action="https://emplois.inclusion.beta.gouv.fr/search/employers"
             data-recherche-ville
             data-resultats="https://emplois.inclusion.beta.gouv.fr/search/employers/results">
@@ -46,6 +50,7 @@
       </form>
 
       <form class="recherche__barre" id="form-accompagnateur" role="search" method="get" target="_top" hidden
+            data-matomo-category="hero" data-matomo-action="recherche" data-matomo-name="Un accompagnateur"
             action="https://emplois.inclusion.beta.gouv.fr/search/prescribers"
             data-recherche-ville
             data-resultats="https://emplois.inclusion.beta.gouv.fr/search/prescribers/results">
@@ -65,6 +70,7 @@
       </form>
 
       <form class="recherche__barre" id="form-insertion" role="search" method="get" target="_top" hidden
+            data-matomo-category="hero" data-matomo-action="recherche" data-matomo-name="Un service d'insertion"
             action="https://emplois.inclusion.beta.gouv.fr/search/services"
             data-recherche-ville
             data-resultats="https://emplois.inclusion.beta.gouv.fr/search/services/results">

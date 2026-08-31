@@ -7,6 +7,7 @@
       {% for profile in content.profiles %}
         <button type="button" class="profils__onglet{% if forloop.first %} est-actif{% endif %}" role="tab"
                 id="onglet-{{ profile.slug }}" aria-controls="profil-{{ profile.slug }}"
+                data-matomo-category="{{ section.anchor }}" data-matomo-action="onglet" data-matomo-name="{{ profile.tab_label }}"
                 aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
           <svg class="icone" aria-hidden="true"><use href="#{{ profile.icon }}"/></svg>
           {{ profile.tab_label }}
@@ -21,7 +22,8 @@
           <div>
             <h3 class="profil__titre">{{ profile.title }}</h3>
             <p class="profil__chapo">{{ profile.chapo }}</p>
-            <a class="bouton" href="{{ profile.cta_href }}" target="_top">
+            <a class="bouton" href="{{ profile.cta_href }}" target="_top"
+               data-matomo-category="{{ section.anchor }}" data-matomo-action="inscription" data-matomo-name="{{ profile.tab_label }}">
               <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
               <span>{{ profile.cta_label }}</span>
             </a>
