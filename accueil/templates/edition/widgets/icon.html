@@ -1,0 +1,9 @@
+{# `IconWidget` (accueil/sections/base.py): a grid rather than Django's #}
+{# default one-radio-per-line list. #}
+<div class="champ-icone" role="radiogroup" aria-labelledby="{{ widget.attrs.id }}_label">
+  {% for group, options, index in widget.optgroups %}
+    {% for option in options %}
+      {% include option.template_name with widget=option %}
+    {% endfor %}
+  {% endfor %}
+</div>

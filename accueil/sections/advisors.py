@@ -2,11 +2,11 @@
 
 from django import forms
 
-from accueil.sections.base import ListField, SectionType, registry
+from accueil.sections.base import Icon, ListField, SectionType, registry
 
 
 class Tag(forms.Form):
-    icon = forms.CharField(label="Icône")
+    icon = Icon(label="Icône")
     label = forms.CharField(label="Libellé")
 
 

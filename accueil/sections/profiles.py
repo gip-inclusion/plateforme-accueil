@@ -2,7 +2,7 @@
 
 from django import forms
 
-from accueil.sections.base import ListField, Reference, SectionType, registry
+from accueil.sections.base import Icon, ListField, Reference, SectionType, registry
 
 
 class Step(forms.Form):
@@ -13,7 +13,7 @@ class Step(forms.Form):
 class Profile(forms.Form):
     slug = Reference(label="Identifiant", help_text="Relie l'onglet à son panneau.")
     tab_label = forms.CharField(label="Onglet")
-    icon = forms.CharField(label="Icône")
+    icon = Icon(label="Icône")
     title = forms.CharField(label="Titre")
     chapo = forms.CharField(label="Chapô", required=False, widget=forms.Textarea)
     cta_label = forms.CharField(label="Bouton")

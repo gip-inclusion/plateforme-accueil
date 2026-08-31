@@ -7,14 +7,14 @@ by the badge — so they share one template and declare the rest as data.
 
 from django import forms
 
-from accueil.sections.base import Illustration, SectionType
+from accueil.sections.base import Icon, Illustration, SectionType
 
 
 class Card(forms.Form):
     title = forms.CharField(label="Titre")
     stat = forms.CharField(label="Accroche", required=False)
     text = forms.CharField(label="Texte", required=False, widget=forms.Textarea)
-    icon = forms.CharField(label="Icône")
+    icon = Icon(label="Icône")
     image = Illustration(
         label="Image",
         # .carte-media__media is widest just *below* the 64rem breakpoint, not
@@ -31,7 +31,7 @@ class Card(forms.Form):
 
 class Shortcut(forms.Form):
     label = forms.CharField(label="Libellé")
-    icon = forms.CharField(label="Icône")
+    icon = Icon(label="Icône")
     href = forms.URLField(label="Lien")
 
 

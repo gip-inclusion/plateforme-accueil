@@ -4,7 +4,10 @@
 {# in one place. Expects `champ` (a bound field); `overridden`, a set of #}
 {# field names shown with a "modifié" tag, is optional. #}
 <div class="champ{% if champ.errors %} champ--erreur{% endif %}">
-  <label for="{{ champ.id_for_label }}">
+  {# A widget made of several controls — the icon grid — has no single one to #}
+  {# point at, and `id_for_label` is empty for it. Naming the group through #}
+  {# `aria-labelledby` beats a `for=""` that resolves to nothing. #}
+  <label id="{{ champ.auto_id }}_label"{% if champ.id_for_label %} for="{{ champ.id_for_label }}"{% endif %}>
     {{ champ.label }}
     {% if overridden and champ.name in overridden %}<span class="tag">modifié</span>{% endif %}
   </label>
