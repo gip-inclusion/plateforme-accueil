@@ -102,7 +102,10 @@ def test_index_allows_iframe_embedding(client):
     assert "https://*.inclusion.beta.gouv.fr" in csp
     assert "https://*.cleverapps.io" in csp
     assert "https://*.scalingo.io" in csp
-    assert "localhost" not in csp  # DEBUG=False in tests
+    # The shipped list stays closed: a developer machine is opened per
+    # deployment through CSP_EXTRA_FRAME_ANCESTORS, never in the code.
+    assert "localhost" not in csp
+    assert "127.0.0.1" not in csp
 
 
 def test_index_has_no_inline_styles_or_scripts(client):
@@ -142,3 +145,9 @@ def test_analytics_tags_always_come_in_pairs(client):
     body = client.get("/").content.decode()
     for tag in re.findall(r"<(?:a|button|form)[^>]*data-matomo-[^>]*>", body):
         assert "data-matomo-category=" in tag and "data-matomo-action=" in tag, tag
+
+
+def test_an_extra_frame_ancestor_can_be_opened_per_deployment(client, settings):
+    # The documented way to embed the deployed page from a developer machine.
+    settings.SECURE_CSP = {"frame-ancestors": ["https://*.inclusion.gouv.fr", "http://localhost:8000"]}
+    assert "http://localhost:8000" in client.get("/").headers["Content-Security-Policy"]
