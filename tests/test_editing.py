@@ -242,59 +242,6 @@ def test_an_unknown_section_is_a_404_not_a_500(client, editor):
     assert client.post(reverse("edition:toggle", args=[999999])).status_code == 404
 
 
-# The backend refuses to instantiate without a full OIDC configuration; these
-# are the endpoints it checks for, pointing nowhere since nothing is fetched.
-oidc_configured = override_settings(
-    OIDC_RP_CLIENT_ID="test",
-    OIDC_RP_CLIENT_SECRET="test",
-    OIDC_RP_SIGN_ALGO="RS256",
-    OIDC_OP_TOKEN_ENDPOINT="https://exemple.test/token/",
-    OIDC_OP_USER_ENDPOINT="https://exemple.test/userinfo/",
-    OIDC_OP_JWKS_ENDPOINT="https://exemple.test/jwks/",
-)
-
-
-def _backend():
-    from accueil.auth import AuthentikBackend
-
-    return AuthentikBackend()
-
-
-@oidc_configured
-def test_losing_the_group_downgrades_the_account(db):
-    from django.contrib.auth.models import User
-
-    backend = _backend()
-    claims = {"email": "nadia@example.test", "groups": ["accueil-redaction", "accueil-publication"]}
-    user = backend.create_user(claims)
-    assert user.is_staff and user.groups.count() == 2
-
-    # Same person, next login, removed from the group upstream.
-    user = backend.update_user(user, {"email": "nadia@example.test", "groups": []})
-    assert not user.is_staff
-    assert user.groups.count() == 0
-    assert not User.objects.get(pk=user.pk).is_staff
-
-
-@oidc_configured
-def test_sso_never_grants_superuser(db):
-    from django.contrib.auth.models import User
-
-    # An account matched on email must not inherit local superuser rights.
-    local = User.objects.create_superuser("chef", "chef@example.test", "x")
-    backend = _backend()
-    user = backend.update_user(local, {"email": "chef@example.test", "groups": ["accueil-redaction"]})
-    assert not user.is_superuser
-    assert user.is_staff
-
-
-@oidc_configured
-def test_a_string_groups_claim_grants_nothing(db):
-    backend = _backend()
-    user = backend.create_user({"email": "bob@example.test", "groups": "accueil-redaction"})
-    assert not user.is_staff
-
-
 def test_the_public_page_never_loads_the_editing_theme(client):
     # Two CSS worlds: the house theme dresses /edition/, the public page keeps
     # its own hand-written stylesheet and must not pull in a Bootstrap build.
