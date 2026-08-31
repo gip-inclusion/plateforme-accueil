@@ -1,8 +1,9 @@
+{% load platform %}
 <div class="pastilles">
   {% for shortcut in content.shortcuts %}
-    <a class="pastille-lien" href="{{ shortcut.href }}" target="_top"
+    <a class="pastille-lien" href="{% platform_url shortcut.href %}" target="_top"
        data-matomo-category="{{ section.anchor }}" data-matomo-action="raccourci" data-matomo-name="{{ shortcut.label }}"><svg class="icone" aria-hidden="true"><use href="#{{ shortcut.icon }}"/></svg> {{ shortcut.label }}</a>
   {% endfor %}
-  <a class="lien-fleche" href="{{ content.see_all_href }}" target="_top"
+  <a class="lien-fleche" href="{% platform_url content.see_all_href %}" target="_top"
      data-matomo-category="{{ section.anchor }}" data-matomo-action="voir-tout" data-matomo-name="{{ content.see_all_label }}">{{ content.see_all_label }} <svg class="icone" aria-hidden="true"><use href="#ri-arrow-right-line"/></svg></a>
 </div>

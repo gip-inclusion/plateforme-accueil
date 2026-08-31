@@ -124,6 +124,29 @@ SECURE_CSP["frame-ancestors"] += [
     origin for origin in os.environ.get("CSP_EXTRA_FRAME_ANCESTORS", "").split(",") if origin
 ]
 
+# Where the page sends its visitors: the platform deployment that embeds it.
+# Deliberately *not* the frame-ancestors list above — being allowed to embed the
+# page is not the same as being allowed to receive its visitors, since a
+# redirect launders a link behind our domain and an embed does not.
+PLATFORM_DEFAULT_ORIGIN = os.environ.get("PLATFORM_DEFAULT_ORIGIN", "https://plateforme.inclusion.gouv.fr")
+
+# Hostnames a host may claim through `?host=` (see accueil/platform_urls.py).
+# `*` never crosses a dot, so the review-app pattern stays one label wide.
+PLATFORM_ALLOWED_HOSTS = [
+    "plateforme.inclusion.gouv.fr",
+    "demo.plateforme.inclusion.gouv.fr",
+    "emplois.inclusion.beta.gouv.fr",
+    "demo.emplois.inclusion.beta.gouv.fr",
+    "c1-review-*.cleverapps.io",
+]
+
+if DEBUG:
+    # Any port: the fake host page of `make embed-test` and a local platform do
+    # not sit on the same one.
+    PLATFORM_ALLOWED_HOSTS += ["localhost:*", "127.0.0.1:*", "localhost", "127.0.0.1"]
+
+PLATFORM_ALLOWED_HOSTS += [host for host in os.environ.get("PLATFORM_EXTRA_HOSTS", "").split(",") if host]
+
 # The database is optional. Without DATABASE_URL the page renders the defaults
 # declared in `accueil/sections/`, exactly as it did before the CMS existed —
 # which is also what happens if the database is configured but unreachable.

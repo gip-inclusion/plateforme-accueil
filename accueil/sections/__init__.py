@@ -1,4 +1,14 @@
-from accueil.sections.base import Credit, Icon, Illustration, ListField, Reference, Registry, SectionType, registry
+from accueil.sections.base import (
+    Credit,
+    Icon,
+    Illustration,
+    ListField,
+    PlatformPath,
+    Reference,
+    Registry,
+    SectionType,
+    registry,
+)
 
 
 # Imported for their registration side effect; the order here is irrelevant,
@@ -15,4 +25,14 @@ from accueil.sections import (  # noqa: E402,F401  isort:skip
 )
 
 
-__all__ = ["Credit", "Icon", "Illustration", "ListField", "Reference", "Registry", "SectionType", "registry"]
+__all__ = [
+    "Credit",
+    "Icon",
+    "Illustration",
+    "ListField",
+    "PlatformPath",
+    "Reference",
+    "Registry",
+    "SectionType",
+    "registry",
+]

@@ -241,6 +241,49 @@ En local (`DEBUG=1`), `localhost` et `127.0.0.1` sont déjà autorisés sur tous
 les ports : rien à poser pour embarquer une vitrine qui tourne elle aussi en
 local.
 
+### Dire à la page où elle est embarquée
+
+Un seul déploiement de la vitrine sert tous les environnements. Sans rien, ses
+liens et ses recherches pointent vers la plateforme de production — un visiteur
+de la démo qui cherche un emploi se retrouverait donc en production. L'hôte se
+nomme dans le `src` pour l'éviter :
+
+```html
+<iframe src="https://<URL-DE-LA-VITRINE>/?host=demo.plateforme.inclusion.gouv.fr" …>
+```
+
+Lu au rendu : tous les liens de la page sont justes dès le premier affichage, et
+sans JavaScript. Le formulaire du héros reporte la valeur, pour que la recherche
+atterrisse sur le même déploiement que le reste de la page.
+
+C'est un **nom d'hôte**, jamais une URL, et il n'est que *comparé* à une liste
+déclarée dans `config/settings.py` (`PLATFORM_ALLOWED_HOSTS`) :
+
+| Hôte | |
+| --- | --- |
+| `plateforme.inclusion.gouv.fr` | production |
+| `demo.plateforme.inclusion.gouv.fr` | démo |
+| `emplois.inclusion.beta.gouv.fr` | production (nom actuel) |
+| `demo.emplois.inclusion.beta.gouv.fr` | démo (nom actuel) |
+| `c1-review-*.cleverapps.io` | recettes jetables |
+
+En développement (`DEBUG`), `localhost` et `127.0.0.1` s'ajoutent, sur
+n'importe quel port et en clair — le reste doit être en HTTPS, sans port.
+
+Toute autre valeur retombe silencieusement sur `PLATFORM_DEFAULT_ORIGIN`
+(`https://plateforme.inclusion.gouv.fr`, ajustable par variable
+d'environnement).
+
+Cette liste n'est **pas** celle des `frame-ancestors`, et c'est délibéré : être
+autorisé à embarquer la page n'est pas être autorisé à en recevoir les
+visiteurs. Une redirection blanchit un lien derrière notre domaine, un
+embarquement non. D'où l'absence de Scalingo ici, et le motif `c1-review-*`
+plutôt que `*.cleverapps.io`.
+
+Les sections déclarent donc des **chemins** (`/search/employers/results`), pas
+des URL. Le champ `PlatformPath` refuse une URL absolue : collée par un
+rédacteur, elle figerait le lien sur l'environnement d'où elle a été copiée.
+
 ### Ajustement automatique de la hauteur (optionnel)
 
 La page fonctionne sans JavaScript : l'iframe garde alors la hauteur fixée par

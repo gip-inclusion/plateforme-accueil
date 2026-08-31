@@ -2,7 +2,7 @@
 
 from django import forms
 
-from accueil.sections.base import Icon, ListField, SectionType, registry
+from accueil.sections.base import Icon, ListField, PlatformPath, SectionType, registry
 
 
 class Tag(forms.Form):
@@ -45,6 +45,4 @@ class Advisors(SectionType):
             ],
         )
         cta_label = forms.CharField(label="Bouton", initial="Trouver un accompagnateur autour de moi")
-        cta_href = forms.URLField(
-            label="Cible du bouton", initial="https://emplois.inclusion.beta.gouv.fr/search/prescribers/results"
-        )
+        cta_href = PlatformPath(label="Cible du bouton", initial="/search/prescribers/results")

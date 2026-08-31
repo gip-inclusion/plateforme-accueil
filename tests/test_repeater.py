@@ -474,7 +474,7 @@ def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, edit
             "title": "Titre",
             "chapo": "",
             "cta_label": "Go",
-            "cta_href": "https://example.test",
+            "cta_href": "/signup/professional/user",
             "steps": steps,
         },
     )
@@ -502,7 +502,7 @@ def test_a_profiles_item_is_created_and_edited_with_its_nested_list(client, edit
             "title": "Titre modifié",
             "chapo": "",
             "cta_label": "Go",
-            "cta_href": "https://example.test",
+            "cta_href": "/signup/professional/user",
             "steps": new_steps,
         },
     )

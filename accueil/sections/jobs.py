@@ -2,7 +2,7 @@
 
 from django import forms
 
-from accueil.sections.base import ListField, registry
+from accueil.sections.base import ListField, PlatformPath, registry
 from accueil.sections.search import Card, SearchSection, Shortcut
 
 
@@ -46,7 +46,7 @@ class Jobs(SearchSection):
                     "text": "Les entreprises et chantiers d'insertion forment leurs salariés aux métiers de la restauration.",
                     "icon": "ri-restaurant-line",
                     "image": "accueil/img/emploi-restauration.jpg",
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=G",
+                    "href": "/search/job-descriptions/results?domains=G",
                 },
                 {
                     "title": "Le bâtiment cherche des bras",
@@ -54,7 +54,7 @@ class Jobs(SearchSection):
                     "text": "Chantiers, rénovation, second œuvre : de nombreuses structures recrutent en insertion.",
                     "icon": "ri-hammer-line",
                     "image": "accueil/img/emploi-batiment.jpg",
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=F",
+                    "href": "/search/job-descriptions/results?domains=F",
                 },
             ],
         )
@@ -65,43 +65,41 @@ class Jobs(SearchSection):
             max_num=12,
             initial=[
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=H",
+                    "href": "/search/job-descriptions/results?domains=H",
                     "icon": "ri-building-2-line",
                     "label": "Industrie",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=N",
+                    "href": "/search/job-descriptions/results?domains=N",
                     "icon": "ri-truck-line",
                     "label": "Transport et logistique",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=A",
+                    "href": "/search/job-descriptions/results?domains=A",
                     "icon": "ri-plant-line",
                     "label": "Agriculture et pêche",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=I",
+                    "href": "/search/job-descriptions/results?domains=I",
                     "icon": "ri-tools-line",
                     "label": "Installation et maintenance",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=L",
+                    "href": "/search/job-descriptions/results?domains=L",
                     "icon": "ri-mic-line",
                     "label": "Spectacle",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=C",
+                    "href": "/search/job-descriptions/results?domains=C",
                     "icon": "ri-bank-line",
                     "label": "Banque, assurance, immobilier",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results?domains=B",
+                    "href": "/search/job-descriptions/results?domains=B",
                     "icon": "ri-brush-line",
                     "label": "Art et façonnage d'ouvrages d'art",
                 },
             ],
         )
         see_all_label = forms.CharField(label="Lien « voir tout »", initial="Voir tous les secteurs")
-        see_all_href = forms.URLField(
-            label="Cible du lien", initial="https://emplois.inclusion.beta.gouv.fr/search/job-descriptions/results"
-        )
+        see_all_href = PlatformPath(label="Cible du lien", initial="/search/job-descriptions/results")

@@ -1,7 +1,7 @@
-{% load illustrations %}
+{% load illustrations platform %}
 <div class="cartes-media">
   {% for card in content.cards %}
-    <a class="carte-media" href="{{ card.href }}" target="_top"
+    <a class="carte-media" href="{% platform_url card.href %}" target="_top"
        data-matomo-category="{{ section.anchor }}" data-matomo-action="carte" data-matomo-name="{{ card.title }}">
       <div class="carte-media__media">
         {% with image=card.image|illustration %}
