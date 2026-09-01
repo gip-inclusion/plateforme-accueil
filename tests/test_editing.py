@@ -432,3 +432,64 @@ def test_saving_an_unchanged_list_with_an_illustration_adds_no_override(client, 
     assert client.post(reverse("edition:section", args=[section.pk]), data).status_code == 302
     section.refresh_from_db()
     assert section.content == {}
+
+
+def test_an_editor_can_open_the_password_screen(client, editor):
+    client.force_login(editor)
+    response = client.get(reverse("edition:password"))
+    assert response.status_code == 200
+
+
+def test_the_password_screen_needs_an_account(client, page):
+    response = client.get(reverse("edition:password"))
+    assert response.status_code == 302
+    assert reverse("edition:password") not in response["Location"].split("?")[0]
+
+
+def test_the_password_screen_is_never_embeddable(client, editor):
+    client.force_login(editor)
+    response = client.get(reverse("edition:password"))
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_changing_the_password_keeps_the_editor_signed_in(client, editor):
+    client.force_login(editor)
+    response = client.post(
+        reverse("edition:password"),
+        {"old_password": "x", "new_password1": "tourbillon-42", "new_password2": "tourbillon-42"},
+        follow=True,
+    )
+    assert response.status_code == 200
+    editor.refresh_from_db()
+    assert editor.check_password("tourbillon-42")
+    # `update_session_auth_hash` spares the editor a fresh login.
+    assert client.get("/edition/").status_code == 200
+
+
+def test_the_password_screen_touches_nobody_else(client, editor):
+    other = User.objects.create_user("bob", "bob@example.test", "x", is_staff=True)
+    client.force_login(editor)
+    client.post(
+        reverse("edition:password"),
+        {"old_password": "x", "new_password1": "tourbillon-42", "new_password2": "tourbillon-42"},
+    )
+    other.refresh_from_db()
+    assert other.check_password("x")
+
+
+def test_a_wrong_current_password_changes_nothing(client, editor):
+    client.force_login(editor)
+    response = client.post(
+        reverse("edition:password"),
+        {"old_password": "pas-le-bon", "new_password1": "tourbillon-42", "new_password2": "tourbillon-42"},
+    )
+    assert response.status_code == 200
+    editor.refresh_from_db()
+    assert editor.check_password("x")
+
+
+def test_every_editing_screen_links_to_the_password_change(client, editor):
+    client.force_login(editor)
+    body = client.get("/edition/").content.decode()
+    assert reverse("edition:password") in body
