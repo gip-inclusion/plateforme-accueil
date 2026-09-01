@@ -26,19 +26,11 @@ if settings.LOCAL_UPLOADS_ENABLED:
         ),
     ]
 
-if settings.OIDC_ENABLED:
-    urlpatterns += [path("oidc/", include("mozilla_django_oidc.urls"))]
-
 # The editing UI and the admin are only routable when there is a way to sign in.
 # Mounting the editor without one gave a 500 rather than a login: the redirect
 # had nowhere to point.
-if settings.ADMIN_ENABLED or settings.OIDC_ENABLED:
+if settings.ADMIN_ENABLED:
     from django.contrib import admin
-
-    if settings.OIDC_ENABLED:
-        urlpatterns.append(
-            path("admin/login/", views.login_view, name="login"),
-        )
 
     urlpatterns += [
         path("edition/", include("config.urls_edition")),

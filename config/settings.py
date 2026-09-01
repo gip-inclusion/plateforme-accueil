@@ -21,35 +21,9 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 # environment, which is a good way to lose a table.
 ADMIN_ENABLED = os.environ.get("ADMIN_ENABLED", "1" if DEBUG else "") == "1"
 
-# Authentik (OpenID Connect). Off until a client is configured: no endpoint is
-# hard-coded here, the whole configuration comes from the environment.
-OIDC_RP_CLIENT_ID = os.environ.get("OIDC_RP_CLIENT_ID", "")
-OIDC_RP_CLIENT_SECRET = os.environ.get("OIDC_RP_CLIENT_SECRET", "")
-OIDC_PROVIDER_URL = os.environ.get("OIDC_PROVIDER_URL", "").rstrip("/")
-OIDC_ENABLED = bool(OIDC_RP_CLIENT_ID and OIDC_RP_CLIENT_SECRET and OIDC_PROVIDER_URL)
-
-# Authentik group names. Membership of the first opens the editing UI, of the
-# second the Publier button.
-OIDC_EDITOR_GROUP = os.environ.get("OIDC_EDITOR_GROUP", "accueil-redaction")
-OIDC_PUBLISHER_GROUP = os.environ.get("OIDC_PUBLISHER_GROUP", "accueil-publication")
 LOGOUT_REDIRECT_URL = "/index/"
 
-if OIDC_ENABLED:
-    AUTHENTICATION_BACKENDS = ["accueil.auth.AuthentikBackend"]
-    OIDC_RP_SIGN_ALGO = "RS256"
-    OIDC_RP_SCOPES = "openid email given_name usual_name"
-    OIDC_OP_AUTHORIZATION_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/authorize/"
-    OIDC_OP_TOKEN_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/token/"
-    OIDC_OP_USER_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/userinfo/"
-    OIDC_OP_JWKS_ENDPOINT = f"{OIDC_PROVIDER_URL}/application/o/accueil-plateforme/jwks/"
-    OIDC_USE_PKCE = True
-    # Re-checks the session against Authentik rather than trusting a cookie for
-    # the full two weeks: without it, revoking an editor upstream would not bite
-    # until their session expired.
-    OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 15 * 60
-    LOGIN_URL = "oidc_authentication_init"
-    LOGIN_REDIRECT_URL = "/edition/"
-elif ADMIN_ENABLED:
+if ADMIN_ENABLED:
     LOGIN_URL = "admin:login"
 else:
     # Nothing to log into, so nothing to redirect to. /edition/ is not mounted
@@ -65,8 +39,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "accueil",
 ]
-if OIDC_ENABLED:
-    INSTALLED_APPS += ["mozilla_django_oidc"]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -82,8 +54,6 @@ MIDDLEWARE = [
     # Last, so its response phase runs before the CSP middleware's.
     "accueil.middleware.BackOfficeIsNeverFramed",
 ]
-if OIDC_ENABLED:
-    MIDDLEWARE += ["mozilla_django_oidc.middleware.SessionRefresh"]
 
 ROOT_URLCONF = "config.urls"
 

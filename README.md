@@ -122,24 +122,6 @@ L'interface d'édition est sur `/edition/` : le plan de la page, pour réordonne
 masquer et ouvrir chaque section. Elle n'est jamais embarquable et demande un
 compte du groupe rédaction.
 
-En production, l'authentification passe par Authentik (OpenID Connect). Elle
-s'active dès que ces trois variables sont présentes, sinon tout le bloc est
-inerte :
-
-```
-OIDC_RP_CLIENT_ID       identifiant du client
-OIDC_RP_CLIENT_SECRET   secret du client
-OIDC_PROVIDER_URL       URL du fournisseur, sans barre finale
-```
-
-Deux groupes Authentik pilotent les droits, recalculés à chaque connexion :
-`accueil-redaction` ouvre l'édition, `accueil-publication` ouvrira la
-publication. Retirer quelqu'un d'un groupe le rétrograde — la connexion reste
-possible, mais sans accès — et la session est revérifiée toutes les 15 minutes,
-sans attendre son expiration. Le compte est créé à la première connexion depuis
-les claims ; il n'y a pas de mot de passe local, et jamais de superutilisateur
-accordé par SSO.
-
 En local, sans ces variables, `DEBUG=1` suffit : `createsuperuser` puis
 `/edition/`.
 
