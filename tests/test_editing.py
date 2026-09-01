@@ -183,7 +183,7 @@ def test_the_editor_refuses_an_unknown_section(client, editor):
 
 
 def test_the_editing_ui_is_not_mounted_when_nobody_can_sign_in():
-    """The default production config has neither the admin nor OIDC.
+    """The default production config doesn't have the admin.
 
     /edition/ used to be mounted anyway, and any hit on it 500'd: the login
     redirect had nowhere to point. Not routable is the honest answer.
@@ -195,7 +195,7 @@ def test_the_editing_ui_is_not_mounted_when_nobody_can_sign_in():
     import config.urls
 
     try:
-        with override_settings(ADMIN_ENABLED=False, OIDC_ENABLED=False):
+        with override_settings(ADMIN_ENABLED=False):
             importlib.reload(config.urls)
             clear_url_caches()
             with pytest.raises(Resolver404):

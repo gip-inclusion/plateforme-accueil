@@ -54,11 +54,6 @@ def cities(request):
     )
 
 
-def login_view(request):
-    return redirect("oidc_authentication_init")
-
-
 def logout_url(request):
-    # It would be better to logout from our sso but's it's not really an issue
     logout(request)
     return redirect("index")

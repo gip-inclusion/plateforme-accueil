@@ -37,7 +37,7 @@ from accueil.sections import Illustration, ListField, registry
 
 
 def may_publish(user):
-    return user.is_superuser or user.groups.filter(name=settings.OIDC_PUBLISHER_GROUP).exists()
+    return user.is_superuser
 
 
 # `staff_member_required` would do, but it hard-codes a redirect to the admin
@@ -121,7 +121,6 @@ def plan(request):
             "page": page,
             "plan": _plan(page) if page else [],
             "may_publish": may_publish(request.user),
-            "oidc_enabled": settings.OIDC_ENABLED,
         },
     )
 
