@@ -91,6 +91,27 @@ class Icon(forms.ChoiceField):
         super().__init__(choices=icon_choices, **kwargs)
 
 
+class PlatformPath(forms.RegexField):
+    """Where a link goes *on the platform*, as a path — never a full URL.
+
+    Which deployment answers it is decided at render time by
+    `accueil/platform_urls.py`, so a link written here follows the environment
+    the page is embedded in instead of contradicting it. Refusing an absolute
+    URL is the point: an editor who pastes one would pin every environment to
+    whichever host they happened to copy from.
+    """
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("strip", True)
+        super().__init__(
+            # A single leading slash: `//host` and `/\host` are protocol-relative
+            # URLs, which a browser resolves against another origin entirely.
+            regex=r"^/(?![/\\])[^\s]*\Z",
+            error_messages={"invalid": "Indiquez un chemin commençant par « / », sans nom de domaine."},
+            **kwargs,
+        )
+
+
 class Illustration(forms.CharField):
     """An image on the page.
 

@@ -2,7 +2,7 @@
 
 from django import forms
 
-from accueil.sections.base import Icon, ListField, Reference, SectionType, registry
+from accueil.sections.base import Icon, ListField, PlatformPath, Reference, SectionType, registry
 
 
 class Step(forms.Form):
@@ -17,7 +17,7 @@ class Profile(forms.Form):
     title = forms.CharField(label="Titre")
     chapo = forms.CharField(label="Chapô", required=False, widget=forms.Textarea)
     cta_label = forms.CharField(label="Bouton")
-    cta_href = forms.URLField(label="Cible du bouton")
+    cta_href = PlatformPath(label="Cible du bouton")
     steps = ListField(Step, label="Étapes", min_num=1, max_num=6)
 
 
@@ -46,7 +46,7 @@ class Profiles(SectionType):
                     "tab_label": "Accompagnateur",
                     "title": "Orientez vos candidats vers l'emploi durable",
                     "chapo": "Adressez vos bénéficiaires aux employeurs inclusifs de votre territoire et suivez chaque parcours depuis votre espace.",
-                    "cta_href": "https://emplois.inclusion.beta.gouv.fr/signup/professional/user",
+                    "cta_href": "/signup/professional/user",
                     "cta_label": "S'inscrire",
                     "steps": [
                         {
@@ -73,7 +73,7 @@ class Profiles(SectionType):
                     "tab_label": "Employeur inclusif",
                     "title": "Recrutez et gérez vos PASS IAE en ligne",
                     "chapo": "SIAE, GEIQ, EA ou facilitateur : publiez vos postes et gérez vos obligations déclaratives sans changer d'outil.",
-                    "cta_href": "https://emplois.inclusion.beta.gouv.fr/signup/professional/user",
+                    "cta_href": "/signup/professional/user",
                     "cta_label": "S'inscrire",
                     "steps": [
                         {
@@ -100,7 +100,7 @@ class Profiles(SectionType):
                     "tab_label": "Institution partenaire",
                     "title": "Pilotez l'insertion sur votre territoire",
                     "chapo": "DDETS, conseils départementaux, France Travail : disposez d'une vision consolidée de l'offre et des parcours d'insertion.",
-                    "cta_href": "https://emplois.inclusion.beta.gouv.fr/signup/professional/user",
+                    "cta_href": "/signup/professional/user",
                     "cta_label": "S'inscrire",
                     "steps": [
                         {
@@ -127,7 +127,7 @@ class Profiles(SectionType):
                     "tab_label": "Candidat",
                     "title": "Trouvez un emploi près de chez vous",
                     "chapo": "Recherchez un emploi inclusif, postulez et suivez vos candidatures — seul ou avec votre accompagnateur.",
-                    "cta_href": "https://emplois.inclusion.beta.gouv.fr/signup/job_seeker/start",
+                    "cta_href": "/signup/job_seeker/start",
                     "cta_label": "S'inscrire",
                     "steps": [
                         {

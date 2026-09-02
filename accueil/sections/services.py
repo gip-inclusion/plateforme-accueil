@@ -2,7 +2,7 @@
 
 from django import forms
 
-from accueil.sections.base import ListField, registry
+from accueil.sections.base import ListField, PlatformPath, registry
 from accueil.sections.search import Card, SearchSection, Shortcut
 
 
@@ -46,7 +46,7 @@ class Services(SearchSection):
                     "text": "Aide au permis, location solidaire, covoiturage : des solutions pour vos déplacements vers l'emploi.",
                     "icon": "ri-car-line",
                     "image": "accueil/img/service-mobilite.jpg",
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=mobilite",
+                    "href": "/search/services/results?category=mobilite",
                 },
                 {
                     "title": "Le numérique s'ouvre à l'inclusion",
@@ -54,7 +54,7 @@ class Services(SearchSection):
                     "text": "Développement, support, data : de nouveaux métiers accessibles via des parcours adaptés.",
                     "icon": "ri-computer-line",
                     "image": "accueil/img/service-numerique.jpg",
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=numerique",
+                    "href": "/search/services/results?category=numerique",
                 },
             ],
         )
@@ -65,48 +65,46 @@ class Services(SearchSection):
             max_num=12,
             initial=[
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=choisir-un-metier",
+                    "href": "/search/services/results?category=choisir-un-metier",
                     "icon": "ri-briefcase-line",
                     "label": "Choisir un métier",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=mobilite",
+                    "href": "/search/services/results?category=mobilite",
                     "icon": "ri-car-line",
                     "label": "Mobilité",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=famille",
+                    "href": "/search/services/results?category=famille",
                     "icon": "ri-group-line",
                     "label": "Famille",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=creer-une-entreprise",
+                    "href": "/search/services/results?category=creer-une-entreprise",
                     "icon": "ri-rocket-line",
                     "label": "Créer une entreprise",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=preparer-sa-candidature",
+                    "href": "/search/services/results?category=preparer-sa-candidature",
                     "icon": "ri-file-list-3-line",
                     "label": "Préparer sa candidature",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=se-former",
+                    "href": "/search/services/results?category=se-former",
                     "icon": "ri-graduation-cap-line",
                     "label": "Se former",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=difficultes-financieres",
+                    "href": "/search/services/results?category=difficultes-financieres",
                     "icon": "ri-money-euro-circle-line",
                     "label": "Difficultés financières",
                 },
                 {
-                    "href": "https://emplois.inclusion.beta.gouv.fr/search/services/results?category=sante",
+                    "href": "/search/services/results?category=sante",
                     "icon": "ri-heart-pulse-line",
                     "label": "Santé",
                 },
             ],
         )
         see_all_label = forms.CharField(label="Lien « voir tout »", initial="Voir toutes les thématiques")
-        see_all_href = forms.URLField(
-            label="Cible du lien", initial="https://emplois.inclusion.beta.gouv.fr/search/services/results"
-        )
+        see_all_href = PlatformPath(label="Cible du lien", initial="/search/services/results")
