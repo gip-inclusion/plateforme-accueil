@@ -14,7 +14,7 @@ class SearchTarget(NamedTuple):
     label_short: str
     label_long: str
     icon: str
-    results_url: str
+    results_path: str
 
 
 @registry.register
@@ -24,27 +24,28 @@ class Hero(SectionType):
     position = 10
     template = "accueil/sections/hero.html"
 
-    # Order is the tab order. Results pages, not their landing counterparts:
-    # les emplois serves this very page there in an iframe, so a visitor sent
-    # back would loop.
+    # Order is the tab order. Paths, not URLs: which deployment answers them is
+    # decided at render time (see accueil/platform_urls.py). Results pages, not
+    # their landing counterparts, which serve this very page in an iframe — a
+    # visitor sent back there would loop.
     searches = {
         "emploi": SearchTarget(
             label_short="Emploi",
             label_long="Un emploi inclusif",
             icon="ri-briefcase-line",
-            results_url="https://emplois.inclusion.beta.gouv.fr/search/employers/results",
+            results_path="/search/employers/results",
         ),
         "insertion": SearchTarget(
             label_short="Insertion",
             label_long="Un service d'insertion",
             icon="ri-compass-3-line",
-            results_url="https://emplois.inclusion.beta.gouv.fr/search/services/results",
+            results_path="/search/services/results",
         ),
         "accompagnateur": SearchTarget(
             label_short="Accompagnateur",
             label_long="Un accompagnateur",
             icon="ri-user-line",
-            results_url="https://emplois.inclusion.beta.gouv.fr/search/prescribers/results",
+            results_path="/search/prescribers/results",
         ),
     }
     default_search = "emploi"

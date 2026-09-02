@@ -24,6 +24,10 @@
         {% endfor %}
       </div>
 
+      {# The host the page was embedded by, carried over so the dispatch lands #}
+      {# on the same deployment the rest of the page links to. #}
+      {% if request.GET.host %}<input type="hidden" name="host" value="{{ request.GET.host }}">{% endif %}
+
       <div class="recherche__barre">
         <div class="champ champ--ville">
           <svg class="icone" aria-hidden="true"><use href="#ri-map-pin-line"/></svg>

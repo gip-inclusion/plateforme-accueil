@@ -5,6 +5,7 @@ import re
 from unittest import mock
 
 import pytest
+from django.conf import settings
 from django.utils.html import escape
 
 from accueil.sections.hero import Hero
@@ -172,9 +173,10 @@ def test_the_analytics_bridge_loads_before_the_page_is_measured(client):
     assert "defer" not in head[head.rindex("<script", 0, bridge) : bridge]
 
 
-EMPLOI = Hero.searches["emploi"].results_url
-INSERTION = Hero.searches["insertion"].results_url
-ACCOMPAGNATEUR = Hero.searches["accompagnateur"].results_url
+PROD = settings.PLATFORM_DEFAULT_ORIGIN
+EMPLOI = PROD + Hero.searches["emploi"].results_path
+INSERTION = PROD + Hero.searches["insertion"].results_path
+ACCOMPAGNATEUR = PROD + Hero.searches["accompagnateur"].results_path
 
 
 HOMONYMS = {

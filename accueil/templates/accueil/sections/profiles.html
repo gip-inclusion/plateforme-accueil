@@ -1,3 +1,4 @@
+{% load platform %}
 <section class="section {{ section.modifiers }}" id="{{ section.anchor }}">
   <div class="section__contenu">
     <p class="section__surtitre">{{ content.kicker }}</p>
@@ -22,7 +23,7 @@
           <div>
             <h3 class="profil__titre">{{ profile.title }}</h3>
             <p class="profil__chapo">{{ profile.chapo }}</p>
-            <a class="bouton" href="{{ profile.cta_href }}" target="_top"
+            <a class="bouton" href="{% platform_url profile.cta_href %}" target="_top"
                data-matomo-category="{{ section.anchor }}" data-matomo-action="inscription" data-matomo-name="{{ profile.tab_label }}">
               <svg class="icone" aria-hidden="true"><use href="#ri-user-add-line"/></svg>
               <span>{{ profile.cta_label }}</span>

@@ -4,7 +4,7 @@ from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
-from accueil import cities as city_lookup, content
+from accueil import cities as city_lookup, content, platform_urls
 from accueil.sections.hero import Hero
 
 
@@ -59,7 +59,7 @@ def search(request):
         if category:
             params["category"] = category
 
-    url = target.results_url
+    url = platform_urls.url(request, target.results_path)
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
     return redirect(url)

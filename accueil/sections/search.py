@@ -7,7 +7,7 @@ by the badge — so they share one template and declare the rest as data.
 
 from django import forms
 
-from accueil.sections.base import Icon, Illustration, SectionType
+from accueil.sections.base import Icon, Illustration, PlatformPath, SectionType
 
 
 class Card(forms.Form):
@@ -26,13 +26,13 @@ class Card(forms.Form):
         max_width=940,
         ratio=(16, 10),  # the card's frame, see .carte-media__media
     )
-    href = forms.URLField(label="Lien")
+    href = PlatformPath(label="Lien")
 
 
 class Shortcut(forms.Form):
     label = forms.CharField(label="Libellé")
     icon = Icon(label="Icône")
-    href = forms.URLField(label="Lien")
+    href = PlatformPath(label="Lien")
 
 
 class SearchSection(SectionType):
