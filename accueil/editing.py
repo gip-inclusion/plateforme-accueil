@@ -21,10 +21,12 @@ import json
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.views.decorators.clickjacking import xframe_options_deny
 from django.views.decorators.csp import csp_override
 from django.views.decorators.http import require_POST
@@ -69,6 +71,24 @@ def editor_view(*, post_only=False):
         return view
 
     return decorate
+
+
+class PasswordScreen(SuccessMessageMixin, PasswordChangeView):
+    """An editor's own password, and nobody else's.
+
+    `PasswordChangeView` works on `request.user` alone, so there is no account
+    to name and no permission to grant. The admin's own user form would do the
+    job, but only for a holder of `auth.change_user`, which also exposes
+    `is_superuser` — the right to change one's password would come with the
+    right to become a superuser.
+    """
+
+    template_name = "edition/password.html"
+    success_url = reverse_lazy("edition:plan")
+    success_message = "Votre mot de passe a été changé."
+
+
+password = editor_view()(PasswordScreen.as_view())
 
 
 def _plan(page):

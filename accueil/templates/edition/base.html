@@ -20,6 +20,7 @@
       <a class="edition__marque" href="{% url 'edition:plan' %}">Édition de la page d'accueil</a>
       <p class="edition__compte">
         {{ user.get_full_name|default:user.username }}
+        <a href="{% url 'edition:password' %}">Mot de passe</a>
         <form id="logout-form" method="post" action={% url 'logout' %}>
           {% csrf_token %}
           <button type="submit">Se déconnecter</button>
