@@ -1,55 +1,29 @@
-import json
 import urllib.parse
-import urllib.request
 
 from django.contrib.auth import logout
-from django.core.cache import cache
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 
-from accueil import content
-
-
-# City autocomplete proxied from "les emplois de l'inclusion". The same endpoint
-# backs the employer and prescriber searches; it is proxied server-side because
-# it sends no CORS headers, so the embedded page cannot call it directly.
-CITIES_URL = "https://plateforme.inclusion.gouv.fr/autocomplete/cities"
-CITIES_CACHE_TTL = 300  # seconds
-CITIES_MAX = 8
+from accueil import cities as city_lookup, content
+from accueil.sections.hero import Hero
 
 
 def index(request):
     return render(
         request,
         "accueil/index.html",
-        {"sections": content.page_sections()},
+        {
+            "sections": content.page_sections(),
+            # `/?type=insertion` lands straight on one search. Resolved
+            # server-side, so it works with no JavaScript.
+            "selected_search": Hero.resolve_search(request.GET.get("type", "")),
+        },
     )
 
 
 def cities(request):
-    # City suggestions for the hero search, resolved to the slug that the
-    # employer and prescriber result pages expect (e.g. "lyon-69").
-    term = request.GET.get("q", "").strip()
-    if not term:
-        return JsonResponse({"results": []})
-
-    key = f"cities:{term.lower()}"
-    results = cache.get(key)
-    if results is None:
-        results = []
-        url = f"{CITIES_URL}?slug=&term={urllib.parse.quote(term)}"
-        try:
-            with urllib.request.urlopen(url, timeout=5) as response:
-                data = json.load(response)
-            for item in data.get("results", [])[:CITIES_MAX]:
-                if isinstance(item, dict) and item.get("id") and item.get("text"):
-                    results.append({"slug": item["id"], "label": item["text"]})
-        except Exception:
-            results = []
-        cache.set(key, results, CITIES_CACHE_TTL)
-
     return JsonResponse(
-        {"results": results},
+        {"results": city_lookup.matches(request.GET.get("q", ""))},
         headers={"Access-Control-Allow-Origin": "*"},
     )
 
@@ -57,3 +31,35 @@ def cities(request):
 def logout_url(request):
     logout(request)
     return redirect("index")
+
+
+def search(request):
+    """Dispatch the hero's single search form to the right external site.
+
+    The target is never built from the request: "type" is only ever a key into
+    `Hero.searches`. Building a URL from it would be an open redirect.
+    """
+    requested_type = Hero.resolve_search(request.GET.get("type", ""))
+    target = Hero.searches[requested_type]
+
+    # The slug comes from the autocomplete; with no JavaScript none can be
+    # produced, so the typed name is resolved here instead. Les emplois only
+    # ever receives the slug it already understands.
+    city = request.GET.get("city", "").strip()
+    if not city:
+        city = city_lookup.exact_slug(request.GET.get("city_name", ""))
+
+    params = {}
+    if city:
+        params["city"] = city
+    # The thematic filter only means anything for "insertion": dropped for the
+    # other two, whether stale or tampered with.
+    if requested_type == "insertion":
+        category = request.GET.get("category", "").strip()
+        if category:
+            params["category"] = category
+
+    url = target.results_url
+    if params:
+        url = f"{url}?{urllib.parse.urlencode(params)}"
+    return redirect(url)

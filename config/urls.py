@@ -10,6 +10,7 @@ from accueil import views
 urlpatterns = [
     path("", views.index, name="index"),
     path("api/cities", views.cities, name="cities"),
+    path("search", views.search, name="search"),
 ]
 
 if settings.LOCAL_UPLOADS_ENABLED:

@@ -676,6 +676,8 @@ p {
   margin-bottom: 1.25rem;
 }
 
+/* One radio per tab: the label carries the pill look, the radio is only
+   visually hidden — display: none would take it out of the tab order. */
 .recherche__onglet {
   display: inline-flex;
   align-items: center;
@@ -692,19 +694,38 @@ p {
   transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
+.recherche__onglet-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Short labels + no icons on small screens; full labels + icons from tablet up. */
 .recherche__onglet .icone,
 .onglet__long {
   display: none;
 }
 
-.recherche__onglet:not(.est-actif):hover {
+.recherche__onglet-radio:not(:checked) + .recherche__onglet:hover {
   border-color: rgba(255, 255, 255, 0.55);
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
-.recherche__onglet.est-actif {
+/* The clipped radio's own ring is invisible: this is the only focus indicator
+   there is (WCAG 2.4.7). */
+.recherche__onglet-radio:focus-visible + .recherche__onglet {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.recherche__onglet-radio:checked + .recherche__onglet {
   background: #fff;
   color: var(--primary);
   border-color: #fff;
@@ -738,11 +759,6 @@ p {
   box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.25);
 }
 
-/* Inactive tab forms stay hidden despite the display above. */
-.recherche__barre[hidden] {
-  display: none;
-}
-
 .champ--ville {
   position: relative;
 }
@@ -771,6 +787,22 @@ p {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* The row states its own height rather than inheriting it from whichever
+   control it holds: an input, a <select> and a <button> have different
+   intrinsic metrics, and Safari's differ from Chrome's. */
+.champ {
+  min-height: 2.75rem; /* 1.5rem of line-height + 2 × 0.625rem of padding */
+}
+
+.champ input,
+.champ__select,
+.select-theme__declencheur {
+  appearance: none;
+  padding: 0;
+  margin: 0;
+  line-height: 1.5;
 }
 
 .champ input {
@@ -802,6 +834,20 @@ p {
    The native <select> stays as the no-JS fallback and is hidden once enhanced. */
 .champ--theme {
   position: relative;
+}
+
+/* The thematic filter only means anything for the "insertion" search. Hidden
+   only where `:has()` can bring it back, since that rule is the sole way it
+   reappears; always visible is a fine fallback, the view drops "category" for
+   the other two types anyway. */
+@supports selector(:has(*)) {
+  .champ--theme {
+    display: none;
+  }
+}
+
+.recherche:has(.recherche__onglet-radio[value="insertion"]:checked) .champ--theme {
+  display: flex;
 }
 
 .select-theme--enrichi .champ__select {
@@ -840,10 +886,16 @@ p {
 }
 
 .champ__separateur {
-  display: none;
   width: 1px;
   height: 1.5rem;
   background: var(--border);
+}
+
+/* Accompanies the thematic filter, so hidden under the same `:has()` guard. */
+@supports selector(:has(*)) {
+  .champ__separateur {
+    display: none;
+  }
 }
 
 .recherche__bouton {
@@ -934,8 +986,11 @@ p {
   }
 
   .champ__separateur {
-    display: block;
     align-self: center;
+  }
+
+  .recherche:has(.recherche__onglet-radio[value="insertion"]:checked) .champ__separateur {
+    display: block;
   }
 
   .recherche__bouton {
