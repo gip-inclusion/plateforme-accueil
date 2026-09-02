@@ -4,12 +4,9 @@ from django.urls import reverse
 from pytest_django.asserts import assertRedirects
 
 
-
 def test_auto_login(db, client):
     response = client.get(reverse("edition:plan"))
-    assertRedirects(
-        response, reverse("admin:login") + "?next=%2Fedition%2F"
-    )
+    assertRedirects(response, reverse("admin:login") + "?next=%2Fedition%2F")
 
 
 def test_admin_auto_login(db, client):
