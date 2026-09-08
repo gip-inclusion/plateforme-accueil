@@ -107,7 +107,6 @@ PLATFORM_ALLOWED_HOSTS = [
     "pentest.plateforme.inclusion.gouv.fr",
     "emplois.inclusion.beta.gouv.fr",
     "demo.emplois.inclusion.beta.gouv.fr",
-    "c1-review-*.cleverapps.io",
     "pentest.emplois.inclusion.beta.gouv.fr",
 ]
 
