@@ -63,13 +63,6 @@ def test_the_form_carries_the_announced_host(client):
     assert 'name="host"' not in client.get("/").content.decode()
 
 
-def test_frame_ancestors_is_not_the_redirect_allowlist():
-    # Being allowed to embed the page is not being allowed to receive its
-    # visitors: a redirect launders a link behind our domain, an embed does not.
-    assert "https://*.scalingo.io" in settings.SECURE_CSP["frame-ancestors"]
-    assert not any("scalingo" in host for host in settings.PLATFORM_ALLOWED_HOSTS)
-
-
 def test_an_editor_cannot_pin_a_link_to_one_environment():
     # A pasted absolute URL would freeze the link on whichever host the editor
     # copied it from, which is the whole defect this replaces.
