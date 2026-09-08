@@ -135,29 +135,10 @@ comme du JSON brut : c'est un plancher, pas une cible.
 
 ## Mesure d'audience
 
-Le Tag Manager Matomo est chargé pour toutes les pages
-(`accueil/static/accueil/js/matomo.js`). En plus des pages vues,
-`analytics.js` publie un événement par interaction avec une section.
+Cette page rapporte les actions de l’utilisateur à son hôte via `analytics.js`.
+https://matomo.org/faq/tag-manager/how-to-track-events-inside-an-iframe-using-matomo-tag-manager/
 
-Le repère est posé dans les gabarits, sur l'élément cliquable :
-
-```html
-<a class="pastille-lien" href="…"
-   data-matomo-category="emplois" data-matomo-action="raccourci"
-   data-matomo-name="Industrie">Industrie</a>
-```
-
-Au clic (ou à l'envoi, pour un `<form>`), le script pousse un événement Matomo
-ordinaire :
-
-```js
-window._paq.push(["trackEvent", "emplois", "raccourci", "Industrie"]);
-```
-
-`_paq` est la file du traqueur, pas la couche de données du Tag Manager : rien
-à déclarer dans le conteneur, un nouveau repère est mesuré dès qu'il est dans un
-gabarit. Le traqueur n'existant qu'une fois le consentement transmis par l'hôte,
-la file attend jusque-là et rien ne part avant.
+Pour les événements à suivre :
 
 | Catégorie | Actions mesurées |
 | --- | --- |
@@ -269,46 +250,6 @@ plutôt que `*.cleverapps.io`.
 Les sections déclarent donc des **chemins** (`/search/employers/results`), pas
 des URL. Le champ `PlatformPath` refuse une URL absolue : collée par un
 rédacteur, elle figerait le lien sur l'environnement d'où elle a été copiée.
-
-### Mesure d’audience
-
-L'hôte émet une fois que le visiteur a accepté la mesure d'audience chez
-lui et jamais avant :
-
-```json
-{ "source": "plateforme-accueil", "type": "analytics", "consent": true,
-  "visitorId": "1a2b3c4d5e6f7a8b", "siteId": 117 }
-```
-
-La page adopte cet identifiant de visiteur et ce site : ses hits rejoignent la
-visite déjà en cours chez l'hôte, dans le site Matomo de l'hôte, au lieu d'en
-ouvrir une seconde ailleurs. Le `siteId` transite plutôt que d'être figé dans le
-container, pour qu'un environnement de recette n'écrive jamais dans le site de
-production.
-
-Le tag Matomo du container se déclenche sur l'événement `host-analytics` émis à
-la réception de ce message, et non sur la page vue : le traqueur sérialise sa
-requête dès que le tag se déclenche, donc une identité arrivée après coup ne
-corrigerait plus la page vue. Le container exige en outre le consentement.
-
-Le même message avec `"consent": false` **retire** le consentement : la page
-appelle `forgetConsentGiven` et cesse de mesurer. L'hôte doit l'émettre si le
-visiteur revient sur son choix — une iframe survit largement au clic qui révoque,
-et sans ce message elle continuerait de mesurer quelqu'un qui a demandé l'arrêt.
-Un consentement redonné ensuite reprend la mesure sans recompter la page vue.
-
-L'hôte peut republier le message autant qu'il veut : une répétition est sans
-effet. C'est ce qui lui permet de le renvoyer à chaque message reçu de l'iframe,
-et de couvrir ainsi le cas où le consentement précède le chargement de celle-ci.
-
-Un hôte qui n'implémente pas le protocole obtient donc une page non mesurée —
-c'est voulu, la vitrine n'a pas de bandeau de consentement à elle.
-
-Côté container, il reste à créer une variable de couche de données
-`hostSiteId`, un déclencheur sur l'événement `host-analytics`, et à y brancher
-la balise Matomo à la place de la page vue — dans l'interface du Tag Manager,
-comme pour `accueil.interaction` plus haut. Tant que ce n'est pas fait,
-l'événement poussé ici ne déclenche rien.
 
 `top` et `height` décrivent la bande visible **dans le repère du document
 embarqué**, c'est-à-dire `max(0, -rect.top)` et la hauteur restant dans la

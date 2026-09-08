@@ -5,21 +5,48 @@
    to the markup it measures, so a new CMS item is measured without touching
    this file — and, since these are ordinary tracker commands, without touching
    the tag manager container either.
-
-   `_paq` is a queue the tracker replays once it exists, and it only exists
-   after the host hands over its consent (see js/analytics-bridge.js), so
-   nothing is sent before then. */
+*/
 
 const SELECTOR = "[data-matomo-category][data-matomo-action]";
+
+const config = JSON.parse(
+  document.getElementById("accueil-config").textContent,
+);
+
+const postMessageToTrustedParents = (message) => {
+  for (const host of config["frame-ancestors"]) {
+    try {
+      new URL(host); // Ignores wildcards.
+      window.parent.postMessage(message, host);
+    } catch {
+      console.error(
+        "Cannot postMessage to trusted origin from the CSP frame-ancestor entry for",
+        host,
+      );
+    }
+  }
+};
 
 const track = (element) => {
   const { matomoCategory, matomoAction } = element.dataset;
   // The hero runs one of three searches from a single form: its name is the
   // choice made inside it.
-  const chosen = element.matches("form") && element.querySelector("[data-matomo-name]:checked");
-  const name = (element.dataset.matomoName || chosen?.dataset.matomoName || "").trim();
-  window._paq = window._paq || [];
-  window._paq.push(["trackEvent", matomoCategory, matomoAction, ...(name ? [name] : [])]);
+  const chosen =
+    element.matches("form") &&
+    element.querySelector("[data-matomo-name]:checked");
+  const name = (
+    element.dataset.matomoName ||
+    chosen?.dataset.matomoName ||
+    ""
+  ).trim();
+
+  postMessageToTrustedParents({
+    source: "plateforme-accueil",
+    type: "analytics",
+    matomoCategory,
+    matomoAction,
+    matomoName: name,
+  });
 };
 
 // Clicks land on the icon or the label inside a link or a button, hence closest().

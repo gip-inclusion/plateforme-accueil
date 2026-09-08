@@ -403,5 +403,3 @@ def test_an_uploaded_override_is_served_from_the_media_store_on_the_public_page(
     # Still framable, still Matomo-first: the upload path must not have
     # changed the public page's own posture.
     assert "X-Frame-Options" not in response.headers
-    (tag,) = [line for line in re.findall(r"<head>.*?</head>", body, re.DOTALL)[0].splitlines() if "matomo" in line]
-    assert "src=" in tag and "defer" not in tag and "async" not in tag

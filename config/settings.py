@@ -78,6 +78,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 # allowed hosts are carried by the CSP instead.
 SECURE_CSP = {
     "frame-ancestors": [
+        # This setting is (ab)used to limit analytics data publication to
+        # trusted origins (see analytics.js).
+        # A URL containing wildcards (`*`) cannot receive analytics data.
         "https://plateforme.inclusion.gouv.fr",
         "https://emplois.inclusion.beta.gouv.fr",
         "https://demo.plateforme.inclusion.gouv.fr",

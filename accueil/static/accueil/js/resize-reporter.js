@@ -54,7 +54,16 @@ if (window.parent !== window) {
       return; // slack, so rounding does not ping-pong between host and iframe
     }
     lastHeight = height;
-    window.parent.postMessage({ source: "plateforme-accueil", type: "resize", height }, "*");
+    // The window height information is public to avoid allowlisting review
+    // apps on CleverCloud.
+    window.parent.postMessage(
+      {
+        source: "plateforme-accueil",
+        type: "resize",
+        height,
+      },
+      "*",
+    );
   };
 
   const scheduleMeasure = () => {
