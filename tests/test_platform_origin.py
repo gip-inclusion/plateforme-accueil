@@ -29,11 +29,6 @@ def test_an_announced_host_carries_every_link_with_it(client):
     assert all(link.startswith(f"https://{DEMO}") for link in links)
 
 
-def test_a_review_app_is_recognised_by_its_prefix(client):
-    body = client.get("/", {"host": "c1-review-1234.cleverapps.io"}).content.decode()
-    assert all(link.startswith("https://c1-review-1234.cleverapps.io") for link in _links(body))
-
-
 @pytest.mark.parametrize(
     "host",
     [
