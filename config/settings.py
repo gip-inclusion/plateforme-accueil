@@ -104,9 +104,11 @@ PLATFORM_DEFAULT_ORIGIN = os.environ.get("PLATFORM_DEFAULT_ORIGIN", "https://pla
 PLATFORM_ALLOWED_HOSTS = [
     "plateforme.inclusion.gouv.fr",
     "demo.plateforme.inclusion.gouv.fr",
+    "pentest.plateforme.inclusion.gouv.fr",
     "emplois.inclusion.beta.gouv.fr",
     "demo.emplois.inclusion.beta.gouv.fr",
     "c1-review-*.cleverapps.io",
+    "pentest.emplois.inclusion.beta.gouv.fr",
 ]
 
 if DEBUG:
