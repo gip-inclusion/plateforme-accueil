@@ -42,7 +42,7 @@ class Features(SectionType):
                 },
                 {
                     "icon": "ri-user-shared-line",
-                    "title": "Orienter des candidats",
+                    "title": "Orienter des usagers",
                     "text": "Adresser vos bénéficiaires et suivre leurs candidatures.",
                 },
                 {
