@@ -44,7 +44,7 @@ class Profiles(SectionType):
                     "slug": "prescripteur",
                     "icon": "ri-home-smile-2-line",
                     "tab_label": "Accompagnateur",
-                    "title": "Orientez vos candidats vers l'emploi durable",
+                    "title": "Orientez vos usagers vers l'emploi durable",
                     "chapo": "Adressez vos bénéficiaires aux employeurs inclusifs de votre territoire et suivez chaque parcours depuis votre espace.",
                     "cta_href": "/signup/professional/user",
                     "cta_label": "S'inscrire",
@@ -82,7 +82,7 @@ class Profiles(SectionType):
                         },
                         {
                             "title": "Publier vos fiches de poste",
-                            "detail": "Visibles des candidats et des prescripteurs habilités.",
+                            "detail": "Visibles des usagers et des prescripteurs habilités.",
                         },
                         {
                             "title": "Recevoir et traiter les candidatures",
@@ -124,7 +124,7 @@ class Profiles(SectionType):
                 {
                     "slug": "candidat",
                     "icon": "ri-user-line",
-                    "tab_label": "Candidat",
+                    "tab_label": "Usager",
                     "title": "Trouvez un emploi près de chez vous",
                     "chapo": "Recherchez un emploi inclusif, postulez et suivez vos candidatures — seul ou avec votre accompagnateur.",
                     "cta_href": "/signup/job_seeker/start",
