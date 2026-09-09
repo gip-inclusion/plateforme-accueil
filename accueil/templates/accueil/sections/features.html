@@ -6,7 +6,6 @@
     <ol class="parcours-frise">
       {% for step in content.steps %}
         <li class="parcours-frise__etape">
-          <span class="parcours-frise__num">{{ forloop.counter }}</span>
           <svg class="icone parcours-frise__pic" aria-hidden="true"><use href="#{{ step.icon }}"/></svg>
           <h3 class="parcours-frise__titre">{{ step.title }}</h3>
           <p class="parcours-frise__texte">{{ step.text }}</p>
