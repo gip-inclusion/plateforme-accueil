@@ -1464,7 +1464,7 @@ p {
 }
 
 /* ==========================================================================
-   Module: parcours (horizontal numbered steps)
+   Module: parcours (horizontal steps)
    ========================================================================== */
 
 
@@ -1476,37 +1476,6 @@ p {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.parcours-frise__etape {
-  position: relative;
-  padding-left: 3.25rem;
-}
-
-.parcours-frise__num {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  width: 2.25rem;
-  height: 2.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--tertiary);
-  color: #fff;
-  font: 700 1rem var(--font-sans);
-}
-
-.parcours-frise__etape:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: 1.125rem;
-  top: -1.5rem;
-  width: 2px;
-  height: 1.5rem;
-  background: var(--border);
 }
 
 .parcours-frise__pic {
@@ -1537,21 +1506,7 @@ p {
 
   .parcours-frise__etape {
     flex: 1;
-    padding: 3.25rem 0 0;
     text-align: center;
-  }
-
-  .parcours-frise__num {
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  .parcours-frise__etape:not(:first-child)::before {
-    top: 1.125rem;
-    left: auto;
-    right: 50%;
-    width: 100%;
-    height: 2px;
   }
 
   .parcours-frise__pic {

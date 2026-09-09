@@ -1,4 +1,4 @@
-"""What the platform does, as a numbered timeline."""
+"""What the platform does, as a timeline."""
 
 from django import forms
 
