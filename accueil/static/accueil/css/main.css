@@ -1478,21 +1478,6 @@ p {
   list-style: none;
 }
 
-.parcours-frise__etape {
-  position: relative;
-}
-
-/* Trait de liaison : il occupe l'écart entre deux étapes, centré sur l'icône. */
-.parcours-frise__etape:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: 0.875rem;
-  top: -1.5rem;
-  width: 2px;
-  height: 1.5rem;
-  background: var(--border);
-}
-
 .parcours-frise__pic {
   display: block;
   width: 1.75rem;
@@ -1522,16 +1507,6 @@ p {
   .parcours-frise__etape {
     flex: 1;
     text-align: center;
-  }
-
-  /* Le trait ne traverse plus une pastille opaque : il se cantonne au `gap`,
-     entre deux icônes, plutôt que de courir de centre à centre. */
-  .parcours-frise__etape:not(:first-child)::before {
-    top: 0.875rem;
-    left: auto;
-    right: 100%;
-    width: 1rem;
-    height: 2px;
   }
 
   .parcours-frise__pic {
