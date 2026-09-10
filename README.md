@@ -270,47 +270,9 @@ Les sections déclarent donc des **chemins** (`/search/employers/results`), pas
 des URL. Le champ `PlatformPath` refuse une URL absolue : collée par un
 rédacteur, elle figerait le lien sur l'environnement d'où elle a été copiée.
 
-### Ajustement automatique de la hauteur (optionnel)
+### Mesure d’audience
 
-La page fonctionne sans JavaScript : l'iframe garde alors la hauteur fixée par
-le site hôte (`height`). Pour que l'iframe s'adapte à la hauteur réelle du
-contenu, inclure le script hôte fourni :
-
-```html
-<script src="https://<URL-DE-LA-VITRINE>/static/accueil/js/iframe-embed.js" defer></script>
-```
-
-Le script écoute les messages `postMessage` émis par la page et ajuste la
-hauteur de toute iframe portant l'attribut `data-plateforme-accueil`. La
-hauteur suivant alors le contenu, l'ascenseur interne disparaît de lui-même.
-Ne mettez jamais `scrolling="no"` sur l'iframe : sans JavaScript (ou si un
-message se perd), l'ascenseur reste le seul moyen d'accéder au contenu qui
-dépasse la hauteur de repli.
-
-Le script publie aussi, en sens inverse, la portion de l'iframe réellement
-visible à l'écran. L'iframe faisant la hauteur de son contenu, son propre
-viewport couvre toute la page : sans cette information, une fenêtre modale se
-centrerait au milieu du document plutôt que devant le visiteur. C'est un
-confort, pas une dépendance — un hôte qui ne publie rien obtient le
-centrage par défaut.
-
-Protocole, si vous préférez l'implémenter vous-même.
-
-La page émet vers son parent (`targetOrigin: "*"`, la hauteur n'est pas une
-donnée sensible), au chargement puis à chaque changement de mise en page :
-
-```json
-{ "source": "plateforme-accueil", "type": "resize", "height": 842 }
-```
-
-L'hôte émet vers l'iframe, au scroll et au redimensionnement (au plus une fois
-par frame, et seulement si la valeur a changé) :
-
-```json
-{ "source": "plateforme-accueil", "type": "viewport", "top": 320, "height": 700 }
-```
-
-L'hôte émet aussi, une fois que le visiteur a accepté la mesure d'audience chez
+L'hôte émet une fois que le visiteur a accepté la mesure d'audience chez
 lui et jamais avant :
 
 ```json
