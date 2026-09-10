@@ -1,13 +1,16 @@
 import urllib.parse
+from datetime import timedelta
 
 from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.cache import cache_page
 
 from accueil import cities as city_lookup, content, platform_urls
 from accueil.sections.hero import Hero
 
 
+@cache_page(timedelta(minutes=1).total_seconds())
 def index(request):
     return render(
         request,

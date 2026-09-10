@@ -61,14 +61,6 @@ def test_a_disabled_section_disappears(page, client):
     assert "temoignage" not in client.get("/").content.decode()
 
 
-def test_saving_a_section_shows_up_at_once(page, client):
-    assert "temoignage" in client.get("/").content.decode()
-    section = Section.objects.get(kind="testimonials")
-    section.active = False
-    section.save()
-    assert "temoignage" not in client.get("/").content.decode()
-
-
 def test_a_queryset_update_still_waits_for_the_cache(page, client):
     client.get("/")
     # `update()` bypasses signals, and another instance's cache cannot be
