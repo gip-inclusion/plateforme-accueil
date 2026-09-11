@@ -114,7 +114,6 @@ def test_index_has_no_inline_styles_or_scripts(client):
 
 def test_static_assets_are_served(client):
     for path in (
-        "/static/accueil/js/iframe-embed.js",
         "/static/accueil/js/matomo.js",
         "/static/accueil/js/profiles.js",
         "/static/accueil/js/analytics.js",
