@@ -1,6 +1,7 @@
 import urllib.parse
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -16,6 +17,7 @@ def index(request):
         request,
         "accueil/index.html",
         {
+            "config": {"frame-ancestors": settings.SECURE_CSP["frame-ancestors"]},
             "sections": content.page_sections(),
             # `/?type=insertion` lands straight on one search. Resolved
             # server-side, so it works with no JavaScript.

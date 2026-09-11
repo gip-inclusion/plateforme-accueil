@@ -13,5 +13,6 @@
       {% for section in sections %}{% include section.template with content=section.content %}{% endfor %}
 
       {% include "accueil/modale-ville.html" %}
+      {{ config|json_script:"accueil-config" }}
     </main>
 {% endblock %}

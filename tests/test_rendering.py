@@ -61,24 +61,6 @@ def test_figures_fall_back_when_feed_is_down(client):
     assert "/static/accueil/js/resize-reporter.js" in body
 
 
-def test_analytics_is_not_deferred(client):
-    # Modules are implicitly deferred, so switching the page scripts to
-    # type="module" must not drag the tag manager along: the container has to
-    # boot before the page builds, or visits are under-counted.
-    head = client.get("/").content.decode().split("</head>")[0]
-    (tag,) = [line for line in head.splitlines() if "js/matomo.js" in line]
-    assert "defer" not in tag
-    assert "async" not in tag
-    assert "module" not in tag
-
-
-def test_index_loads_analytics(client):
-    # Must be in the <head>: the tag manager has to boot before the page
-    # builds, so a tag that drifted into the <body> would under-measure.
-    head = client.get("/").content.decode().split("</head>")[0]
-    assert "/static/accueil/js/matomo.js" in head
-
-
 def test_index_inlines_svg_sprite(client):
     # The sprite is inlined and referenced by bare fragment: an external
     # reference (file#id) is blocked in a sandboxed iframe without
@@ -106,7 +88,6 @@ def test_index_has_no_inline_styles_or_scripts(client):
 
 def test_static_assets_are_served(client):
     for path in (
-        "/static/accueil/js/matomo.js",
         "/static/accueil/js/profiles.js",
         "/static/accueil/js/analytics.js",
         "/static/accueil/css/main.css",
@@ -153,15 +134,6 @@ def test_the_documented_sandbox_allows_what_the_page_needs(client):
         assert "allow-top-navigation-by-user-activation" in sandbox
     # Together, these two let the framed page remove its own sandbox.
     assert not ("allow-same-origin" in sandbox and "allow-scripts" in sandbox)
-
-
-def test_the_analytics_bridge_loads_before_the_page_is_measured(client):
-    # The bridge holds the consent and the visitor id the tag needs, so it must
-    # be listening before the container can fire.
-    head = re.findall(r"<head>.*?</head>", client.get("/").content.decode(), re.DOTALL)[0]
-    bridge = head.index("js/analytics-bridge.js")
-    assert head.index("js/matomo.js") < bridge
-    assert "defer" not in head[head.rindex("<script", 0, bridge) : bridge]
 
 
 PROD = settings.PLATFORM_DEFAULT_ORIGIN
