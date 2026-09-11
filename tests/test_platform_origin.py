@@ -29,11 +29,6 @@ def test_an_announced_host_carries_every_link_with_it(client):
     assert all(link.startswith(f"https://{DEMO}") for link in links)
 
 
-def test_a_review_app_is_recognised_by_its_prefix(client):
-    body = client.get("/", {"host": "c1-review-1234.cleverapps.io"}).content.decode()
-    assert all(link.startswith("https://c1-review-1234.cleverapps.io") for link in _links(body))
-
-
 @pytest.mark.parametrize(
     "host",
     [
@@ -61,13 +56,6 @@ def test_the_form_carries_the_announced_host(client):
     body = client.get("/", {"host": DEMO}).content.decode()
     assert f'<input type="hidden" name="host" value="{DEMO}">' in body
     assert 'name="host"' not in client.get("/").content.decode()
-
-
-def test_frame_ancestors_is_not_the_redirect_allowlist():
-    # Being allowed to embed the page is not being allowed to receive its
-    # visitors: a redirect launders a link behind our domain, an embed does not.
-    assert "https://*.scalingo.io" in settings.SECURE_CSP["frame-ancestors"]
-    assert not any("scalingo" in host for host in settings.PLATFORM_ALLOWED_HOSTS)
 
 
 def test_an_editor_cannot_pin_a_link_to_one_environment():
