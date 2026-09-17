@@ -53,7 +53,7 @@
 
   window.addEventListener("message", function (event) {
     var data = event.data;
-    if (!data || data.source !== "plateforme-accueil") {
+    if (!data || data.source !== "plateforme-accueil-iframe-hote") {
       return;
     }
     if (data.type === "resize") {

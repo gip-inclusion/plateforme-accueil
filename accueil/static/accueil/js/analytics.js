@@ -41,7 +41,7 @@ const track = (element) => {
   ).trim();
 
   postMessageToTrustedParents({
-    source: "plateforme-accueil",
+    source: "plateforme-accueil-iframe-contenu",
     type: "analytics",
     matomoCategory,
     matomoAction,
