@@ -58,7 +58,7 @@ if (window.parent !== window) {
     // apps on CleverCloud.
     window.parent.postMessage(
       {
-        source: "plateforme-accueil",
+        source: "plateforme-accueil-iframe-contenu",
         type: "resize",
         height,
       },
@@ -101,7 +101,11 @@ if (window.parent !== window) {
 
   window.addEventListener("message", (event) => {
     const data = event.data;
-    if (event.source !== window.parent || !data || data.source !== "plateforme-accueil") {
+    if (
+      event.source !== window.parent ||
+      !data ||
+      data.source !== "plateforme-accueil-iframe-hote"
+    ) {
       return;
     }
     if (data.type !== "viewport" || !(data.height > 0)) {
