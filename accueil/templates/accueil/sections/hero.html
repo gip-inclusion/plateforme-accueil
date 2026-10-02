@@ -17,7 +17,7 @@
         <input class="recherche__onglet-radio" type="radio" name="type" value="{{ key }}"
                id="recherche-{{ key }}" {% if key == selected_search %}checked{% endif %}
                data-matomo-category="hero" data-matomo-action="onglet"
-               data-matomo-name="{{ target.label_long }}">
+               data-matomo-name="{{ target.matomo_name }}">
         <label class="recherche__onglet" for="recherche-{{ key }}">
           <svg class="icone" aria-hidden="true"><use href="#{{ target.icon }}"/></svg>
           <span class="onglet__court">{{ target.label_short }}</span><span class="onglet__long">{{ target.label_long }}</span>

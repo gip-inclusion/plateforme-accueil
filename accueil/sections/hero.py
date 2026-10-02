@@ -13,6 +13,8 @@ class SearchTarget(NamedTuple):
 
     label_short: str
     label_long: str
+    # Frozen: the analytics stay comparable when the labels are reworded.
+    matomo_name: str
     icon: str
     results_path: str
 
@@ -32,18 +34,21 @@ class Hero(SectionType):
         "emploi": SearchTarget(
             label_short="Emploi",
             label_long="Un emploi inclusif",
+            matomo_name="Un emploi inclusif",
             icon="ri-briefcase-line",
             results_path="/search/employers/results",
         ),
         "insertion": SearchTarget(
-            label_short="Insertion",
+            label_short="Service",
             label_long="Un service d'insertion",
+            matomo_name="Un service d'insertion",
             icon="ri-compass-3-line",
             results_path="/search/services/results",
         ),
         "accompagnateur": SearchTarget(
-            label_short="Accompagnateur",
-            label_long="Un accompagnateur",
+            label_short="Accompagnement",
+            label_long="Un accompagnement",
+            matomo_name="Un accompagnateur",
             icon="ri-user-line",
             results_path="/search/prescribers/results",
         ),
