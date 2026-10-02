@@ -46,7 +46,7 @@ class Hero(SectionType):
             results_path="/search/services/results",
         ),
         "accompagnateur": SearchTarget(
-            label_short="Accompagnateur",
+            label_short="Accompagnement",
             label_long="Un accompagnement",
             matomo_name="Un accompagnateur",
             icon="ri-user-line",
