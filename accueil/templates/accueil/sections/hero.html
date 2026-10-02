@@ -1,4 +1,5 @@
 {% load illustrations %}
+{% if request.GET.no_forms != "1" %}
 <section class="hero">
   <div class="hero__contenu">
     {% with image=content.visual|illustration %}
@@ -74,3 +75,4 @@
     <p class="hero__note">{{ content.note }}</p>
   </div>
 </section>
+{% endif %}
