@@ -43,7 +43,7 @@ class Hero(SectionType):
         ),
         "accompagnateur": SearchTarget(
             label_short="Accompagnateur",
-            label_long="Un accompagnateur",
+            label_long="Un accompagnement",
             icon="ri-user-line",
             results_path="/search/prescribers/results",
         ),
