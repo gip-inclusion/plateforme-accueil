@@ -39,7 +39,7 @@ class Hero(SectionType):
             results_path="/search/employers/results",
         ),
         "insertion": SearchTarget(
-            label_short="Insertion",
+            label_short="Service",
             label_long="Un service d'insertion",
             matomo_name="Un service d'insertion",
             icon="ri-compass-3-line",
