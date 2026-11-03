@@ -51,6 +51,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "accueil.middleware.EmbeddedOnlyIndexing",
     # Last, so its response phase runs before the CSP middleware's.
     "accueil.middleware.BackOfficeIsNeverFramed",
 ]

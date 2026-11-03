@@ -22,3 +22,20 @@ class BackOfficeIsNeverFramed:
             # response phase because it is listed before this one.
             response._csp_config = {"frame-ancestors": ["'none'"]}
         return response
+
+
+class EmbeddedOnlyIndexing:
+    """Keep this site out of search results, but not out of its host's.
+
+    `noindex` drops our own URLs; `indexifembedded` still lets Google index
+    the content as part of the page that frames it. Both need the page to be
+    crawlable: a robots.txt `Disallow` would hide this header from Google.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        response.headers["X-Robots-Tag"] = "noindex, indexifembedded"
+        return response

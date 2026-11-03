@@ -45,6 +45,11 @@ def test_cities_proxy_maps_slug_and_label(client):
     assert len(data["results"]) == 2
 
 
+@pytest.mark.parametrize("url", ["/", "/search?type=insertion"])
+def test_pages_are_only_indexed_when_embedded(client, url):
+    assert client.get(url)["X-Robots-Tag"] == "noindex, indexifembedded"
+
+
 def test_cities_empty_query(client):
     # No query -> no upstream call, empty list.
     assert client.get("/api/cities").json() == {"results": []}
